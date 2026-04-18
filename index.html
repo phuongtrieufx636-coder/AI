@@ -722,38 +722,23 @@
     <div class="tab hidden" id="tab-stats">
       <div id="tab-stats-inner" style="overflow-y:auto; padding:20px 22px; flex:1; display:flex; flex-direction:column; gap:20px;">
         <div>
-          <div class="section-hd">KPI Tháng 4 / 2026</div>
-          <div class="kpi-grid">
+          <div class="section-hd">Tổng quan</div>
+          <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
             <div class="kpi">
-              <div class="kpi-label">Doanh thu</div>
-              <div class="kpi-val" style="color:#4f8ef7;">847tr</div>
-              <div class="kpi-sub up">↑ +12% so tháng trước</div>
+              <div class="kpi-label">Loại sản phẩm</div>
+              <div class="kpi-val" id="kpi-total-products" style="color:#4f8ef7;">0</div>
+              <div class="kpi-sub" id="kpi-products-sub" style="color:var(--text3);">loại hàng</div>
             </div>
             <div class="kpi">
-              <div class="kpi-label">Đơn hàng</div>
-              <div class="kpi-val">234</div>
-              <div class="kpi-sub up">↑ +8% so tháng trước</div>
-            </div>
-            <div class="kpi">
-              <div class="kpi-label">Lợi nhuận</div>
-              <div class="kpi-val" style="color:#34c87a;">127tr</div>
-              <div class="kpi-sub up">Biên lợi nhuận 15%</div>
-            </div>
-            <div class="kpi">
-              <div class="kpi-label">Tồn kho</div>
+              <div class="kpi-label">Tổng tồn kho</div>
               <div class="kpi-val" id="kpi-stock" style="color:#f0a030;">0</div>
               <div class="kpi-sub warn" id="kpi-stock-sub">—</div>
             </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="section-hd">Cơ cấu doanh thu</div>
-          <div class="panel">
-            <div class="stat-row"><span class="stat-row-key">iPhone / Apple</span><span class="stat-row-val" style="color:#4f8ef7;">42%</span></div>
-            <div class="stat-row"><span class="stat-row-key">Samsung</span><span class="stat-row-val" style="color:#34c87a;">28%</span></div>
-            <div class="stat-row"><span class="stat-row-key">Phụ kiện</span><span class="stat-row-val" style="color:#f0a030;">18%</span></div>
-            <div class="stat-row"><span class="stat-row-key">Khác</span><span class="stat-row-val">12%</span></div>
+            <div class="kpi">
+              <div class="kpi-label">Khách VIP</div>
+              <div class="kpi-val" id="kpi-vip-count" style="color:#9b72f5;">0</div>
+              <div class="kpi-sub" style="color:var(--text3);">khách hàng</div>
+            </div>
           </div>
         </div>
 
@@ -1118,12 +1103,14 @@ function buildVipList() {
 
 // ─── STATS ────────────────────────────────────────────────────────────────────
 function updateStats() {
-  // KPI stock
+  // KPI cards
   const totalStock = PRODUCTS.reduce((s, p) => s + p.stock, 0);
   const critCount  = PRODUCTS.filter(p => p.stock <= 2).length;
+  document.getElementById('kpi-total-products').textContent = PRODUCTS.length;
   document.getElementById('kpi-stock').textContent = totalStock;
   document.getElementById('kpi-stock-sub').textContent =
     critCount > 0 ? `⚠ ${critCount} sản phẩm sắp hết` : PRODUCTS.length === 0 ? '—' : 'Tồn kho bình thường';
+  document.getElementById('kpi-vip-count').textContent = VIPS.length;
 
   // Stock list
   const sl = document.getElementById('stats-stock-list');
