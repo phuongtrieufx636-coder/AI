@@ -459,6 +459,41 @@
   }
   .empty-state .empty-icon { font-size: 36px; margin-bottom: 10px; }
 
+  /* NOTES TAB */
+  #tab-notes { overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .note-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 13px 16px;
+    display: flex; gap: 12px; align-items: flex-start;
+    transition: border-color 0.15s;
+  }
+  .note-card:hover { border-color: var(--border2); }
+  .note-icon {
+    width: 34px; height: 34px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0; background: var(--bg3);
+    border: 1px solid var(--border);
+  }
+  .note-body { flex: 1; min-width: 0; }
+  .note-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .note-content { font-size: 12.5px; color: var(--text2); margin-top: 3px; line-height: 1.5; }
+  .note-meta { font-size: 10.5px; color: var(--text3); margin-top: 5px; }
+  .note-tag {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 20px; margin-right: 6px;
+  }
+  .tag-repair { background: var(--amber-dim); color: var(--amber); }
+  .tag-debt   { background: var(--red-dim);   color: var(--red); }
+  .tag-order  { background: var(--accent-dim); color: var(--accent); }
+  .tag-other  { background: var(--bg3);        color: var(--text2); }
+  .note-del-btn {
+    padding: 4px 10px; font-size: 11px; font-weight: 600; flex-shrink: 0;
+    background: var(--red-dim); color: var(--red);
+    border: 1px solid rgba(240,82,82,0.2); border-radius: var(--radius-sm);
+    cursor: pointer; font-family: inherit; transition: background 0.15s;
+  }
+  .note-del-btn:hover { background: rgba(240,82,82,0.25); }
+
   /* ── MOBILE RESPONSIVE ─────────────────────────────────────── */
   @media (max-width: 700px) {
     /* Ẩn sidebar, dùng bottom nav */
@@ -611,6 +646,10 @@
       <button class="nav-btn" onclick="switchTab('vip')" id="nav-vip">
         <span class="ni">👤</span> Khách VIP
       </button>
+      <button class="nav-btn" onclick="switchTab('notes')" id="nav-notes">
+        <span class="ni">📝</span> Ghi chú
+        <span class="nav-badge" id="notes-badge" style="display:none">!</span>
+      </button>
       <button class="nav-btn" onclick="switchTab('stats')" id="nav-stats">
         <span class="ni">📊</span> Thống kê
       </button>
@@ -715,6 +754,28 @@
         </div>
         <div class="section-hd">Danh sách khách VIP</div>
         <div class="vip-list" id="vip-list"></div>
+      </div>
+    </div>
+
+    <!-- NOTES TAB -->
+    <div class="tab hidden" id="tab-notes">
+      <div style="padding:20px 22px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
+        <div class="add-form">
+          <h4>➕ Thêm ghi chú thủ công</h4>
+          <div class="form-row">
+            <select id="note-type">
+              <option value="repair">🔧 Sửa chữa</option>
+              <option value="debt">💸 Công nợ</option>
+              <option value="order">📦 Đặt hàng</option>
+              <option value="other">📝 Khác</option>
+            </select>
+            <input type="text" id="note-title" placeholder="Tiêu đề (vd: Sửa iPhone Quang)" />
+            <input type="text" id="note-content" placeholder="Nội dung chi tiết" />
+            <button class="btn-add" onclick="addNote()">Thêm</button>
+          </div>
+        </div>
+        <div class="section-hd">Danh sách ghi chú (<span id="notes-count">0</span>)</div>
+        <div id="notes-list"></div>
       </div>
     </div>
 
@@ -830,6 +891,11 @@
     <span class="bnav-icon">👤</span>
     <span class="bnav-label">VIP</span>
   </button>
+  <button class="bnav-btn" onclick="switchTab('notes')" id="bnav-notes">
+    <span class="bnav-icon">📝</span>
+    <span class="bnav-label">Ghi chú</span>
+    <span class="bnav-badge" id="bnav-notes-badge"></span>
+  </button>
   <button class="bnav-btn" onclick="switchTab('stats')" id="bnav-stats">
     <span class="bnav-icon">📊</span>
     <span class="bnav-label">Thống kê</span>
@@ -847,6 +913,7 @@ const SK_PRODUCTS = 'ps_products';
 const SK_VIPS     = 'ps_vips';
 const SK_PERMS    = 'ps_perms';
 const SK_HISTORY  = 'ps_chat_history';
+const SK_NOTES    = 'ps_notes';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let groqKey = '';
@@ -854,6 +921,7 @@ let history = [];
 let PRODUCTS = [];
 let VIPS = [];
 let PERMS = { delInventory: false, delVip: false, delAll: false };
+let NOTES = [];
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 function init() {
@@ -882,6 +950,10 @@ function init() {
     document.getElementById('perm-del-all').checked = PERMS.delAll;
   }
 
+  // Load notes
+  const savedNotes = localStorage.getItem(SK_NOTES);
+  NOTES = savedNotes ? JSON.parse(savedNotes) : [];
+
   // Load chat history
   const savedHistory = localStorage.getItem(SK_HISTORY);
   if (savedHistory) {
@@ -895,6 +967,7 @@ function init() {
 
   buildInventory();
   buildVipList();
+  buildNotesList();
   updateStats();
   updateSettingsStatus();
 }
@@ -961,9 +1034,11 @@ function confirmClear(type) {
   };
   if (!confirm(msgs[type])) return;
   if (type === 'all') {
-    history = [];
+    history = []; NOTES = [];
     localStorage.removeItem(SK_HISTORY);
+    localStorage.removeItem(SK_NOTES);
     document.getElementById('messages').innerHTML = '';
+    buildNotesList();
   }
   if (type === 'inventory' || type === 'all') {
     PRODUCTS = [];
@@ -980,7 +1055,7 @@ function confirmClear(type) {
 
 // ─── NAVIGATION ───────────────────────────────────────────────────────────────
 function switchTab(tab) {
-  ['chat','inventory','vip','stats','settings'].forEach(t => {
+  ['chat','inventory','vip','notes','stats','settings'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
     document.getElementById('nav-'+t).classList.toggle('active', t === tab);
     const bb = document.getElementById('bnav-'+t);
@@ -990,6 +1065,7 @@ function switchTab(tab) {
     chat: 'Trợ lý quản lý cửa hàng',
     inventory: 'Quản lý kho hàng',
     vip: 'Khách hàng VIP',
+    notes: 'Ghi chú & nhật ký',
     stats: 'Thống kê & báo cáo',
     settings: 'Cài đặt'
   };
@@ -1118,6 +1194,61 @@ function buildVipList() {
   });
 }
 
+// ─── NOTES ───────────────────────────────────────────────────────────────────
+function saveNotes() {
+  localStorage.setItem(SK_NOTES, JSON.stringify(NOTES));
+}
+
+function addNote(type, title, content_, fromAI) {
+  if (!fromAI) {
+    type    = document.getElementById('note-type').value;
+    title   = document.getElementById('note-title').value.trim();
+    content_ = document.getElementById('note-content').value.trim();
+    if (!title) { alert('Vui lòng nhập tiêu đề ghi chú!'); return; }
+    ['note-title','note-content'].forEach(id => document.getElementById(id).value = '');
+  }
+  const now = new Date().toLocaleString('vi-VN');
+  NOTES.unshift({ type: type||'other', title, content: content_||'', time: now });
+  saveNotes();
+  buildNotesList();
+}
+
+function deleteNote(idx) {
+  if (!confirm('Xóa ghi chú này?')) return;
+  NOTES.splice(idx, 1);
+  saveNotes();
+  buildNotesList();
+}
+
+function buildNotesList() {
+  const list = document.getElementById('notes-list');
+  const countEl = document.getElementById('notes-count');
+  if (countEl) countEl.textContent = NOTES.length;
+  // update badge
+  const nb = document.getElementById('notes-badge');
+  if (nb) nb.style.display = NOTES.length > 0 ? '' : 'none';
+  if (!list) return;
+  if (NOTES.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div>Chưa có ghi chú nào.<br>Nói chuyện với AI hoặc thêm thủ công!</div>';
+    return;
+  }
+  const tagMap = { repair:'tag-repair', debt:'tag-debt', order:'tag-order', other:'tag-other' };
+  const labelMap = { repair:'🔧 Sửa chữa', debt:'💸 Công nợ', order:'📦 Đặt hàng', other:'📝 Khác' };
+  list.innerHTML = NOTES.map((n, i) => `
+    <div class="note-card">
+      <div class="note-icon">${n.type==='repair'?'🔧':n.type==='debt'?'💸':n.type==='order'?'📦':'📝'}</div>
+      <div class="note-body">
+        <div class="note-title">
+          <span class="note-tag ${tagMap[n.type]||'tag-other'}">${labelMap[n.type]||'Khác'}</span>
+          ${n.title}
+        </div>
+        ${n.content ? `<div class="note-content">${n.content}</div>` : ''}
+        <div class="note-meta">${n.time}</div>
+      </div>
+      <button class="note-del-btn" onclick="deleteNote(${i})">🗑</button>
+    </div>`).join('');
+}
+
 // ─── STATS ────────────────────────────────────────────────────────────────────
 function updateStats() {
   // KPI cards
@@ -1200,6 +1331,12 @@ LỢI NHUẬN: 127 triệu (biên 15%)
 CƠ CẤU DOANH THU: iPhone/Apple 42%, Samsung 28%, Phụ kiện 18%, Khác 12%
 ${permSection}
 
+Khi người dùng muốn GHI CHÚ bất kỳ thông tin gì (sửa chữa, công nợ, đặt hàng, giao dịch, nhắc nhở...), hãy trả lời bao gồm tag:
+[ACTION:ADD_NOTE|loại|tiêu_đề|nội_dung]
+- loại: repair (sửa chữa), debt (công nợ), order (đặt hàng), other (khác)
+- Ví dụ: [ACTION:ADD_NOTE|repair|Sửa iPhone Quang|Nhận 500k, lãi 350k, chưa giao]
+- Ví dụ: [ACTION:ADD_NOTE|debt|Công nợ Minh|Còn nợ 2 triệu, hẹn trả 20/4]
+
 Khi người dùng yêu cầu THÊM khách VIP, hãy phân tích và trả lời bao gồm tag:
 [ACTION:ADD_VIP|tên|sdt|số_lần_mua|ghi_chú]
 Ví dụ: [ACTION:ADD_VIP|Nguyễn Văn A|0901234567|3|Khách thân thiết]
@@ -1256,6 +1393,17 @@ function qsend(text) {
 
 function handleAIActions(reply) {
   let cleanReply = reply;
+
+  // Handle ADD_NOTE
+  const noteMatches = [...cleanReply.matchAll(/\[ACTION:ADD_NOTE\|([^\]]+)\]/g)];
+  noteMatches.forEach(match => {
+    const parts   = match[1].split('|');
+    const type    = (parts[0]||'other').trim();
+    const title   = (parts[1]||'Ghi chú').trim();
+    const content_ = (parts[2]||'').trim();
+    addNote(type, title, content_, true);
+    cleanReply = cleanReply.replace(match[0], '');
+  });
 
   // Handle ADD_VIP
   const vipMatches = [...cleanReply.matchAll(/\[ACTION:ADD_VIP\|([^\]]+)\]/g)];
