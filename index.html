@@ -846,6 +846,7 @@ const SK_KEY      = 'ps_groq_key';
 const SK_PRODUCTS = 'ps_products';
 const SK_VIPS     = 'ps_vips';
 const SK_PERMS    = 'ps_perms';
+const SK_HISTORY  = 'ps_chat_history';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let groqKey = '';
@@ -879,6 +880,17 @@ function init() {
     document.getElementById('perm-del-inventory').checked = PERMS.delInventory;
     document.getElementById('perm-del-vip').checked = PERMS.delVip;
     document.getElementById('perm-del-all').checked = PERMS.delAll;
+  }
+
+  // Load chat history
+  const savedHistory = localStorage.getItem(SK_HISTORY);
+  if (savedHistory) {
+    history = JSON.parse(savedHistory);
+    // Restore messages to UI
+    history.forEach(m => {
+      const html = m.content.replace(/</g,'&lt;').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+      addMsg(m.role === 'user' ? 'user' : 'bot', html);
+    });
   }
 
   buildInventory();
@@ -948,6 +960,11 @@ function confirmClear(type) {
     all: '⚠️ XÓA HẾT TẤT CẢ DỮ LIỆU (kho hàng + khách VIP)?\nHành động này không thể hoàn tác!'
   };
   if (!confirm(msgs[type])) return;
+  if (type === 'all') {
+    history = [];
+    localStorage.removeItem(SK_HISTORY);
+    document.getElementById('messages').innerHTML = '';
+  }
   if (type === 'inventory' || type === 'all') {
     PRODUCTS = [];
     localStorage.removeItem(SK_PRODUCTS);
@@ -1183,11 +1200,21 @@ LỢI NHUẬN: 127 triệu (biên 15%)
 CƠ CẤU DOANH THU: iPhone/Apple 42%, Samsung 28%, Phụ kiện 18%, Khác 12%
 ${permSection}
 
+Khi người dùng yêu cầu THÊM khách VIP, hãy phân tích và trả lời bao gồm tag:
+[ACTION:ADD_VIP|tên|sdt|số_lần_mua|ghi_chú]
+Ví dụ: [ACTION:ADD_VIP|Nguyễn Văn A|0901234567|3|Khách thân thiết]
+Nếu không có SĐT hoặc ghi chú thì để trống: [ACTION:ADD_VIP|Tên khách||1|]
+
+Khi người dùng yêu cầu THÊM sản phẩm vào kho, hãy phân tích và trả lời bao gồm tag:
+[ACTION:ADD_PRODUCT|tên|icon|giá|tồn_kho|tối_đa]
+Ví dụ: [ACTION:ADD_PRODUCT|iPhone 16 Pro|📱|35.990.000đ|10|20]
+
 Khi được yêu cầu thực hiện hành động xóa dữ liệu (nếu có quyền), hãy trả lời dạng:
 [ACTION:DELETE_INVENTORY] để xóa kho hàng
 [ACTION:DELETE_VIPS] để xóa danh sách VIP  
 [ACTION:DELETE_ALL] để xóa tất cả
 
+Quan trọng: Sau khi thêm dữ liệu, hãy xác nhận đã thêm thành công và mô tả nội dung vừa thêm.
 Hãy trả lời ngắn gọn, chuyên nghiệp bằng tiếng Việt. Đưa ra gợi ý cụ thể và thực tế khi được hỏi.`;
 }
 
@@ -1229,7 +1256,42 @@ function qsend(text) {
 
 function handleAIActions(reply) {
   let cleanReply = reply;
-  let actioned = false;
+
+  // Handle ADD_VIP
+  const vipMatches = [...cleanReply.matchAll(/\[ACTION:ADD_VIP\|([^\]]+)\]/g)];
+  vipMatches.forEach(match => {
+    const parts = match[1].split('|');
+    const name  = (parts[0] || '').trim();
+    const phone = (parts[1] || '').trim();
+    const count = parseInt(parts[2]) || 1;
+    const note  = (parts[3] || '').trim();
+    if (name) {
+      VIPS.push({ name, phone, count, note });
+      VIPS.sort((a, b) => b.count - a.count);
+      saveVips();
+      buildVipList();
+      updateStats();
+    }
+    cleanReply = cleanReply.replace(match[0], '');
+  });
+
+  // Handle ADD_PRODUCT
+  const prodMatches = [...cleanReply.matchAll(/\[ACTION:ADD_PRODUCT\|([^\]]+)\]/g)];
+  prodMatches.forEach(match => {
+    const parts = match[1].split('|');
+    const name  = (parts[0] || '').trim();
+    const icon  = (parts[1] || '📦').trim();
+    const price = (parts[2] || '').trim();
+    const stock = parseInt(parts[3]) || 0;
+    const max   = parseInt(parts[4]) || 20;
+    if (name && price) {
+      PRODUCTS.push({ name, icon, price, stock, max });
+      saveProducts();
+      buildInventory();
+      updateStats();
+    }
+    cleanReply = cleanReply.replace(match[0], '');
+  });
 
   if (reply.includes('[ACTION:DELETE_ALL]') && PERMS.delAll) {
     PRODUCTS = []; VIPS = [];
@@ -1266,6 +1328,7 @@ async function sendMsg() {
 
   addMsg('user', text.replace(/</g,'&lt;'));
   history.push({role:'user', content: text});
+  localStorage.setItem(SK_HISTORY, JSON.stringify(history));
   input.value = '';
   input.style.height = 'auto';
 
@@ -1295,6 +1358,7 @@ async function sendMsg() {
       let reply = data.choices[0].message.content;
       reply = handleAIActions(reply);
       history.push({role:'assistant', content: reply});
+      localStorage.setItem(SK_HISTORY, JSON.stringify(history));
       addMsg('bot', reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
     }
   } catch(e) {
