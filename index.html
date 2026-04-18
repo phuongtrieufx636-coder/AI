@@ -148,6 +148,12 @@
     white-space: nowrap;
   }
   #apibar button:hover { background: var(--accent-dark); }
+  #apibar .key-status {
+    font-size: 11px; white-space: nowrap;
+    padding: 4px 10px; border-radius: 20px;
+  }
+  #apibar .key-status.ok { background: var(--green-dim); color: var(--green); }
+  #apibar .key-status.none { background: var(--red-dim); color: var(--red); }
 
   /* TAB CONTENTS */
   .tab { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -300,7 +306,47 @@
   .badge-low { background: var(--amber-dim); color: var(--amber); }
   .badge-critical { background: var(--red-dim); color: var(--red); }
 
+  .inv-actions { display: flex; gap: 6px; margin-top: 4px; }
+  .inv-del-btn {
+    flex: 1; padding: 5px 0; font-size: 11px; font-weight: 600;
+    background: var(--red-dim); color: var(--red);
+    border: 1px solid rgba(240,82,82,0.2); border-radius: var(--radius-sm);
+    cursor: pointer; font-family: inherit; transition: background 0.15s;
+  }
+  .inv-del-btn:hover { background: rgba(240,82,82,0.25); }
+
   .section-hd { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; }
+
+  /* ADD FORM */
+  .add-form {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 16px;
+  }
+  .add-form h4 { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+  .form-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .form-row input, .form-row select {
+    flex: 1; min-width: 120px;
+    background: var(--bg3); border: 1px solid var(--border2);
+    color: var(--text); border-radius: var(--radius-sm);
+    padding: 7px 10px; font-size: 12.5px; font-family: inherit; outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-row input:focus, .form-row select:focus { border-color: var(--accent); }
+  .form-row input::placeholder { color: var(--text3); }
+  .btn-add {
+    padding: 7px 18px; border-radius: var(--radius-sm);
+    background: var(--green); color: #000; border: none;
+    font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: opacity 0.15s; white-space: nowrap;
+  }
+  .btn-add:hover { opacity: 0.85; }
+  .btn-danger {
+    padding: 7px 14px; border-radius: var(--radius-sm);
+    background: var(--red-dim); color: var(--red); border: 1px solid rgba(240,82,82,0.3);
+    font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: background 0.15s; white-space: nowrap;
+  }
+  .btn-danger:hover { background: rgba(240,82,82,0.25); }
 
   /* STATS TAB */
   #tab-stats { overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 20px; }
@@ -340,6 +386,79 @@
   .stat-row-key { font-size: 12.5px; color: var(--text2); }
   .stat-row-val { font-size: 12.5px; font-weight: 600; color: var(--text); }
 
+  /* VIP TAB */
+  #tab-vip { overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .vip-list { display: flex; flex-direction: column; gap: 8px; }
+  .vip-card {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 13px 16px;
+    transition: border-color 0.15s;
+  }
+  .vip-card:hover { border-color: var(--border2); }
+  .vip-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--purple-dim); border: 1px solid rgba(155,114,245,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .vip-info { flex: 1; }
+  .vip-name { font-size: 13.5px; font-weight: 600; color: var(--text); }
+  .vip-sub { font-size: 11.5px; color: var(--text3); margin-top: 1px; }
+  .vip-count { font-size: 13px; font-weight: 700; color: var(--amber); margin-right: 10px; }
+  .vip-del-btn {
+    padding: 5px 12px; font-size: 11px; font-weight: 600;
+    background: var(--red-dim); color: var(--red);
+    border: 1px solid rgba(240,82,82,0.2); border-radius: var(--radius-sm);
+    cursor: pointer; font-family: inherit; transition: background 0.15s;
+  }
+  .vip-del-btn:hover { background: rgba(240,82,82,0.25); }
+
+  /* SETTINGS TAB */
+  #tab-settings { overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .settings-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .settings-section h4 { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+  .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row-label { font-size: 13px; color: var(--text); }
+  .settings-row-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .toggle {
+    position: relative; width: 38px; height: 20px; cursor: pointer;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0; background: var(--bg3);
+    border-radius: 20px; border: 1px solid var(--border2);
+    transition: background 0.2s;
+  }
+  .toggle-slider::before {
+    content: ''; position: absolute;
+    width: 14px; height: 14px; left: 2px; top: 2px;
+    background: var(--text3); border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: #fff; }
+
+  .danger-zone { border-color: rgba(240,82,82,0.3) !important; }
+  .danger-zone h4 { color: var(--red) !important; }
+  .danger-btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .btn-full-danger {
+    flex: 1; min-width: 160px; padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    background: var(--red-dim); color: var(--red);
+    border: 1px solid rgba(240,82,82,0.3);
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: background 0.15s; text-align: center;
+  }
+  .btn-full-danger:hover { background: rgba(240,82,82,0.25); }
+
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--text3); font-size: 13px;
+  }
+  .empty-state .empty-icon { font-size: 36px; margin-bottom: 10px; }
+
   @media (max-width: 900px) {
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .two-col { grid-template-columns: 1fr; }
@@ -366,10 +485,16 @@
       </button>
       <button class="nav-btn" onclick="switchTab('inventory')" id="nav-inventory">
         <span class="ni">📦</span> Kho hàng
-        <span class="nav-badge">2</span>
+        <span class="nav-badge" id="low-badge" style="display:none">!</span>
+      </button>
+      <button class="nav-btn" onclick="switchTab('vip')" id="nav-vip">
+        <span class="ni">👤</span> Khách VIP
       </button>
       <button class="nav-btn" onclick="switchTab('stats')" id="nav-stats">
         <span class="ni">📊</span> Thống kê
+      </button>
+      <button class="nav-btn" onclick="switchTab('settings')" id="nav-settings">
+        <span class="ni">⚙️</span> Cài đặt
       </button>
     </div>
 
@@ -395,6 +520,7 @@
       <label>🔑 Groq API Key:</label>
       <input type="password" id="key-input" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx" />
       <button onclick="saveKey()">Lưu key</button>
+      <span class="key-status none" id="key-status">Chưa có key</span>
     </div>
 
     <!-- CHAT TAB -->
@@ -437,8 +563,37 @@
     <!-- INVENTORY TAB -->
     <div class="tab hidden" id="tab-inventory">
       <div style="padding:20px 22px; overflow-y:auto; flex:1;">
-        <div class="section-hd">Danh sách sản phẩm — Tháng 4/2026</div>
+        <div class="add-form">
+          <h4>➕ Thêm sản phẩm mới</h4>
+          <div class="form-row">
+            <input type="text" id="inv-name" placeholder="Tên sản phẩm (vd: iPhone 16 Pro)" />
+            <input type="text" id="inv-icon" placeholder="Icon (vd: 📱)" maxlength="2" style="max-width:80px;" />
+            <input type="text" id="inv-price" placeholder="Giá (vd: 32.990.000đ)" />
+            <input type="number" id="inv-stock" placeholder="Tồn kho" min="0" style="max-width:110px;" />
+            <input type="number" id="inv-max" placeholder="Tối đa" min="1" style="max-width:90px;" />
+            <button class="btn-add" onclick="addProduct()">Thêm</button>
+          </div>
+        </div>
+        <div class="section-hd" id="inv-hd">Danh sách sản phẩm</div>
         <div class="inv-grid" id="inv-grid"></div>
+      </div>
+    </div>
+
+    <!-- VIP TAB -->
+    <div class="tab hidden" id="tab-vip">
+      <div style="padding:20px 22px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
+        <div class="add-form">
+          <h4>➕ Thêm khách hàng VIP</h4>
+          <div class="form-row">
+            <input type="text" id="vip-name" placeholder="Họ tên khách hàng" />
+            <input type="text" id="vip-phone" placeholder="Số điện thoại (tuỳ chọn)" />
+            <input type="number" id="vip-count" placeholder="Số lần mua" min="1" style="max-width:130px;" />
+            <input type="text" id="vip-note" placeholder="Ghi chú (tuỳ chọn)" />
+            <button class="btn-add" onclick="addVip()">Thêm</button>
+          </div>
+        </div>
+        <div class="section-hd">Danh sách khách VIP</div>
+        <div class="vip-list" id="vip-list"></div>
       </div>
     </div>
 
@@ -465,50 +620,87 @@
             </div>
             <div class="kpi">
               <div class="kpi-label">Tồn kho</div>
-              <div class="kpi-val" style="color:#f0a030;">77</div>
-              <div class="kpi-sub warn">⚠ 2 sản phẩm sắp hết</div>
+              <div class="kpi-val" id="kpi-stock" style="color:#f0a030;">0</div>
+              <div class="kpi-sub warn" id="kpi-stock-sub">—</div>
             </div>
           </div>
         </div>
 
         <div>
-          <div class="section-hd">Top bán chạy</div>
-          <div class="top-list">
-            <div class="top-row">
-              <div class="rank r1">1</div>
-              <div class="top-name">iPhone 15 Pro Max</div>
-              <div class="top-bar-w"><div class="top-bar" style="width:100%;"></div></div>
-              <div class="top-val">48 máy</div>
-            </div>
-            <div class="top-row">
-              <div class="rank r2">2</div>
-              <div class="top-name">AirPods Pro 2</div>
-              <div class="top-bar-w"><div class="top-bar" style="width:85%;"></div></div>
-              <div class="top-val">62 chiếc</div>
-            </div>
-            <div class="top-row">
-              <div class="rank r3">3</div>
-              <div class="top-name">Samsung S24 Ultra</div>
-              <div class="top-bar-w"><div class="top-bar" style="width:70%;"></div></div>
-              <div class="top-val">36 máy</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="two-col">
+          <div class="section-hd">Cơ cấu doanh thu</div>
           <div class="panel">
-            <h3>Khách hàng VIP</h3>
-            <div class="stat-row"><span class="stat-row-key">Nguyễn Văn A</span><span class="stat-row-val" style="color:#f5c842;">5 lần mua</span></div>
-            <div class="stat-row"><span class="stat-row-key">Trần Thị B</span><span class="stat-row-val">4 lần mua</span></div>
-            <div class="stat-row"><span class="stat-row-key">Lê Văn C</span><span class="stat-row-val">3 lần mua</span></div>
-            <div class="stat-row"><span class="stat-row-key">Phạm Thị D</span><span class="stat-row-val">2 lần mua</span></div>
-          </div>
-          <div class="panel">
-            <h3>Cơ cấu doanh thu</h3>
             <div class="stat-row"><span class="stat-row-key">iPhone / Apple</span><span class="stat-row-val" style="color:#4f8ef7;">42%</span></div>
             <div class="stat-row"><span class="stat-row-key">Samsung</span><span class="stat-row-val" style="color:#34c87a;">28%</span></div>
             <div class="stat-row"><span class="stat-row-key">Phụ kiện</span><span class="stat-row-val" style="color:#f0a030;">18%</span></div>
             <div class="stat-row"><span class="stat-row-key">Khác</span><span class="stat-row-val">12%</span></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-hd">Tồn kho theo sản phẩm</div>
+          <div class="top-list" id="stats-stock-list"></div>
+        </div>
+
+        <div>
+          <div class="section-hd">Khách hàng VIP</div>
+          <div class="panel" id="stats-vip-panel"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div class="tab hidden" id="tab-settings">
+      <div style="padding:20px 22px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
+        <div class="settings-section">
+          <h4>🔑 API Key</h4>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Trạng thái key</div>
+              <div class="settings-row-sub" id="settings-key-status">Chưa lưu key nào</div>
+            </div>
+            <button class="btn-danger" onclick="clearKey()">Xóa key</button>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Tự động load key khi mở trang</div>
+              <div class="settings-row-sub">Key được lưu vào localStorage của trình duyệt</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked disabled><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4>🤖 Quyền AI</h4>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Cho phép AI xóa toàn bộ kho hàng</div>
+              <div class="settings-row-sub">Khi bật, AI có thể xóa hết sản phẩm nếu bạn yêu cầu trong chat</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="perm-del-inventory" onchange="savePerms()"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Cho phép AI xóa toàn bộ khách VIP</div>
+              <div class="settings-row-sub">Khi bật, AI có thể xóa hết danh sách VIP nếu bạn yêu cầu</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="perm-del-vip" onchange="savePerms()"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Cho phép AI xóa toàn bộ dữ liệu</div>
+              <div class="settings-row-sub">⚠️ Nguy hiểm — AI có thể xóa hết tất cả dữ liệu lưu trữ</div>
+            </div>
+            <label class="toggle"><input type="checkbox" id="perm-del-all" onchange="savePerms()"><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+
+        <div class="settings-section danger-zone">
+          <h4>🗑️ Vùng nguy hiểm</h4>
+          <div style="font-size:12px; color:var(--text3); margin-bottom:14px;">Các thao tác xóa dữ liệu không thể hoàn tác.</div>
+          <div class="danger-btn-row">
+            <button class="btn-full-danger" onclick="confirmClear('inventory')">🗑 Xóa hết kho hàng</button>
+            <button class="btn-full-danger" onclick="confirmClear('vip')">🗑 Xóa hết khách VIP</button>
+            <button class="btn-full-danger" onclick="confirmClear('all')" style="border-color:rgba(240,82,82,0.6); background:rgba(240,82,82,0.18); font-size:14px;">⚠️ XÓA HẾT TẤT CẢ DỮ LIỆU</button>
           </div>
         </div>
       </div>
@@ -518,69 +710,192 @@
 </div>
 
 <script>
-const PRODUCTS = [
-  { name:'iPhone 15 Pro Max', icon:'📱', price:'32.990.000đ', stock:12, max:20 },
-  { name:'Samsung S24 Ultra', icon:'📱', price:'26.990.000đ', stock:8, max:20 },
-  { name:'Xiaomi 14 Ultra', icon:'📱', price:'18.990.000đ', stock:2, max:20 },
-  { name:'OPPO Find X7', icon:'📱', price:'14.990.000đ', stock:15, max:20 },
-  { name:'Vivo X100 Pro', icon:'📱', price:'13.490.000đ', stock:1, max:20 },
-  { name:'Google Pixel 9 Pro', icon:'📱', price:'22.990.000đ', stock:6, max:20 },
-  { name:'AirPods Pro 2', icon:'🎧', price:'5.990.000đ', stock:24, max:30 },
-  { name:'Apple Watch Series 9', icon:'⌚', price:'9.990.000đ', stock:9, max:20 },
-];
+// ─── STORAGE KEYS ─────────────────────────────────────────────────────────────
+const SK_KEY      = 'ps_groq_key';
+const SK_PRODUCTS = 'ps_products';
+const SK_VIPS     = 'ps_vips';
+const SK_PERMS    = 'ps_perms';
 
-const STORE_CONTEXT = `Bạn là AI trợ lý quản lý cửa hàng điện thoại "PhoneStore VN" tại Nha Trang.
-Dữ liệu cửa hàng tháng 4/2026:
-
-KHO HÀNG:
-- iPhone 15 Pro Max: 12 máy, giá 32.990.000đ
-- Samsung S24 Ultra: 8 máy, giá 26.990.000đ
-- Xiaomi 14 Ultra: 2 máy (SẮP HẾT - cần nhập gấp), giá 18.990.000đ
-- OPPO Find X7: 15 máy, giá 14.990.000đ
-- Vivo X100 Pro: 1 máy (SẮP HẾT - cần nhập gấp), giá 13.490.000đ
-- Google Pixel 9 Pro: 6 máy, giá 22.990.000đ
-- AirPods Pro 2: 24 chiếc, giá 5.990.000đ
-- Apple Watch Series 9: 9 chiếc, giá 9.990.000đ
-
-DOANH THU THÁNG 4/2026: 847 triệu đồng (+12% so tháng trước)
-TỔNG ĐƠN HÀNG: 234 đơn (+8%)
-LỢI NHUẬN: 127 triệu (biên 15%)
-
-CƠ CẤU DOANH THU: iPhone/Apple 42%, Samsung 28%, Phụ kiện 18%, Khác 12%
-
-TOP BÁN CHẠY: iPhone 15 Pro Max (48 máy), AirPods Pro 2 (62 chiếc), Samsung S24 Ultra (36 máy)
-
-KHÁCH HÀNG VIP: Nguyễn Văn A (5 lần mua), Trần Thị B (4 lần), Lê Văn C (3 lần)
-
-Hãy trả lời ngắn gọn, chuyên nghiệp bằng tiếng Việt. Đưa ra gợi ý cụ thể và thực tế khi được hỏi.`;
-
+// ─── STATE ────────────────────────────────────────────────────────────────────
 let groqKey = '';
 let history = [];
+let PRODUCTS = [];
+let VIPS = [];
+let PERMS = { delInventory: false, delVip: false, delAll: false };
 
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function init() {
+  // Load API key
+  const savedKey = localStorage.getItem(SK_KEY) || '';
+  if (savedKey) {
+    groqKey = savedKey;
+    document.getElementById('key-input').value = savedKey;
+    setKeyStatus(true);
+  }
+
+  // Load products
+  const savedProds = localStorage.getItem(SK_PRODUCTS);
+  PRODUCTS = savedProds ? JSON.parse(savedProds) : [];
+
+  // Load VIPs
+  const savedVips = localStorage.getItem(SK_VIPS);
+  VIPS = savedVips ? JSON.parse(savedVips) : [];
+
+  // Load permissions
+  const savedPerms = localStorage.getItem(SK_PERMS);
+  if (savedPerms) {
+    PERMS = JSON.parse(savedPerms);
+    document.getElementById('perm-del-inventory').checked = PERMS.delInventory;
+    document.getElementById('perm-del-vip').checked = PERMS.delVip;
+    document.getElementById('perm-del-all').checked = PERMS.delAll;
+  }
+
+  buildInventory();
+  buildVipList();
+  updateStats();
+  updateSettingsStatus();
+}
+
+// ─── KEY MANAGEMENT ───────────────────────────────────────────────────────────
 function saveKey() {
-  groqKey = document.getElementById('key-input').value.trim();
-  if (groqKey) {
+  const val = document.getElementById('key-input').value.trim();
+  if (!val) return;
+  groqKey = val;
+  localStorage.setItem(SK_KEY, val);
+  setKeyStatus(true);
+  addMsg('bot', '✅ API key đã được lưu thành công! Bây giờ bạn có thể đặt câu hỏi cho tôi.');
+  updateSettingsStatus();
+}
+
+function clearKey() {
+  if (!confirm('Xóa API key đã lưu?')) return;
+  groqKey = '';
+  localStorage.removeItem(SK_KEY);
+  document.getElementById('key-input').value = '';
+  setKeyStatus(false);
+  updateSettingsStatus();
+}
+
+function setKeyStatus(ok) {
+  const el = document.getElementById('key-status');
+  if (ok) {
+    el.textContent = '✓ Đã lưu';
+    el.className = 'key-status ok';
     document.getElementById('apibar').style.borderBottomColor = '#34c87a';
-    addMsg('bot', '✅ API key đã được lưu thành công! Bây giờ bạn có thể đặt câu hỏi cho tôi.');
+  } else {
+    el.textContent = 'Chưa có key';
+    el.className = 'key-status none';
+    document.getElementById('apibar').style.borderBottomColor = '';
   }
 }
 
+function updateSettingsStatus() {
+  const el = document.getElementById('settings-key-status');
+  if (groqKey) {
+    const masked = groqKey.substring(0, 8) + '••••••••••••' + groqKey.slice(-4);
+    el.textContent = '✓ Đã lưu: ' + masked;
+    el.style.color = 'var(--green)';
+  } else {
+    el.textContent = 'Chưa lưu key nào';
+    el.style.color = 'var(--text3)';
+  }
+}
+
+// ─── PERMISSIONS ──────────────────────────────────────────────────────────────
+function savePerms() {
+  PERMS.delInventory = document.getElementById('perm-del-inventory').checked;
+  PERMS.delVip       = document.getElementById('perm-del-vip').checked;
+  PERMS.delAll       = document.getElementById('perm-del-all').checked;
+  localStorage.setItem(SK_PERMS, JSON.stringify(PERMS));
+}
+
+// ─── CLEAR DATA ───────────────────────────────────────────────────────────────
+function confirmClear(type) {
+  const msgs = {
+    inventory: 'Xóa hết toàn bộ kho hàng?',
+    vip: 'Xóa hết toàn bộ danh sách khách VIP?',
+    all: '⚠️ XÓA HẾT TẤT CẢ DỮ LIỆU (kho hàng + khách VIP)?\nHành động này không thể hoàn tác!'
+  };
+  if (!confirm(msgs[type])) return;
+  if (type === 'inventory' || type === 'all') {
+    PRODUCTS = [];
+    localStorage.removeItem(SK_PRODUCTS);
+    buildInventory();
+  }
+  if (type === 'vip' || type === 'all') {
+    VIPS = [];
+    localStorage.removeItem(SK_VIPS);
+    buildVipList();
+  }
+  updateStats();
+}
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────────
 function switchTab(tab) {
-  ['chat','inventory','stats'].forEach(t => {
+  ['chat','inventory','vip','stats','settings'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
     document.getElementById('nav-'+t).classList.toggle('active', t === tab);
   });
-  const titles = { chat:'Trợ lý quản lý cửa hàng', inventory:'Quản lý kho hàng', stats:'Thống kê & báo cáo' };
+  const titles = {
+    chat: 'Trợ lý quản lý cửa hàng',
+    inventory: 'Quản lý kho hàng',
+    vip: 'Khách hàng VIP',
+    stats: 'Thống kê & báo cáo',
+    settings: 'Cài đặt'
+  };
   document.getElementById('tab-title').textContent = titles[tab];
+  if (tab === 'stats') updateStats();
+}
+
+// ─── INVENTORY ────────────────────────────────────────────────────────────────
+function saveProducts() {
+  localStorage.setItem(SK_PRODUCTS, JSON.stringify(PRODUCTS));
+}
+
+function addProduct() {
+  const name  = document.getElementById('inv-name').value.trim();
+  const icon  = document.getElementById('inv-icon').value.trim() || '📦';
+  const price = document.getElementById('inv-price').value.trim();
+  const stock = parseInt(document.getElementById('inv-stock').value) || 0;
+  const max   = parseInt(document.getElementById('inv-max').value) || 20;
+  if (!name || !price) { alert('Vui lòng nhập tên và giá sản phẩm!'); return; }
+  PRODUCTS.push({ name, icon, price, stock, max });
+  saveProducts();
+  buildInventory();
+  updateStats();
+  ['inv-name','inv-icon','inv-price','inv-stock','inv-max'].forEach(id => document.getElementById(id).value = '');
+}
+
+function deleteProduct(idx) {
+  if (!confirm('Xóa sản phẩm "' + PRODUCTS[idx].name + '"?')) return;
+  PRODUCTS.splice(idx, 1);
+  saveProducts();
+  buildInventory();
+  updateStats();
 }
 
 function buildInventory() {
   const grid = document.getElementById('inv-grid');
+  const badge = document.getElementById('low-badge');
+
+  if (PRODUCTS.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div>Chưa có sản phẩm nào.<br>Thêm sản phẩm đầu tiên ở trên!</div>';
+    badge.style.display = 'none';
+    document.getElementById('inv-hd').textContent = 'Danh sách sản phẩm (0)';
+    return;
+  }
+
+  const lowCount = PRODUCTS.filter(p => p.stock <= 2).length;
+  badge.style.display = lowCount > 0 ? '' : 'none';
+  if (lowCount > 0) badge.textContent = lowCount;
+  document.getElementById('inv-hd').textContent = `Danh sách sản phẩm (${PRODUCTS.length})`;
+
   grid.innerHTML = '';
-  PRODUCTS.forEach(p => {
+  PRODUCTS.forEach((p, idx) => {
     const pct = Math.round((p.stock / p.max) * 100);
     const cls = p.stock <= 2 ? 'critical' : p.stock <= 5 ? 'low' : 'ok';
     const label = p.stock <= 2 ? 'Sắp hết' : p.stock <= 5 ? 'Ít hàng' : 'Còn hàng';
+    const unitWord = p.icon === '🎧' || p.icon === '⌚' ? 'chiếc' : 'máy';
     grid.innerHTML += `
       <div class="inv-card">
         <div class="inv-card-top">
@@ -591,12 +906,151 @@ function buildInventory() {
           </div>
         </div>
         <div class="inv-footer">
-          <span class="stock-label ${cls}">${p.stock} máy</span>
+          <span class="stock-label ${cls}">${p.stock} ${unitWord}</span>
           <div class="stock-bar-wrap"><div class="stock-bar stock-${cls}" style="width:${Math.max(pct,5)}%"></div></div>
           <span class="inv-badge badge-${cls}">${label}</span>
         </div>
+        <div class="inv-actions">
+          <button class="inv-del-btn" onclick="deleteProduct(${idx})">🗑 Xóa</button>
+        </div>
       </div>`;
   });
+}
+
+// ─── VIP ──────────────────────────────────────────────────────────────────────
+function saveVips() {
+  localStorage.setItem(SK_VIPS, JSON.stringify(VIPS));
+}
+
+function addVip() {
+  const name  = document.getElementById('vip-name').value.trim();
+  const phone = document.getElementById('vip-phone').value.trim();
+  const count = parseInt(document.getElementById('vip-count').value) || 1;
+  const note  = document.getElementById('vip-note').value.trim();
+  if (!name) { alert('Vui lòng nhập tên khách hàng!'); return; }
+  VIPS.push({ name, phone, count, note });
+  VIPS.sort((a, b) => b.count - a.count);
+  saveVips();
+  buildVipList();
+  updateStats();
+  ['vip-name','vip-phone','vip-count','vip-note'].forEach(id => document.getElementById(id).value = '');
+}
+
+function deleteVip(idx) {
+  if (!confirm('Xóa khách VIP "' + VIPS[idx].name + '"?')) return;
+  VIPS.splice(idx, 1);
+  saveVips();
+  buildVipList();
+  updateStats();
+}
+
+function buildVipList() {
+  const list = document.getElementById('vip-list');
+  if (VIPS.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div>Chưa có khách VIP nào.<br>Thêm khách hàng ở trên!</div>';
+    return;
+  }
+  list.innerHTML = '';
+  VIPS.forEach((v, idx) => {
+    list.innerHTML += `
+      <div class="vip-card">
+        <div class="vip-avatar">👤</div>
+        <div class="vip-info">
+          <div class="vip-name">${v.name}</div>
+          <div class="vip-sub">${v.phone ? v.phone + ' · ' : ''}${v.note || 'Khách VIP'}</div>
+        </div>
+        <div class="vip-count">${v.count} lần mua</div>
+        <button class="vip-del-btn" onclick="deleteVip(${idx})">🗑 Xóa</button>
+      </div>`;
+  });
+}
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+function updateStats() {
+  // KPI stock
+  const totalStock = PRODUCTS.reduce((s, p) => s + p.stock, 0);
+  const critCount  = PRODUCTS.filter(p => p.stock <= 2).length;
+  document.getElementById('kpi-stock').textContent = totalStock;
+  document.getElementById('kpi-stock-sub').textContent =
+    critCount > 0 ? `⚠ ${critCount} sản phẩm sắp hết` : PRODUCTS.length === 0 ? '—' : 'Tồn kho bình thường';
+
+  // Stock list
+  const sl = document.getElementById('stats-stock-list');
+  if (PRODUCTS.length === 0) {
+    sl.innerHTML = '<div class="empty-state" style="padding:20px 0;font-size:12px;color:var(--text3)">Chưa có sản phẩm</div>';
+  } else {
+    const sorted = [...PRODUCTS].sort((a,b) => b.stock - a.stock);
+    const maxStock = sorted[0]?.stock || 1;
+    sl.innerHTML = sorted.map((p, i) => {
+      const rankCls = i === 0 ? 'r1' : i === 1 ? 'r2' : 'r3';
+      const pct = Math.round((p.stock / maxStock) * 100);
+      return `<div class="top-row">
+        <div class="rank ${i < 3 ? rankCls : 'r2'}">${i + 1}</div>
+        <div class="top-name">${p.name}</div>
+        <div class="top-bar-w"><div class="top-bar" style="width:${pct}%"></div></div>
+        <div class="top-val">${p.stock} máy</div>
+      </div>`;
+    }).join('');
+  }
+
+  // VIP panel
+  const vp = document.getElementById('stats-vip-panel');
+  if (VIPS.length === 0) {
+    vp.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0;">Chưa có khách VIP nào</div>';
+  } else {
+    vp.innerHTML = VIPS.slice(0, 6).map(v =>
+      `<div class="stat-row">
+        <span class="stat-row-key">${v.name}${v.phone ? ' · ' + v.phone : ''}</span>
+        <span class="stat-row-val" style="color:#f5c842;">${v.count} lần mua</span>
+      </div>`
+    ).join('');
+  }
+}
+
+// ─── CHAT ─────────────────────────────────────────────────────────────────────
+function buildStoreContext() {
+  const invLines = PRODUCTS.length > 0
+    ? PRODUCTS.map(p => {
+        const warn = p.stock <= 2 ? ' (SẮP HẾT - cần nhập gấp)' : p.stock <= 5 ? ' (ÍT HÀNG)' : '';
+        return `- ${p.name}: ${p.stock} máy${warn}, giá ${p.price}`;
+      }).join('\n')
+    : '(Kho hàng đang trống, chưa có sản phẩm nào)';
+
+  const vipLines = VIPS.length > 0
+    ? VIPS.map(v => `- ${v.name}: ${v.count} lần mua${v.note ? ' — ' + v.note : ''}`).join('\n')
+    : '(Chưa có khách VIP nào)';
+
+  const permLines = [];
+  if (PERMS.delAll) permLines.push('- Được phép XÓA TOÀN BỘ dữ liệu (kho hàng + khách VIP) nếu chủ cửa hàng yêu cầu rõ ràng');
+  else {
+    if (PERMS.delInventory) permLines.push('- Được phép xóa toàn bộ kho hàng nếu chủ cửa hàng yêu cầu rõ ràng');
+    if (PERMS.delVip)       permLines.push('- Được phép xóa toàn bộ danh sách khách VIP nếu chủ cửa hàng yêu cầu rõ ràng');
+  }
+  const permSection = permLines.length > 0
+    ? '\nQUYỀN ĐẶC BIỆT CỦA AI:\n' + permLines.join('\n')
+    : '';
+
+  return `Bạn là AI trợ lý quản lý cửa hàng điện thoại "PhoneStore VN" tại Nha Trang.
+Dữ liệu cửa hàng hiện tại:
+
+KHO HÀNG:
+${invLines}
+
+KHÁCH HÀNG VIP:
+${vipLines}
+
+DOANH THU THÁNG 4/2026: 847 triệu đồng (+12% so tháng trước)
+TỔNG ĐƠN HÀNG: 234 đơn (+8%)
+LỢI NHUẬN: 127 triệu (biên 15%)
+CƠ CẤU DOANH THU: iPhone/Apple 42%, Samsung 28%, Phụ kiện 18%, Khác 12%
+${permSection}
+
+Khi được yêu cầu thực hiện hành động xóa dữ liệu (nếu có quyền), hãy trả lời dạng:
+[ACTION:DELETE_INVENTORY] để xóa kho hàng
+[ACTION:DELETE_VIPS] để xóa danh sách VIP  
+[ACTION:DELETE_ALL] để xóa tất cả
+
+Hãy trả lời ngắn gọn, chuyên nghiệp bằng tiếng Việt. Đưa ra gợi ý cụ thể và thực tế khi được hỏi.`;
 }
 
 function addMsg(role, html) {
@@ -635,6 +1089,34 @@ function qsend(text) {
   sendMsg();
 }
 
+function handleAIActions(reply) {
+  let cleanReply = reply;
+  let actioned = false;
+
+  if (reply.includes('[ACTION:DELETE_ALL]') && PERMS.delAll) {
+    PRODUCTS = []; VIPS = [];
+    localStorage.removeItem(SK_PRODUCTS);
+    localStorage.removeItem(SK_VIPS);
+    buildInventory(); buildVipList(); updateStats();
+    cleanReply = cleanReply.replace('[ACTION:DELETE_ALL]', '');
+    actioned = true;
+  } else if (reply.includes('[ACTION:DELETE_INVENTORY]') && PERMS.delInventory) {
+    PRODUCTS = [];
+    localStorage.removeItem(SK_PRODUCTS);
+    buildInventory(); updateStats();
+    cleanReply = cleanReply.replace('[ACTION:DELETE_INVENTORY]', '');
+    actioned = true;
+  } else if (reply.includes('[ACTION:DELETE_VIPS]') && PERMS.delVip) {
+    VIPS = [];
+    localStorage.removeItem(SK_VIPS);
+    buildVipList(); updateStats();
+    cleanReply = cleanReply.replace('[ACTION:DELETE_VIPS]', '');
+    actioned = true;
+  }
+
+  return cleanReply.trim();
+}
+
 async function sendMsg() {
   const input = document.getElementById('msg-input');
   const text = input.value.trim();
@@ -662,7 +1144,7 @@ async function sendMsg() {
         max_tokens: 700,
         temperature: 0.7,
         messages: [
-          { role: 'system', content: STORE_CONTEXT },
+          { role: 'system', content: buildStoreContext() },
           ...history
         ]
       })
@@ -672,7 +1154,8 @@ async function sendMsg() {
     if (!res.ok) {
       addMsg('bot', '❌ Lỗi API: ' + (data.error?.message || 'Không xác định'));
     } else {
-      const reply = data.choices[0].message.content;
+      let reply = data.choices[0].message.content;
+      reply = handleAIActions(reply);
       history.push({role:'assistant', content: reply});
       addMsg('bot', reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
     }
@@ -694,7 +1177,8 @@ document.getElementById('msg-input').addEventListener('input', function() {
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
 
-buildInventory();
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+init();
 </script>
 </body>
 </html>
