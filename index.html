@@ -459,6 +459,127 @@
   }
   .empty-state .empty-icon { font-size: 36px; margin-bottom: 10px; }
 
+  /* ── MOBILE RESPONSIVE ─────────────────────────────────────── */
+  @media (max-width: 700px) {
+    /* Ẩn sidebar, dùng bottom nav */
+    #sidebar { display: none !important; }
+
+    #app { flex-direction: column; }
+
+    #main { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+
+    /* Topbar gọn hơn */
+    #topbar { padding: 10px 14px; }
+    #topbar h2 { font-size: 13px; }
+
+    /* API bar xếp dọc */
+    #apibar {
+      flex-wrap: wrap; gap: 7px; padding: 8px 14px;
+    }
+    #apibar label { display: none; }
+    #apibar input { min-width: 0; flex: 1 1 120px; font-size: 12px; }
+    #apibar button { flex-shrink: 0; padding: 6px 12px; font-size: 12px; }
+    #apibar .key-status { font-size: 10px; padding: 3px 8px; }
+
+    /* Tab content full */
+    .tab { flex: 1; min-height: 0; }
+
+    /* Messages padding */
+    #messages { padding: 12px 14px; gap: 12px; }
+    .msg { max-width: 88%; }
+    .bubble { font-size: 13px; padding: 9px 12px; }
+
+    /* Quick buttons scroll ngang */
+    #quick {
+      padding: 8px 14px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    #quick::-webkit-scrollbar { display: none; }
+    .qbtn { white-space: nowrap; flex-shrink: 0; font-size: 12px; padding: 5px 11px; }
+
+    /* Input bar */
+    #inputbar { padding: 8px 14px 10px; gap: 8px; }
+    #msg-input { font-size: 13px; padding: 9px 12px; }
+
+    /* Inventory / VIP / Settings padding */
+    #tab-inventory > div,
+    #tab-vip > div,
+    #tab-settings > div,
+    #tab-stats-inner { padding: 14px !important; }
+
+    .inv-grid { grid-template-columns: 1fr 1fr; gap: 9px; }
+    .inv-card { padding: 11px 12px; gap: 8px; }
+    .inv-name { font-size: 12px; }
+    .inv-price { font-size: 11px; }
+    .inv-icon { width: 34px; height: 34px; font-size: 18px; }
+
+    /* Form rows xếp dọc */
+    .form-row { flex-direction: column; gap: 8px; }
+    .form-row input, .form-row select { min-width: 0 !important; max-width: 100% !important; width: 100%; }
+    .btn-add { width: 100%; padding: 10px; font-size: 13px; }
+
+    .kpi-grid { grid-template-columns: 1fr 1fr; gap: 9px; }
+    .kpi { padding: 11px 12px; }
+    .kpi-val { font-size: 20px; }
+
+    .vip-card { padding: 10px 12px; gap: 10px; }
+    .vip-name { font-size: 13px; }
+
+    .settings-section { padding: 14px; }
+    .settings-row-label { font-size: 12px; }
+    .settings-row-sub { font-size: 10px; }
+    .danger-btn-row { flex-direction: column; }
+    .btn-full-danger { min-width: 0; }
+
+    /* Bottom nav bar */
+    #bottom-nav {
+      display: flex !important;
+    }
+
+    /* Thêm padding bottom để nội dung không bị bottom nav che */
+    .tab { padding-bottom: 0; }
+  }
+
+  /* Bottom nav — ẩn trên PC */
+  #bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    z-index: 100;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .bnav-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    flex: 1; padding: 6px 2px;
+    border: none; background: none;
+    color: var(--text3); font-family: inherit; cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: color 0.15s;
+    position: relative;
+  }
+  .bnav-btn.active { color: var(--accent); }
+  .bnav-btn .bnav-icon { font-size: 20px; line-height: 1; }
+  .bnav-btn .bnav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.01em; }
+  .bnav-badge {
+    position: absolute; top: 2px; right: 14px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red); display: none;
+  }
+
+  /* Khi có bottom nav, đẩy content lên */
+  body.has-bnav #main {
+    padding-bottom: 60px;
+  }
+
   @media (max-width: 900px) {
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .two-col { grid-template-columns: 1fr; }
@@ -649,7 +770,7 @@
     </div>
 
     <!-- SETTINGS TAB -->
-    <div class="tab hidden" id="tab-settings">
+    <div class="tab hidden" id="tab-settings" style="padding-bottom:0;">
       <div style="padding:20px 22px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
         <div class="settings-section">
           <h4>🔑 API Key</h4>
@@ -708,6 +829,31 @@
 
   </div>
 </div>
+
+<!-- BOTTOM NAV (mobile only) -->
+<nav id="bottom-nav">
+  <button class="bnav-btn active" onclick="switchTab('chat')" id="bnav-chat">
+    <span class="bnav-icon">💬</span>
+    <span class="bnav-label">Trợ lý</span>
+  </button>
+  <button class="bnav-btn" onclick="switchTab('inventory')" id="bnav-inventory">
+    <span class="bnav-icon">📦</span>
+    <span class="bnav-label">Kho hàng</span>
+    <span class="bnav-badge" id="bnav-badge"></span>
+  </button>
+  <button class="bnav-btn" onclick="switchTab('vip')" id="bnav-vip">
+    <span class="bnav-icon">👤</span>
+    <span class="bnav-label">VIP</span>
+  </button>
+  <button class="bnav-btn" onclick="switchTab('stats')" id="bnav-stats">
+    <span class="bnav-icon">📊</span>
+    <span class="bnav-label">Thống kê</span>
+  </button>
+  <button class="bnav-btn" onclick="switchTab('settings')" id="bnav-settings">
+    <span class="bnav-icon">⚙️</span>
+    <span class="bnav-label">Cài đặt</span>
+  </button>
+</nav>
 
 <script>
 // ─── STORAGE KEYS ─────────────────────────────────────────────────────────────
@@ -835,6 +981,8 @@ function switchTab(tab) {
   ['chat','inventory','vip','stats','settings'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
     document.getElementById('nav-'+t).classList.toggle('active', t === tab);
+    const bb = document.getElementById('bnav-'+t);
+    if (bb) bb.classList.toggle('active', t === tab);
   });
   const titles = {
     chat: 'Trợ lý quản lý cửa hàng',
@@ -888,6 +1036,9 @@ function buildInventory() {
   const lowCount = PRODUCTS.filter(p => p.stock <= 2).length;
   badge.style.display = lowCount > 0 ? '' : 'none';
   if (lowCount > 0) badge.textContent = lowCount;
+  // sync mobile badge
+  const bnavBadge = document.getElementById('bnav-badge');
+  if (bnavBadge) bnavBadge.style.display = lowCount > 0 ? 'block' : 'none';
   document.getElementById('inv-hd').textContent = `Danh sách sản phẩm (${PRODUCTS.length})`;
 
   grid.innerHTML = '';
@@ -1178,6 +1329,13 @@ document.getElementById('msg-input').addEventListener('input', function() {
 });
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
+// Detect mobile → add class for bottom nav spacing
+if (window.innerWidth <= 700) {
+  document.body.classList.add('has-bnav');
+}
+window.addEventListener('resize', () => {
+  document.body.classList.toggle('has-bnav', window.innerWidth <= 700);
+});
 init();
 </script>
 </body>
