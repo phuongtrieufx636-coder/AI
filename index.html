@@ -363,6 +363,42 @@
   #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   #send-btn svg { width: 18px; height: 18px; fill: #fff; }
 
+  /* MIC BUTTON */
+  #mic-btn {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-sm);
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 0.15s;
+  }
+  #mic-btn:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+  #mic-btn.listening {
+    background: var(--red-dim); color: var(--red);
+    border-color: var(--red);
+    animation: pulse-mic 1s infinite;
+  }
+  @keyframes pulse-mic {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(240,82,82,0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(240,82,82,0); }
+  }
+
+  /* TTS TOGGLE BUTTON */
+  #tts-toggle {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-sm);
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text3);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 0.15s;
+  }
+  #tts-toggle:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+  #tts-toggle.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+
   /* INVENTORY TAB */
   #tab-inventory { overflow-y: auto; padding: 20px 22px; }
   .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
@@ -806,7 +842,6 @@
     <div id="topbar">
       <h2 id="tab-title">Trợ lý quản lý cửa hàng</h2>
       <button id="mode-toggle" class="store" onclick="toggleMode()" title="Chuyển chế độ AI">🏪 Cửa hàng</button>
-      <span class="tag" id="ai-tag">Groq AI</span>
       <button id="theme-toggle" onclick="cycleTheme()" title="Đổi giao diện">🌙</button>
     </div>
 
@@ -853,7 +888,13 @@
       </div>
 
       <div id="inputbar">
+        <button id="mic-btn" onclick="toggleMic()" title="Nhấn để nói">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v6a2 2 0 0 0 4 0V5a2 2 0 0 0-2-2zm7 9a1 1 0 0 1 1 1 8 8 0 0 1-7 7.938V23h-2v-2.062A8 8 0 0 1 4 13a1 1 0 1 1 2 0 6 6 0 0 0 12 0 1 1 0 0 1 1-1z"/></svg>
+        </button>
         <textarea id="msg-input" rows="1" placeholder="Hỏi về kho hàng, doanh thu, chiến lược kinh doanh..."></textarea>
+        <button id="tts-toggle" onclick="toggleTTS()" title="Bật/tắt đọc phản hồi bằng giọng nói">
+          <svg id="tts-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </button>
         <button id="send-btn" onclick="sendMsg()">
           <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
         </button>
@@ -1748,6 +1789,7 @@ async function sendMsg() {
       history.push({role:'assistant', content: reply});
       localStorage.setItem(SK_HISTORY, JSON.stringify(history));
       addMsg('bot', reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
+      speakText(reply);
     }
   } catch(e) {
     hideTyping();
@@ -1761,6 +1803,106 @@ async function sendMsg() {
 document.getElementById('msg-input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
 });
+
+// ─── VOICE INPUT (Speech Recognition) ────────────────────────────────────────
+let recognition = null;
+let isListening = false;
+
+function initSpeechRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return null;
+  const r = new SpeechRecognition();
+  r.lang = 'vi-VN';
+  r.interimResults = true;
+  r.continuous = false;
+
+  r.onstart = () => {
+    isListening = true;
+    document.getElementById('mic-btn').classList.add('listening');
+    document.getElementById('msg-input').placeholder = '🎙️ Đang nghe... nói đi!';
+  };
+
+  r.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    document.getElementById('msg-input').value = final || interim;
+    if (final) {
+      stopListening();
+      setTimeout(sendMsg, 300);
+    }
+  };
+
+  r.onerror = (e) => {
+    stopListening();
+    if (e.error !== 'aborted') {
+      addMsg('bot', '⚠️ Không thể nhận giọng nói: ' + e.error + '. Hãy cho phép truy cập microphone.');
+    }
+  };
+
+  r.onend = () => { stopListening(); };
+  return r;
+}
+
+function stopListening() {
+  isListening = false;
+  document.getElementById('mic-btn').classList.remove('listening');
+  document.getElementById('msg-input').placeholder = 'Hỏi về kho hàng, doanh thu, chiến lược kinh doanh...';
+  if (recognition) { try { recognition.stop(); } catch(e) {} }
+}
+
+function toggleMic() {
+  if (isListening) {
+    stopListening();
+    return;
+  }
+  if (!recognition) recognition = initSpeechRecognition();
+  if (!recognition) {
+    addMsg('bot', '⚠️ Trình duyệt của bạn không hỗ trợ nhận giọng nói. Hãy dùng Chrome hoặc Edge.');
+    return;
+  }
+  try { recognition.start(); } catch(e) { stopListening(); }
+}
+
+// ─── VOICE OUTPUT (Text-to-Speech) ────────────────────────────────────────────
+let ttsEnabled = false;
+
+function toggleTTS() {
+  ttsEnabled = !ttsEnabled;
+  const btn = document.getElementById('tts-toggle');
+  btn.classList.toggle('active', ttsEnabled);
+  btn.title = ttsEnabled ? 'Đang đọc phản hồi — nhấn để tắt' : 'Bật đọc phản hồi bằng giọng nói';
+  if (!ttsEnabled && window.speechSynthesis) window.speechSynthesis.cancel();
+  addMsg('bot', ttsEnabled
+    ? '🔊 Đã bật đọc phản hồi bằng giọng nói.'
+    : '🔇 Đã tắt đọc phản hồi bằng giọng nói.');
+}
+
+function speakText(text) {
+  if (!ttsEnabled || !window.speechSynthesis) return;
+  // Strip HTML tags and action tags
+  const clean = text.replace(/<[^>]+>/g, '').replace(/\[ACTION:[^\]]+\]/g, '').trim();
+  if (!clean) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(clean);
+  utter.lang = 'vi-VN';
+  utter.rate = 1.05;
+  utter.pitch = 1;
+
+  // Try to pick a Vietnamese voice if available
+  const voices = window.speechSynthesis.getVoices();
+  const viVoice = voices.find(v => v.lang.startsWith('vi'));
+  if (viVoice) utter.voice = viVoice;
+
+  window.speechSynthesis.speak(utter);
+}
+
+// Load voices async (Chrome requires this)
+if (window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+}
 
 document.getElementById('msg-input').addEventListener('input', function() {
   this.style.height = 'auto';
