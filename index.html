@@ -717,8 +717,7 @@
               💰 Phân tích doanh thu &amp; lợi nhuận<br>
               🔥 Báo cáo sản phẩm bán chạy<br>
               💡 Tư vấn chiến lược kinh doanh<br>
-              👤 Quản lý khách hàng VIP<br><br>
-              Hãy nhập <strong>Groq API key</strong> rồi bắt đầu hỏi tôi nhé!
+              👤 Quản lý khách hàng VIP
             </div>
           </div>
           <div class="msg-meta">Hệ thống · Sẵn sàng</div>
@@ -1189,6 +1188,8 @@ function addVip() {
   const count = parseInt(document.getElementById('vip-count').value) || 1;
   const note  = document.getElementById('vip-note').value.trim();
   if (!name) { alert('Vui lòng nhập tên khách hàng!'); return; }
+  const dup = VIPS.find(v => v.name.toLowerCase() === name.toLowerCase());
+  if (dup) { alert(`⚠️ Khách VIP "${name}" đã tồn tại!\nNếu muốn cập nhật hãy xóa rồi thêm lại.`); return; }
   VIPS.push({ name, phone, count, note });
   VIPS.sort((a, b) => b.count - a.count);
   saveVips();
@@ -1237,6 +1238,8 @@ function addNote(type, title, content_, fromAI) {
     title   = document.getElementById('note-title').value.trim();
     content_ = document.getElementById('note-content').value.trim();
     if (!title) { alert('Vui lòng nhập tiêu đề ghi chú!'); return; }
+    const dup = NOTES.find(n => n.title.toLowerCase() === title.toLowerCase());
+    if (dup) { alert(`⚠️ Ghi chú "${title}" đã tồn tại!\nXóa ghi chú cũ nếu muốn thêm mới.`); return; }
     ['note-title','note-content'].forEach(id => document.getElementById(id).value = '');
   }
   const now = new Date().toLocaleString('vi-VN');
@@ -1433,7 +1436,10 @@ function handleAIActions(reply) {
     const type    = (parts[0]||'other').trim();
     const title   = (parts[1]||'Ghi chú').trim();
     const content_ = (parts[2]||'').trim();
-    addNote(type, title, content_, true);
+    // Bỏ qua nếu trùng tiêu đề
+    if (!NOTES.find(n => n.title.toLowerCase() === title.toLowerCase())) {
+      addNote(type, title, content_, true);
+    }
     cleanReply = cleanReply.replace(match[0], '');
   });
 
@@ -1445,7 +1451,8 @@ function handleAIActions(reply) {
     const phone = (parts[1] || '').trim();
     const count = parseInt(parts[2]) || 1;
     const note  = (parts[3] || '').trim();
-    if (name) {
+    // Bỏ qua nếu trùng tên
+    if (name && !VIPS.find(v => v.name.toLowerCase() === name.toLowerCase())) {
       VIPS.push({ name, phone, count, note });
       VIPS.sort((a, b) => b.count - a.count);
       saveVips();
@@ -1473,25 +1480,26 @@ function handleAIActions(reply) {
     cleanReply = cleanReply.replace(match[0], '');
   });
 
-  if (reply.includes('[ACTION:DELETE_ALL]') && PERMS.delAll) {
-    PRODUCTS = []; VIPS = [];
+  // Xử lý xóa — ưu tiên DELETE_ALL trước
+  if (cleanReply.includes('[ACTION:DELETE_ALL]') && PERMS.delAll) {
+    PRODUCTS = []; VIPS = []; NOTES = []; history = [];
     localStorage.removeItem(SK_PRODUCTS);
     localStorage.removeItem(SK_VIPS);
-    buildInventory(); buildVipList(); updateStats();
+    localStorage.removeItem(SK_NOTES);
+    localStorage.removeItem(SK_HISTORY);
+    buildInventory(); buildVipList(); buildNotesList(); updateStats();
+    document.getElementById('messages').innerHTML = '';
     cleanReply = cleanReply.replace('[ACTION:DELETE_ALL]', '');
-    actioned = true;
-  } else if (reply.includes('[ACTION:DELETE_INVENTORY]') && PERMS.delInventory) {
+  } else if (cleanReply.includes('[ACTION:DELETE_INVENTORY]') && PERMS.delInventory) {
     PRODUCTS = [];
     localStorage.removeItem(SK_PRODUCTS);
     buildInventory(); updateStats();
     cleanReply = cleanReply.replace('[ACTION:DELETE_INVENTORY]', '');
-    actioned = true;
-  } else if (reply.includes('[ACTION:DELETE_VIPS]') && PERMS.delVip) {
+  } else if (cleanReply.includes('[ACTION:DELETE_VIPS]') && PERMS.delVip) {
     VIPS = [];
     localStorage.removeItem(SK_VIPS);
     buildVipList(); updateStats();
     cleanReply = cleanReply.replace('[ACTION:DELETE_VIPS]', '');
-    actioned = true;
   }
 
   return cleanReply.trim();
