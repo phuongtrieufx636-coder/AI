@@ -1501,12 +1501,14 @@ function toggleMode() {
     btn.className = 'free';
     input.placeholder = 'Hỏi bất cứ điều gì — dịch, code, nấu ăn, kiến thức...';
     quickDiv.innerHTML = `
-      <button class="qbtn" onclick="qsend('Thời tiết hôm nay tại Nha Trang')">🌤️ Thời tiết</button>
+      <button class="qbtn" onclick="qsend('Thời tiết Nha Trang hôm nay?')">🌤️ Thời tiết</button>
       <button class="qbtn" onclick="qsend('Giá vàng hôm nay bao nhiêu?')">🥇 Giá vàng</button>
-      <button class="qbtn" onclick="qsend('Tin tức công nghệ mới nhất')">📱 Tin tức</button>
-      <button class="qbtn" onclick="qsend('Dịch sang tiếng Anh: Chào buổi sáng')">🌍 Dịch</button>
-      <button class="qbtn" onclick="qsend('Viết caption Instagram bán điện thoại')">✍️ Caption</button>
-      <button class="qbtn" onclick="qsend('Công thức nấu phở bò')">🍜 Nấu ăn</button>`;
+      <button class="qbtn" onclick="qsend('1 USD bằng bao nhiêu VND?')">💱 Tỷ giá</button>
+      <button class="qbtn" onclick="qsend('Bitcoin hôm nay giá bao nhiêu?')">🪙 Crypto</button>
+      <button class="qbtn" onclick="qsend('Dịch sang tiếng Anh: Xin chào')">🌍 Dịch</button>
+      <button class="qbtn" onclick="qsend('Viết caption Instagram hay')">✍️ Caption</button>
+      <button class="qbtn" onclick="qsend('Công thức nấu phở bò')">🍜 Nấu ăn</button>
+      <button class="qbtn" onclick="qsend('Giải thích AI là gì?')">🤖 Kiến thức</button>`;
     addMsg('bot', '🌐 Đã chuyển sang <strong>Chế độ Tự do</strong> — Tôi có thể trả lời mọi câu hỏi và <strong>tìm kiếm thông tin trực tiếp từ internet</strong> khi cần! Hỏi thời tiết, tin tức, giá vàng, review sản phẩm... đều được nhé.');
   } else {
     btn.textContent = '🏪 Cửa hàng';
@@ -1547,13 +1549,25 @@ function buildStoreContext() {
     : '';
 
   if (FREE_MODE) {
-    return `Bạn là trợ lý AI thông minh, hữu ích, có thể trả lời MỌI câu hỏi bằng tiếng Việt — dịch thuật, lập trình, nấu ăn, kiến thức tổng quát, sáng tạo nội dung, toán học, khoa học, v.v.
+    return `Bạn là trợ lý AI thông minh, hữu ích, có thể trả lời MỌI câu hỏi bằng tiếng Việt một cách chính xác và thân thiện.
 
-Ngoài ra bạn cũng biết thông tin cửa hàng điện thoại "PhoneStore VN" tại Nha Trang của người dùng:
+Khả năng của bạn:
+- Kiến thức tổng quát: khoa học, lịch sử, địa lý, toán học, vật lý, hóa học, sinh học
+- Lập trình: Python, JavaScript, C++, Java, SQL, HTML/CSS và nhiều ngôn ngữ khác
+- Ngôn ngữ: dịch thuật, ngữ pháp, học tiếng Anh và các ngôn ngữ khác
+- Sáng tạo: viết văn, thơ, caption, email, bài đăng mạng xã hội
+- Ẩm thực: công thức nấu ăn, nguyên liệu, cách làm
+- Tư vấn: sức khỏe cơ bản, học tập, nghề nghiệp, kinh doanh
+- Dữ liệu thực tế: thời tiết, giá vàng, tỷ giá, crypto (khi được cung cấp data từ internet)
+- Thông tin cửa hàng: bạn vẫn biết dữ liệu PhoneStore VN khi cần
+
+Ngoài ra bạn cũng biết thông tin cửa hàng điện thoại "PhoneStore VN" tại Nha Trang:
 KHO HÀNG: ${invLines}
 KHÁCH VIP: ${vipLines}
 
-Trả lời ngắn gọn, rõ ràng, thân thiện bằng tiếng Việt. Nếu câu hỏi liên quan đến cửa hàng, vẫn dùng được các action tag sau:
+Phong cách trả lời: Tiếng Việt tự nhiên, thân thiện, ngắn gọn, rõ ràng, dùng emoji vừa phải. Khi có dữ liệu thực tế từ internet, hãy trình bày gọn gàng và chính xác.
+
+Khi câu hỏi liên quan đến cửa hàng, vẫn dùng được các action tag:
 [ACTION:ADD_NOTE|loại|tiêu_đề|nội_dung]
 [ACTION:ADD_VIP|tên|sdt|số_lần_mua|ghi_chú]
 [ACTION:ADD_PRODUCT|tên|icon|giá|tồn_kho|tối_đa]
@@ -1746,158 +1760,116 @@ function handleAIActions(reply) {
   return cleanReply.trim();
 }
 
-// ─── WEB DATA — các API thực sự hỗ trợ CORS ──────────────────────────────────
+// ─── WEB DATA — CORS-friendly APIs ───────────────────────────────────────────
 
 function detectQueryType(text) {
   const t = text.toLowerCase();
-  if (/thời tiết|nhiệt độ|mưa|nắng|weather|°c|độ c/.test(t)) return 'weather';
-  if (/giá vàng|gold price|vàng sjc|vàng 9999/.test(t)) return 'gold';
-  if (/tỷ giá|usd|đô la|euro|eur|gbp|jpy|exchange rate/.test(t)) return 'forex';
-  if (/bitcoin|btc|eth|crypto|coin|usdt/.test(t)) return 'crypto';
-  if (/tin tức|news|mới nhất|hôm nay|sự kiện/.test(t)) return 'news';
-  if (/wikipedia|là gì|lịch sử|khái niệm|định nghĩa/.test(t)) return 'wiki';
+  if (/thời tiết|nhiệt độ|mưa|nắng|weather/.test(t)) return 'weather';
+  if (/giá vàng|vàng sjc|vàng 9999|gold/.test(t)) return 'gold';
+  if (/tỷ giá|usd|đô la|euro|eur|gbp|jpy|exchange/.test(t)) return 'forex';
+  if (/bitcoin|btc|ethereum|eth|crypto|coin|usdt/.test(t)) return 'crypto';
+  if (/wikipedia|lịch sử của|là gì|ai là/.test(t)) return 'wiki';
   return 'general';
 }
 
 function needsWebSearch(text) {
-  const lower = text.toLowerCase();
-  const noSearch = [
-    'dịch','translate','viết','code','tính','công thức','caption',
-    'tồn kho','doanh thu','khách vip','sản phẩm','kho hàng','ghi chú',
-    'nấu','món','thêm','xóa','tóm tắt'
-  ];
-  if (noSearch.some(k => lower.includes(k))) return false;
-  const yesSearch = [
-    'thời tiết','nhiệt độ','mưa','nắng',
-    'giá vàng','tỷ giá','bitcoin','crypto','btc','eth','usdt',
-    'tin tức','mới nhất','hôm nay','hiện tại','bây giờ',
-    'là gì','lịch sử','ai là','kết quả','review','đánh giá',
-    'năm nay','tháng này','ra mắt','phiên bản','update'
-  ];
-  return yesSearch.some(k => lower.includes(k));
+  const s = text.toLowerCase();
+  const skip = ['dịch','code','viết','tính','công thức','nấu','tồn kho','doanh thu','khách vip','kho hàng','ghi chú','thêm','xóa','tóm tắt','caption'];
+  if (skip.some(k => s.includes(k))) return false;
+  const hit = ['thời tiết','nhiệt độ','giá vàng','tỷ giá','bitcoin','crypto','eth','btc','usd','eur','tin tức','mới nhất','hôm nay','hiện tại','bây giờ','giá','lịch sử của','là gì','ai là'];
+  return hit.some(k => s.includes(k));
 }
 
-// Lấy tên thành phố từ câu hỏi
 function extractCity(text) {
-  const cities = {
+  const map = {
     'nha trang':'Nha Trang','hà nội':'Hanoi','hồ chí minh':'Ho Chi Minh City',
-    'tp.hcm':'Ho Chi Minh City','tphcm':'Ho Chi Minh City','sài gòn':'Ho Chi Minh City',
-    'đà nẵng':'Da Nang','cần thơ':'Can Tho','huế':'Hue','hải phòng':'Hai Phong',
-    'vũng tàu':'Vung Tau','đà lạt':'Da Lat','quy nhơn':'Quy Nhon',
+    'tphcm':'Ho Chi Minh City','tp.hcm':'Ho Chi Minh City','sài gòn':'Ho Chi Minh City',
+    'đà nẵng':'Da Nang','đà lạt':'Da Lat','cần thơ':'Can Tho','huế':'Hue',
+    'hải phòng':'Hai Phong','vũng tàu':'Vung Tau','quy nhơn':'Quy Nhon',
     'buôn ma thuột':'Buon Ma Thuot','vinh':'Vinh','bình dương':'Binh Duong'
   };
-  const t = text.toLowerCase();
-  for (const [vi, en] of Object.entries(cities)) {
-    if (t.includes(vi)) return en;
-  }
-  return 'Nha Trang'; // default
+  const s = text.toLowerCase();
+  for (const [vi, en] of Object.entries(map)) if (s.includes(vi)) return en;
+  return 'Nha Trang';
 }
 
 async function fetchWeather(city) {
-  // wttr.in hỗ trợ CORS hoàn toàn, trả JSON rõ ràng
-  const url = `https://wttr.in/${encodeURIComponent(city)}?format=j1`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('weather fail');
-  const d = await res.json();
-  const cur = d.current_condition[0];
-  const area = d.nearest_area[0];
-  const areaName = area.areaName[0].value;
-  const country = area.country[0].value;
-  const tempC = cur.temp_C;
-  const feels = cur.FeelsLikeC;
-  const humid = cur.humidity;
-  const desc = cur.lang_vi ? cur.lang_vi[0].value : cur.weatherDesc[0].value;
-  const wind = cur.windspeedKmph;
-  const today = d.weather[0];
-  const maxT = today.maxtempC;
-  const minT = today.mintempC;
-  const rain = today.hourly.reduce((a,h) => a + parseFloat(h.precipMM||0), 0).toFixed(1);
-  return `Thời tiết tại ${areaName}, ${country} (dữ liệu thực tế wttr.in):
-- Hiện tại: ${tempC}°C (cảm giác như ${feels}°C), ${desc}
-- Cao/thấp hôm nay: ${maxT}°C / ${minT}°C
-- Độ ẩm: ${humid}%, Gió: ${wind} km/h
-- Lượng mưa hôm nay: ${rain} mm`;
+  const r = await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=j1`);
+  if (!r.ok) throw new Error('fail');
+  const d = await r.json();
+  const c = d.current_condition[0];
+  const a = d.nearest_area[0];
+  const name = a.areaName[0].value;
+  const desc = (c.lang_vi && c.lang_vi[0]) ? c.lang_vi[0].value : c.weatherDesc[0].value;
+  const t0 = d.weather[0];
+  const rain = t0.hourly.reduce((s,h) => s + parseFloat(h.precipMM||0), 0).toFixed(1);
+  return `Thời tiết tại ${name} (wttr.in - thực tế):
+- Hiện tại: ${c.temp_C}°C — ${desc}
+- Cảm giác như: ${c.FeelsLikeC}°C
+- Cao/thấp: ${t0.maxtempC}°C / ${t0.mintempC}°C
+- Độ ẩm: ${c.humidity}% · Gió: ${c.windspeedKmph} km/h · Mưa: ${rain} mm`;
 }
 
 async function fetchGold() {
-  // metals-api free tier (no key needed for XAU/USD)
-  // Dùng exchangerate-api public endpoint thay thế
-  const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-  if (!res.ok) throw new Error('fail');
-  const d = await res.json();
-  const vndPerUsd = d.rates.VND || 25400;
-  // Giá vàng thế giới xấp xỉ (troy oz) — dùng Open API
-  const goldRes = await fetch('https://api.metals.live/v1/spot/gold');
-  let goldUsd = 3300; // fallback ước tính
-  if (goldRes.ok) {
-    const gd = await goldRes.json();
-    goldUsd = gd[0]?.price || goldUsd;
-  }
-  const goldVndPerOz = Math.round(goldUsd * vndPerUsd);
-  const goldVndPerChi = Math.round(goldVndPerOz / 32.15 * 3.75); // 1 chỉ = 3.75g, 1 oz=31.1g → ≈ chỉ
-  const goldVndPerLuong = goldVndPerChi * 10;
+  let goldUsd = 3350;
+  try {
+    const r2 = await fetch('https://api.metals.live/v1/spot/gold');
+    if (r2.ok) { const g = await r2.json(); goldUsd = g[0]?.price || goldUsd; }
+  } catch(e) {}
+  const r = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+  const vnd = r.ok ? (await r.json()).rates.VND : 25400;
+  const perLuong = Math.round(goldUsd * vnd / 32.1507 * 37.5);
   return `Giá vàng thế giới (thời gian thực):
-- Vàng thế giới: ~$${goldUsd.toLocaleString()}/oz (troy ounce)
-- Tỷ giá USD/VND: ~${vndPerUsd.toLocaleString()}đ
-- Quy đổi tham khảo: ~${goldVndPerLuong.toLocaleString()}đ/lượng
-(Giá SJC trong nước có thể chênh lệch do phí gia công. Kiểm tra sjc.com.vn để biết giá chính xác nhất.)`;
+- Vàng thế giới: $${goldUsd.toLocaleString()}/oz
+- Tỷ giá USD/VND: ~${Math.round(vnd).toLocaleString()}đ
+- Quy đổi tham khảo: ~${perLuong.toLocaleString()}đ/lượng
+(Giá SJC thực tế xem tại sjc.com.vn)`;
 }
 
-async function fetchForex(text) {
-  const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-  if (!res.ok) throw new Error('fail');
-  const d = await res.json();
-  const vnd = d.rates.VND;
-  const eur = d.rates.EUR;
-  const gbp = d.rates.GBP;
-  const jpy = d.rates.JPY;
-  const cny = d.rates.CNY;
-  const thb = d.rates.THB;
-  return `Tỷ giá ngoại tệ (nguồn: exchangerate-api):
-- 1 USD = ${Math.round(vnd).toLocaleString()} VND
-- 1 EUR = ${Math.round(vnd/eur).toLocaleString()} VND
-- 1 GBP = ${Math.round(vnd/gbp).toLocaleString()} VND
-- 1 CNY = ${Math.round(vnd/cny).toLocaleString()} VND
-- 1 THB = ${Math.round(vnd/thb).toLocaleString()} VND
-- 100 JPY = ${Math.round(vnd/jpy*100).toLocaleString()} VND
-(Tỷ giá tham khảo, cập nhật hàng ngày)`;
+async function fetchForex() {
+  const r = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+  if (!r.ok) throw new Error('fail');
+  const v = (await r.json()).rates;
+  return `Tỷ giá ngoại tệ (exchangerate-api, cập nhật hàng ngày):
+- 1 USD = ${Math.round(v.VND).toLocaleString()} VND
+- 1 EUR = ${Math.round(v.VND/v.EUR).toLocaleString()} VND
+- 1 GBP = ${Math.round(v.VND/v.GBP).toLocaleString()} VND
+- 1 CNY = ${Math.round(v.VND/v.CNY).toLocaleString()} VND
+- 1 THB = ${Math.round(v.VND/v.THB).toLocaleString()} VND
+- 100 JPY = ${Math.round(v.VND/v.JPY*100).toLocaleString()} VND`;
 }
 
 async function fetchCrypto(text) {
   const coins = [];
-  if (/bitcoin|btc/.test(text.toLowerCase())) coins.push('bitcoin');
-  if (/ethereum|eth/.test(text.toLowerCase())) coins.push('ethereum');
-  if (/usdt|tether/.test(text.toLowerCase())) coins.push('tether');
+  const s = text.toLowerCase();
+  if (/bitcoin|btc/.test(s)) coins.push('bitcoin');
+  if (/ethereum|eth/.test(s)) coins.push('ethereum');
+  if (/usdt|tether/.test(s)) coins.push('tether');
+  if (/bnb/.test(s)) coins.push('binancecoin');
   if (coins.length === 0) coins.push('bitcoin','ethereum');
-  const ids = coins.join(',');
-  const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd,vnd&include_24hr_change=true`);
-  if (!res.ok) throw new Error('fail');
-  const d = await res.json();
+  const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coins.join(',')}&vs_currencies=usd,vnd&include_24hr_change=true`);
+  if (!r.ok) throw new Error('fail');
+  const d = await r.json();
   const lines = Object.entries(d).map(([coin, val]) => {
-    const change = val.usd_24h_change ? ` (${val.usd_24h_change > 0 ? '+' : ''}${val.usd_24h_change.toFixed(2)}% 24h)` : '';
-    return `- ${coin.charAt(0).toUpperCase()+coin.slice(1)}: $${val.usd?.toLocaleString()} ≈ ${val.vnd?.toLocaleString()}đ${change}`;
+    const ch = val.usd_24h_change;
+    const arr = ch > 0 ? '↑' : '↓';
+    const chStr = ch ? ` ${arr}${Math.abs(ch).toFixed(2)}% (24h)` : '';
+    return `- ${coin.charAt(0).toUpperCase()+coin.slice(1)}: $${(val.usd||0).toLocaleString()} ≈ ${(val.vnd||0).toLocaleString()}đ${chStr}`;
   });
-  return `Giá Crypto (nguồn: CoinGecko, thời gian thực):\n${lines.join('\n')}`;
+  return `Giá Crypto (CoinGecko, thời gian thực):\n${lines.join('\n')}`;
 }
 
 async function fetchWiki(text) {
-  // Thử tiếng Việt trước, fallback tiếng Anh
-  const q = text.replace(/wikipedia|là gì|lịch sử|khái niệm|\?/gi,'').trim();
-  const wikiQ = encodeURIComponent(q);
-  const res = await fetch(`https://vi.wikipedia.org/api/rest_v1/page/summary/${wikiQ}`);
-  if (res.ok) {
-    const d = await res.json();
-    if (d.extract && d.extract.length > 100) {
-      return `[Wikipedia tiếng Việt — ${d.title}]\n${d.extract.slice(0,700)}`;
-    }
+  const q = encodeURIComponent(text.replace(/wikipedia|là gì|lịch sử của|khái niệm|\?/gi,'').trim());
+  const r = await fetch(`https://vi.wikipedia.org/api/rest_v1/page/summary/${q}`);
+  if (r.ok) {
+    const d = await r.json();
+    if (d.extract && d.extract.length > 100) return `[Wikipedia VI — ${d.title}]\n${d.extract.slice(0,700)}`;
   }
-  // Fallback tiếng Anh
-  const resEn = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${wikiQ}`);
-  if (resEn.ok) {
-    const d = await resEn.json();
-    if (d.extract && d.extract.length > 100) {
-      return `[Wikipedia — ${d.title}]\n${d.extract.slice(0,700)}\n(Tóm tắt tiếng Anh, dịch và giải thích bằng tiếng Việt)`;
-    }
+  const r2 = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${q}`);
+  if (r2.ok) {
+    const d = await r2.json();
+    if (d.extract && d.extract.length > 100) return `[Wikipedia EN — ${d.title}]\n${d.extract.slice(0,700)}\n(Dịch và giải thích bằng tiếng Việt)`;
   }
   return null;
 }
@@ -1905,23 +1877,16 @@ async function fetchWiki(text) {
 async function webSearch(query) {
   const type = detectQueryType(query);
   try {
-    if (type === 'weather') {
-      const city = extractCity(query);
-      return await fetchWeather(city);
-    }
-    if (type === 'gold') return await fetchGold();
-    if (type === 'forex') return await fetchForex(query);
-    if (type === 'crypto') return await fetchCrypto(query);
-    if (type === 'wiki') return await fetchWiki(query);
-
-    // General: thử Wikipedia trước
-    const wikiResult = await fetchWiki(query);
-    if (wikiResult) return wikiResult;
-
+    if (type === 'weather') return await fetchWeather(extractCity(query));
+    if (type === 'gold')    return await fetchGold();
+    if (type === 'forex')   return await fetchForex();
+    if (type === 'crypto')  return await fetchCrypto(query);
+    if (type === 'wiki')    return await fetchWiki(query);
+    return await fetchWiki(query); // general fallback
   } catch(e) {
     console.warn('webSearch error:', type, e);
+    return null;
   }
-  return null;
 }
 
 async function sendMsg() {
