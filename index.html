@@ -1501,13 +1501,13 @@ function toggleMode() {
     btn.className = 'free';
     input.placeholder = 'Hỏi bất cứ điều gì — dịch, code, nấu ăn, kiến thức...';
     quickDiv.innerHTML = `
+      <button class="qbtn" onclick="qsend('Thời tiết hôm nay tại Nha Trang')">🌤️ Thời tiết</button>
+      <button class="qbtn" onclick="qsend('Giá vàng hôm nay bao nhiêu?')">🥇 Giá vàng</button>
+      <button class="qbtn" onclick="qsend('Tin tức công nghệ mới nhất')">📱 Tin tức</button>
       <button class="qbtn" onclick="qsend('Dịch sang tiếng Anh: Chào buổi sáng')">🌍 Dịch</button>
-      <button class="qbtn" onclick="qsend('Viết hàm Python tính giai thừa')">💻 Code</button>
-      <button class="qbtn" onclick="qsend('Công thức nấu phở bò')">🍜 Nấu ăn</button>
-      <button class="qbtn" onclick="qsend('Giải thích AI là gì ngắn gọn')">🤖 Kiến thức</button>
       <button class="qbtn" onclick="qsend('Viết caption Instagram bán điện thoại')">✍️ Caption</button>
-      <button class="qbtn" onclick="qsend('Tóm tắt: [dán văn bản vào đây]')">📄 Tóm tắt</button>`;
-    addMsg('bot', '🌐 Đã chuyển sang <strong>Chế độ Tự do</strong> — Tôi có thể trả lời mọi câu hỏi! Vẫn nhớ dữ liệu cửa hàng của bạn nhé.');
+      <button class="qbtn" onclick="qsend('Công thức nấu phở bò')">🍜 Nấu ăn</button>`;
+    addMsg('bot', '🌐 Đã chuyển sang <strong>Chế độ Tự do</strong> — Tôi có thể trả lời mọi câu hỏi và <strong>tìm kiếm thông tin trực tiếp từ internet</strong> khi cần! Hỏi thời tiết, tin tức, giá vàng, review sản phẩm... đều được nhé.');
   } else {
     btn.textContent = '🏪 Cửa hàng';
     btn.className = 'store';
@@ -1746,6 +1746,61 @@ function handleAIActions(reply) {
   return cleanReply.trim();
 }
 
+// ─── WEB SEARCH (DuckDuckGo instant + scrape snippet) ─────────────────────────
+function needsWebSearch(text) {
+  const lower = text.toLowerCase();
+  // Không cần search những câu đơn giản / cửa hàng / sáng tạo
+  const noSearch = [
+    'dịch','translate','viết','code','tính','công thức','caption',
+    'tồn kho','doanh thu','khách vip','sản phẩm','kho hàng','ghi chú',
+    'nấu','món','thêm','xóa','tóm tắt','giải thích đơn giản','là gì một cách đơn giản'
+  ];
+  if (noSearch.some(k => lower.includes(k))) return false;
+  // Cần search khi hỏi thực tế / tin tức / giá cả / thời tiết / v.v.
+  const yesSearch = [
+    'thời tiết','thời tiết hôm nay','hôm nay','tin tức','mới nhất','hiện tại',
+    'giá','bao nhiêu tiền','tỷ giá','giá vàng','chứng khoán','crypto','bitcoin',
+    'kết quả','điểm','lịch','ra mắt','review','đánh giá','so sánh',
+    'năm nay','tháng này','tuần này','vừa','mới ra','update','phiên bản',
+    'ai là','ai đang','hiện','lúc này','ngay bây giờ','event','sự kiện'
+  ];
+  return yesSearch.some(k => lower.includes(k));
+}
+
+async function webSearch(query) {
+  // Dùng DuckDuckGo Instant Answer API (không cần key, CORS ok qua proxy)
+  // Fallback: dùng Brave search public endpoint hoặc Wikipedia summary
+  try {
+    // Thử Wikipedia summary trước nếu có thể
+    const wikiQ = encodeURIComponent(query.replace(/\?/g,'').trim());
+    const wRes = await fetch(`https://vi.wikipedia.org/api/rest_v1/page/summary/${wikiQ}`);
+    if (wRes.ok) {
+      const wData = await wRes.json();
+      if (wData.extract && wData.extract.length > 80) {
+        return `[Wikipedia - ${wData.title}]\n${wData.extract.slice(0,600)}`;
+      }
+    }
+  } catch(e) {}
+
+  try {
+    // DuckDuckGo Instant API
+    const ddQ = encodeURIComponent(query);
+    const ddRes = await fetch(`https://api.duckduckgo.com/?q=${ddQ}&format=json&no_redirect=1&no_html=1&skip_disambig=1`);
+    if (ddRes.ok) {
+      const dd = await ddRes.json();
+      let snippets = [];
+      if (dd.AbstractText) snippets.push(dd.AbstractText);
+      if (dd.Answer) snippets.push('Đáp án nhanh: ' + dd.Answer);
+      if (dd.RelatedTopics && dd.RelatedTopics.length > 0) {
+        dd.RelatedTopics.slice(0,3).forEach(t => { if (t.Text) snippets.push(t.Text); });
+      }
+      if (snippets.length > 0) return '[DuckDuckGo]\n' + snippets.join('\n').slice(0,600);
+    }
+  } catch(e) {}
+
+  return null; // Không tìm được gì
+}
+
 async function sendMsg() {
   const input = document.getElementById('msg-input');
   const text = input.value.trim();
@@ -1765,16 +1820,28 @@ async function sendMsg() {
   btn.disabled = true;
   showTyping();
 
+  // Chế độ tự do + câu hỏi cần tìm web → search trước
+  let webContext = '';
+  if (FREE_MODE && needsWebSearch(text)) {
+    try {
+      const result = await webSearch(text);
+      if (result) {
+        webContext = `\n\n[DỮ LIỆU TÌM ĐƯỢC TỪ INTERNET]:\n${result}\n[HẾT DỮ LIỆU WEB]\nHãy dựa vào dữ liệu trên để trả lời câu hỏi của người dùng một cách chính xác, ngắn gọn bằng tiếng Việt.`;
+      }
+    } catch(e) {}
+  }
+
   try {
+    const systemPrompt = buildStoreContext() + webContext;
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + groqKey },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        max_tokens: 700,
+        max_tokens: 800,
         temperature: 0.7,
         messages: [
-          { role: 'system', content: buildStoreContext() },
+          { role: 'system', content: systemPrompt },
           ...history
         ]
       })
@@ -1788,7 +1855,9 @@ async function sendMsg() {
       reply = handleAIActions(reply);
       history.push({role:'assistant', content: reply});
       localStorage.setItem(SK_HISTORY, JSON.stringify(history));
-      addMsg('bot', reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
+      // Thêm badge 🌐 nếu có dùng web search
+      const prefix = (FREE_MODE && webContext) ? '<span style="font-size:10px;color:var(--accent);opacity:0.7;">🌐 Từ internet · </span>' : '';
+      addMsg('bot', prefix + reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
       speakText(reply);
     }
   } catch(e) {
