@@ -494,122 +494,27 @@
   }
   .note-del-btn:hover { background: rgba(240,82,82,0.25); }
 
-  /* XIAOZHI TAB */
-  #tab-xiaozhi { overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
-  .xz-status-card {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px 20px;
-    display: flex; align-items: center; gap: 16px;
+  /* DATA IMPORT/EXPORT */
+  .export-btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .btn-export {
+    flex: 1; min-width: 140px; padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    background: var(--accent-dim); color: var(--accent);
+    border: 1px solid rgba(79,142,247,0.3);
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: background 0.15s; text-align: center;
   }
-  .xz-logo {
-    width: 52px; height: 52px; border-radius: var(--radius);
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 26px; flex-shrink: 0;
+  .btn-export:hover { background: rgba(79,142,247,0.22); }
+  .btn-import {
+    flex: 1; min-width: 140px; padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    background: var(--green-dim); color: var(--green);
+    border: 1px solid rgba(52,200,122,0.3);
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: background 0.15s; text-align: center;
   }
-  .xz-status-info { flex: 1; }
-  .xz-status-name { font-size: 15px; font-weight: 700; color: var(--text); }
-  .xz-status-desc { font-size: 12px; color: var(--text3); margin-top: 2px; }
-  .xz-status-dot {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: var(--text3); flex-shrink: 0;
-    transition: background 0.3s;
-  }
-  .xz-status-dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); }
-  .xz-status-dot.connecting { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: pulse 1s infinite; }
-  .xz-status-dot.error { background: var(--red); box-shadow: 0 0 8px var(--red); }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-  .xz-config { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
-  .xz-config h4 { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
-  .xz-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
-  .xz-field label { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-  .xz-field input, .xz-field select {
-    background: var(--bg3); border: 1px solid var(--border2);
-    color: var(--text); border-radius: var(--radius-sm);
-    padding: 8px 12px; font-size: 13px; font-family: inherit; outline: none;
-    transition: border-color 0.15s;
-  }
-  .xz-field input:focus, .xz-field select:focus { border-color: var(--accent); }
-  .xz-field input::placeholder { color: var(--text3); }
-  .xz-btn-row { display: flex; gap: 8px; margin-top: 4px; }
-  .btn-xz-connect {
-    flex: 1; padding: 9px 0; border-radius: var(--radius-sm);
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
-    color: #fff; border: none; font-size: 13px; font-weight: 700;
-    cursor: pointer; font-family: inherit; transition: opacity 0.15s;
-  }
-  .btn-xz-connect:hover { opacity: 0.88; }
-  .btn-xz-connect:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-xz-disconnect {
-    flex: 1; padding: 9px 0; border-radius: var(--radius-sm);
-    background: var(--red-dim); color: var(--red);
-    border: 1px solid rgba(240,82,82,0.3); font-size: 13px; font-weight: 700;
-    cursor: pointer; font-family: inherit; transition: background 0.15s;
-  }
-  .btn-xz-disconnect:hover { background: rgba(240,82,82,0.25); }
-
-  .xz-messages {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 0;
-    display: flex; flex-direction: column;
-    min-height: 220px; max-height: 340px; overflow: hidden;
-  }
-  .xz-msg-header {
-    padding: 10px 16px; border-bottom: 1px solid var(--border);
-    font-size: 11px; font-weight: 700; color: var(--text3);
-    text-transform: uppercase; letter-spacing: 0.06em;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .xz-msg-body {
-    flex: 1; overflow-y: auto; padding: 12px 16px;
-    display: flex; flex-direction: column; gap: 8px;
-    scrollbar-width: thin; scrollbar-color: var(--bg3) transparent;
-  }
-  .xz-msg-body::-webkit-scrollbar { width: 4px; }
-  .xz-msg-body::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
-  .xz-log {
-    font-size: 12px; line-height: 1.5;
-    padding: 6px 10px; border-radius: var(--radius-sm);
-  }
-  .xz-log.incoming { background: var(--bg3); color: var(--text); border-left: 2px solid var(--purple); }
-  .xz-log.outgoing { background: var(--accent-dim); color: var(--accent); border-left: 2px solid var(--accent); align-self: flex-end; }
-  .xz-log.system   { color: var(--text3); font-style: italic; font-size: 11px; }
-  .xz-log.error-log { color: var(--red); border-left: 2px solid var(--red); }
-  .xz-log-time { font-size: 10px; color: var(--text3); margin-top: 2px; }
-
-  .xz-send-row {
-    display: flex; gap: 8px; align-items: flex-end;
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 10px 12px;
-  }
-  .xz-send-row textarea {
-    flex: 1; resize: none; background: var(--bg3);
-    border: 1px solid var(--border2); color: var(--text);
-    border-radius: var(--radius-sm); padding: 8px 12px;
-    font-size: 13px; font-family: inherit; line-height: 1.5;
-    outline: none; max-height: 100px; transition: border-color 0.15s;
-  }
-  .xz-send-row textarea:focus { border-color: var(--purple); }
-  .xz-send-row textarea::placeholder { color: var(--text3); }
-  .btn-xz-send {
-    width: 38px; height: 38px; border-radius: var(--radius-sm);
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
-    border: none; cursor: pointer; display: flex;
-    align-items: center; justify-content: center;
-    flex-shrink: 0; transition: opacity 0.15s;
-  }
-  .btn-xz-send:hover { opacity: 0.85; }
-  .btn-xz-send:disabled { opacity: 0.35; cursor: not-allowed; }
-  .btn-xz-send svg { width: 17px; height: 17px; fill: #fff; }
-
-  .xz-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .xz-info-card {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 12px 14px;
-  }
-  .xz-info-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; font-weight: 600; }
-  .xz-info-val { font-size: 13px; font-weight: 600; color: var(--text); }
+  .btn-import:hover { background: rgba(52,200,122,0.22); }
+  #import-file { display: none; }
 
   /* ── MOBILE RESPONSIVE ─────────────────────────────────────── */
   @media (max-width: 700px) {
@@ -770,10 +675,6 @@
       <button class="nav-btn" onclick="switchTab('stats')" id="nav-stats">
         <span class="ni">📊</span> Thống kê
       </button>
-      <button class="nav-btn" onclick="switchTab('xiaozhi')" id="nav-xiaozhi">
-        <span class="ni">🤖</span> Xiaozhi Bot
-        <span class="nav-badge" id="xz-badge" style="display:none">●</span>
-      </button>
       <button class="nav-btn" onclick="switchTab('settings')" id="nav-settings">
         <span class="ni">⚙️</span> Cài đặt
       </button>
@@ -785,13 +686,6 @@
         <div class="model-info">
           <div class="model-name">llama-3.3-70b</div>
           <div class="model-sub">Groq · Tốc độ cao</div>
-        </div>
-      </div>
-      <div class="model-chip" id="model-chip-xz" style="margin-top:8px; background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.2);">
-        <div class="model-dot" id="xz-sidebar-dot" style="background:var(--text3);"></div>
-        <div class="model-info">
-          <div class="model-name" style="color:#a78bfa;">Xiaozhi</div>
-          <div class="model-sub" id="xz-sidebar-sub">Chưa kết nối</div>
         </div>
       </div>
     </div>
@@ -943,93 +837,6 @@
       </div>
     </div>
 
-    <!-- XIAOZHI TAB -->
-    <div class="tab hidden" id="tab-xiaozhi">
-      <div style="padding:20px 22px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:14px;">
-
-        <!-- Status Card -->
-        <div class="xz-status-card">
-          <div class="xz-logo">🤖</div>
-          <div class="xz-status-info">
-            <div class="xz-status-name">Xiaozhi Chatbot</div>
-            <div class="xz-status-desc" id="xz-status-text">Chưa kết nối — Nhập URL WebSocket để bắt đầu</div>
-          </div>
-          <div class="xz-status-dot" id="xz-dot"></div>
-        </div>
-
-        <!-- Info Grid -->
-        <div class="xz-info-grid">
-          <div class="xz-info-card">
-            <div class="xz-info-label">Trạng thái</div>
-            <div class="xz-info-val" id="xz-state-val">Ngắt kết nối</div>
-          </div>
-          <div class="xz-info-card">
-            <div class="xz-info-label">Tin nhắn đã gửi</div>
-            <div class="xz-info-val" id="xz-sent-count">0</div>
-          </div>
-          <div class="xz-info-card">
-            <div class="xz-info-label">Tin nhắn nhận</div>
-            <div class="xz-info-val" id="xz-recv-count">0</div>
-          </div>
-          <div class="xz-info-card">
-            <div class="xz-info-label">Thời gian kết nối</div>
-            <div class="xz-info-val" id="xz-uptime">—</div>
-          </div>
-        </div>
-
-        <!-- Config -->
-        <div class="xz-config">
-          <h4>⚙️ Cấu hình kết nối Xiaozhi</h4>
-          <div class="xz-field">
-            <label>WebSocket URL</label>
-            <input type="text" id="xz-url" placeholder="ws://192.168.1.x:8080 hoặc wss://your-host/ws" />
-          </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <div class="xz-field">
-              <label>Token / API Key (tuỳ chọn)</label>
-              <input type="password" id="xz-token" placeholder="Để trống nếu không cần" />
-            </div>
-            <div class="xz-field">
-              <label>Device ID (tuỳ chọn)</label>
-              <input type="text" id="xz-device-id" placeholder="vd: phonestore-01" />
-            </div>
-          </div>
-          <div class="xz-field">
-            <label>Tích hợp dữ liệu cửa hàng</label>
-            <select id="xz-inject-mode">
-              <option value="none">Không gửi dữ liệu cửa hàng</option>
-              <option value="hello">Gửi khi kết nối (hello message)</option>
-              <option value="always">Gửi kèm mỗi tin nhắn</option>
-            </select>
-          </div>
-          <div class="xz-btn-row">
-            <button class="btn-xz-connect" id="btn-xz-connect" onclick="xzConnect()">🔌 Kết nối Xiaozhi</button>
-            <button class="btn-xz-disconnect" id="btn-xz-disconnect" onclick="xzDisconnect()" style="display:none;">✕ Ngắt kết nối</button>
-          </div>
-        </div>
-
-        <!-- Message Log -->
-        <div class="xz-messages">
-          <div class="xz-msg-header">
-            <span>📡</span> Nhật ký tin nhắn
-            <button onclick="xzClearLog()" style="margin-left:auto; background:none; border:none; color:var(--text3); font-size:11px; cursor:pointer; font-family:inherit;">Xóa log</button>
-          </div>
-          <div class="xz-msg-body" id="xz-log-body">
-            <div class="xz-log system">Chờ kết nối WebSocket...</div>
-          </div>
-        </div>
-
-        <!-- Send Message -->
-        <div class="xz-send-row">
-          <textarea id="xz-input" rows="1" placeholder="Gửi tin nhắn đến Xiaozhi..." disabled></textarea>
-          <button class="btn-xz-send" id="btn-xz-send" onclick="xzSendMsg()" disabled>
-            <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
-          </button>
-        </div>
-
-      </div>
-    </div>
-
     <!-- SETTINGS TAB -->
     <div class="tab hidden" id="tab-settings" style="padding-bottom:0;">
       <div style="padding:20px 22px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
@@ -1076,6 +883,16 @@
           </div>
         </div>
 
+        <div class="settings-section">
+          <h4>💾 Xuất / Nhập dữ liệu</h4>
+          <div style="font-size:12px; color:var(--text3); margin-bottom:14px;">Sao lưu hoặc khôi phục toàn bộ dữ liệu cửa hàng (kho hàng, khách VIP, ghi chú) dưới dạng file JSON.</div>
+          <input type="file" id="import-file" accept=".json" onchange="importData(event)" />
+          <div class="export-btn-row">
+            <button class="btn-export" onclick="exportData()">📤 Xuất file lưu trữ (.json)</button>
+            <button class="btn-import" onclick="document.getElementById('import-file').click()">📥 Nhập file lưu trữ (.json)</button>
+          </div>
+        </div>
+
         <div class="settings-section danger-zone">
           <h4>🗑️ Vùng nguy hiểm</h4>
           <div style="font-size:12px; color:var(--text3); margin-bottom:14px;">Các thao tác xóa dữ liệu không thể hoàn tác.</div>
@@ -1110,11 +927,6 @@
     <span class="bnav-icon">📝</span>
     <span class="bnav-label">Ghi chú</span>
     <span class="bnav-badge" id="bnav-notes-badge"></span>
-  </button>
-  <button class="bnav-btn" onclick="switchTab('xiaozhi')" id="bnav-xiaozhi">
-    <span class="bnav-icon">🤖</span>
-    <span class="bnav-label">Xiaozhi</span>
-    <span class="bnav-badge" id="bnav-xz-badge"></span>
   </button>
   <button class="bnav-btn" onclick="switchTab('stats')" id="bnav-stats">
     <span class="bnav-icon">📊</span>
@@ -1275,7 +1087,7 @@ function confirmClear(type) {
 
 // ─── NAVIGATION ───────────────────────────────────────────────────────────────
 function switchTab(tab) {
-  ['chat','inventory','vip','notes','stats','settings','xiaozhi'].forEach(t => {
+  ['chat','inventory','vip','notes','stats','settings'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
     document.getElementById('nav-'+t).classList.toggle('active', t === tab);
     const bb = document.getElementById('bnav-'+t);
@@ -1287,8 +1099,7 @@ function switchTab(tab) {
     vip: 'Khách hàng VIP',
     notes: 'Ghi chú & nhật ký',
     stats: 'Thống kê & báo cáo',
-    settings: 'Cài đặt',
-    xiaozhi: 'Xiaozhi Chatbot'
+    settings: 'Cài đặt'
   };
   document.getElementById('tab-title').textContent = titles[tab];
   if (tab === 'stats') updateStats();
@@ -1748,242 +1559,57 @@ document.getElementById('msg-input').addEventListener('input', function() {
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
 
-// ─── XIAOZHI WEBSOCKET ────────────────────────────────────────────────────────
-let xzSocket = null;
-let xzSentCount = 0;
-let xzRecvCount = 0;
-let xzConnectedAt = null;
-let xzUptimeTimer = null;
-
-function xzLog(text, type = 'system') {
-  const body = document.getElementById('xz-log-body');
-  const now = new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-  const div = document.createElement('div');
-  div.className = 'xz-log ' + type;
-  div.innerHTML = `<div>${text}</div><div class="xz-log-time">${now}</div>`;
-  body.appendChild(div);
-  body.scrollTop = body.scrollHeight;
-}
-
-function xzClearLog() {
-  document.getElementById('xz-log-body').innerHTML = '';
-  xzLog('Log đã được xóa.', 'system');
-}
-
-function xzSetStatus(state) {
-  const dot = document.getElementById('xz-dot');
-  const sdot = document.getElementById('xz-sidebar-dot');
-  const statusText = document.getElementById('xz-status-text');
-  const stateVal = document.getElementById('xz-state-val');
-  const subEl = document.getElementById('xz-sidebar-sub');
-  const badge = document.getElementById('xz-badge');
-  const bnavBadge = document.getElementById('bnav-xz-badge');
-  const connectBtn = document.getElementById('btn-xz-connect');
-  const disconnectBtn = document.getElementById('btn-xz-disconnect');
-  const sendBtn = document.getElementById('btn-xz-send');
-  const inputEl = document.getElementById('xz-input');
-
-  dot.className = 'xz-status-dot ' + state;
-  if (state === 'connected') {
-    sdot.style.background = 'var(--green)';
-    sdot.style.boxShadow = '0 0 6px var(--green)';
-    statusText.textContent = 'Đã kết nối — Sẵn sàng nhận/gửi tin nhắn';
-    stateVal.textContent = 'Đã kết nối';
-    stateVal.style.color = 'var(--green)';
-    subEl.textContent = 'Đang hoạt động';
-    badge.style.display = 'block';
-    badge.style.background = 'var(--green)';
-    if (bnavBadge) { bnavBadge.style.display = 'block'; bnavBadge.style.background = 'var(--green)'; }
-    connectBtn.style.display = 'none';
-    disconnectBtn.style.display = 'flex';
-    sendBtn.disabled = false;
-    inputEl.disabled = false;
-  } else if (state === 'connecting') {
-    sdot.style.background = 'var(--amber)';
-    sdot.style.boxShadow = '0 0 6px var(--amber)';
-    statusText.textContent = 'Đang kết nối...';
-    stateVal.textContent = 'Đang kết nối...';
-    stateVal.style.color = 'var(--amber)';
-    subEl.textContent = 'Đang kết nối...';
-    connectBtn.disabled = true;
-    sendBtn.disabled = true;
-    inputEl.disabled = true;
-  } else if (state === 'error') {
-    sdot.style.background = 'var(--red)';
-    sdot.style.boxShadow = '0 0 6px var(--red)';
-    statusText.textContent = 'Lỗi kết nối — Kiểm tra URL và thử lại';
-    stateVal.textContent = 'Lỗi';
-    stateVal.style.color = 'var(--red)';
-    subEl.textContent = 'Lỗi kết nối';
-    connectBtn.disabled = false;
-    connectBtn.style.display = 'flex';
-    disconnectBtn.style.display = 'none';
-    sendBtn.disabled = true;
-    inputEl.disabled = true;
-    badge.style.display = 'block';
-    badge.style.background = 'var(--red)';
-    if (bnavBadge) { bnavBadge.style.display = 'block'; bnavBadge.style.background = 'var(--red)'; }
-  } else {
-    sdot.style.background = 'var(--text3)';
-    sdot.style.boxShadow = 'none';
-    statusText.textContent = 'Chưa kết nối — Nhập URL WebSocket để bắt đầu';
-    stateVal.textContent = 'Ngắt kết nối';
-    stateVal.style.color = 'var(--text2)';
-    subEl.textContent = 'Chưa kết nối';
-    badge.style.display = 'none';
-    if (bnavBadge) bnavBadge.style.display = 'none';
-    connectBtn.disabled = false;
-    connectBtn.style.display = 'flex';
-    disconnectBtn.style.display = 'none';
-    sendBtn.disabled = true;
-    inputEl.disabled = true;
-  }
-}
-
-function xzUpdateUptime() {
-  if (!xzConnectedAt) return;
-  const secs = Math.floor((Date.now() - xzConnectedAt) / 1000);
-  const m = Math.floor(secs / 60), s = secs % 60;
-  document.getElementById('xz-uptime').textContent = `${m}p ${s}s`;
-}
-
-function xzConnect() {
-  const url = document.getElementById('xz-url').value.trim();
-  if (!url) { alert('Vui lòng nhập URL WebSocket của Xiaozhi!'); return; }
-  if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
-    alert('URL phải bắt đầu bằng ws:// hoặc wss://'); return;
-  }
-
-  xzSetStatus('connecting');
-  xzLog('Đang kết nối đến: ' + url, 'system');
-
-  try {
-    xzSocket = new WebSocket(url);
-  } catch(e) {
-    xzLog('Không thể tạo WebSocket: ' + e.message, 'error-log');
-    xzSetStatus('error');
-    return;
-  }
-
-  xzSocket.onopen = () => {
-    xzConnectedAt = Date.now();
-    xzUptimeTimer = setInterval(xzUpdateUptime, 1000);
-    xzSetStatus('connected');
-    xzLog('✅ Kết nối thành công với Xiaozhi!', 'system');
-
-    const token = document.getElementById('xz-token').value.trim();
-    const deviceId = document.getElementById('xz-device-id').value.trim();
-    const injectMode = document.getElementById('xz-inject-mode').value;
-
-    // Send hello/auth message
-    const helloMsg = {
-      type: 'hello',
-      source: 'PhoneStore AI',
-      device_id: deviceId || 'phonestore-vn',
-      ...(token ? { token } : {})
-    };
-
-    if (injectMode === 'hello') {
-      helloMsg.store_context = buildStoreContextObj();
-    }
-
-    xzSocket.send(JSON.stringify(helloMsg));
-    xzLog('→ Đã gửi hello/auth: ' + JSON.stringify(helloMsg).substring(0, 80) + '...', 'outgoing');
-    xzSentCount++;
-    document.getElementById('xz-sent-count').textContent = xzSentCount;
-  };
-
-  xzSocket.onmessage = (event) => {
-    xzRecvCount++;
-    document.getElementById('xz-recv-count').textContent = xzRecvCount;
-    let display = event.data;
-    try {
-      const parsed = JSON.parse(event.data);
-      display = JSON.stringify(parsed, null, 2);
-      // If Xiaozhi sends a text reply, show in chat
-      if (parsed.text || parsed.message || parsed.reply || parsed.content) {
-        const msg = parsed.text || parsed.message || parsed.reply || parsed.content;
-        xzLog('← ' + msg, 'incoming');
-        return;
-      }
-    } catch(e) { /* plain text */ }
-    xzLog('← ' + display, 'incoming');
-  };
-
-  xzSocket.onerror = (e) => {
-    xzLog('❌ Lỗi WebSocket: Không thể kết nối đến server', 'error-log');
-    xzSetStatus('error');
-  };
-
-  xzSocket.onclose = (e) => {
-    clearInterval(xzUptimeTimer);
-    xzConnectedAt = null;
-    document.getElementById('xz-uptime').textContent = '—';
-    if (e.wasClean) {
-      xzLog(`Kết nối đã đóng sạch (code ${e.code})`, 'system');
-    } else {
-      xzLog('Kết nối bị gián đoạn bất ngờ.', 'error-log');
-    }
-    xzSetStatus('disconnected');
-    xzSocket = null;
-  };
-}
-
-function xzDisconnect() {
-  if (xzSocket) { xzSocket.close(); xzSocket = null; }
-  clearInterval(xzUptimeTimer);
-  xzConnectedAt = null;
-  document.getElementById('xz-uptime').textContent = '—';
-  xzSetStatus('disconnected');
-  xzLog('Đã ngắt kết nối thủ công.', 'system');
-}
-
-function buildStoreContextObj() {
-  return {
+// ─── EXPORT / IMPORT DATA ─────────────────────────────────────────────────────
+function exportData() {
+  const data = {
+    version: 1,
+    exportedAt: new Date().toLocaleString('vi-VN'),
     products: PRODUCTS,
     vips: VIPS,
-    notes: NOTES,
-    revenue: '847 triệu đồng',
-    orders: 234,
-    profit: '127 triệu'
+    notes: NOTES
   };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `phonestore-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  addMsg('bot', `✅ Đã xuất file lưu trữ <strong>phonestore-backup-${date}.json</strong> thành công!`);
 }
 
-function xzSendMsg() {
-  const input = document.getElementById('xz-input');
-  const text = input.value.trim();
-  if (!text) return;
-  if (!xzSocket || xzSocket.readyState !== WebSocket.OPEN) {
-    xzLog('Chưa kết nối! Nhấn "Kết nối Xiaozhi" trước.', 'error-log');
-    return;
-  }
-
-  const injectMode = document.getElementById('xz-inject-mode').value;
-  const payload = { type: 'message', text };
-  if (injectMode === 'always') {
-    payload.store_context = buildStoreContextObj();
-  }
-
-  xzSocket.send(JSON.stringify(payload));
-  xzLog('→ ' + text, 'outgoing');
-  xzSentCount++;
-  document.getElementById('xz-sent-count').textContent = xzSentCount;
-  input.value = '';
-  input.style.height = 'auto';
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.products || !data.vips || !data.notes) {
+        alert('❌ File không hợp lệ. Vui lòng chọn đúng file backup của PhoneStore AI!');
+        return;
+      }
+      if (!confirm(`Nhập dữ liệu từ file "${file.name}"?\n\nDữ liệu hiện tại sẽ bị thay thế:\n• ${data.products.length} sản phẩm\n• ${data.vips.length} khách VIP\n• ${data.notes.length} ghi chú\n\nXuất ngày: ${data.exportedAt || 'Không rõ'}`)) return;
+      PRODUCTS = data.products || [];
+      VIPS = data.vips || [];
+      NOTES = data.notes || [];
+      saveProducts();
+      saveVips();
+      saveNotes();
+      buildInventory();
+      buildVipList();
+      buildNotesList();
+      updateStats();
+      addMsg('bot', `✅ Nhập dữ liệu thành công từ <strong>${file.name}</strong>!<br>📦 ${PRODUCTS.length} sản phẩm · 👤 ${VIPS.length} khách VIP · 📝 ${NOTES.length} ghi chú`);
+      switchTab('chat');
+    } catch(err) {
+      alert('❌ Lỗi đọc file: ' + err.message);
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-  const xzInput = document.getElementById('xz-input');
-  if (xzInput) {
-    xzInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); xzSendMsg(); }
-    });
-    xzInput.addEventListener('input', function() {
-      this.style.height = 'auto';
-      this.style.height = Math.min(this.scrollHeight, 100) + 'px';
-    });
-  }
-});
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 // Detect mobile → add class for bottom nav spacing
