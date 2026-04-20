@@ -592,6 +592,18 @@
   }
   .note-del-btn:hover { background: rgba(240,82,82,0.25); }
 
+  /* MODE TOGGLE */
+  #mode-toggle {
+    padding: 4px 12px; border-radius: 20px;
+    border: 1px solid var(--border2);
+    background: var(--bg3);
+    color: var(--text2); font-size: 11px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+  }
+  #mode-toggle.free { background: var(--purple-dim); color: var(--purple); border-color: rgba(155,114,245,0.3); }
+  #mode-toggle.store { background: var(--accent-dim); color: var(--accent); border-color: rgba(79,142,247,0.3); }
+
   /* DATA IMPORT/EXPORT */
   .export-btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
   .btn-export {
@@ -793,7 +805,8 @@
   <div id="main">
     <div id="topbar">
       <h2 id="tab-title">Trợ lý quản lý cửa hàng</h2>
-      <span class="tag">Groq AI</span>
+      <button id="mode-toggle" class="store" onclick="toggleMode()" title="Chuyển chế độ AI">🏪 Cửa hàng</button>
+      <span class="tag" id="ai-tag">Groq AI</span>
       <button id="theme-toggle" onclick="cycleTheme()" title="Đổi giao diện">🌙</button>
     </div>
 
@@ -1434,6 +1447,41 @@ function updateStats() {
   }
 }
 
+// ─── CHAT MODE ────────────────────────────────────────────────────────────────
+let FREE_MODE = false;
+
+function toggleMode() {
+  FREE_MODE = !FREE_MODE;
+  const btn = document.getElementById('mode-toggle');
+  const input = document.getElementById('msg-input');
+  const quickDiv = document.getElementById('quick');
+  if (FREE_MODE) {
+    btn.textContent = '🌐 Tự do';
+    btn.className = 'free';
+    input.placeholder = 'Hỏi bất cứ điều gì — dịch, code, nấu ăn, kiến thức...';
+    quickDiv.innerHTML = `
+      <button class="qbtn" onclick="qsend('Dịch sang tiếng Anh: Chào buổi sáng')">🌍 Dịch</button>
+      <button class="qbtn" onclick="qsend('Viết hàm Python tính giai thừa')">💻 Code</button>
+      <button class="qbtn" onclick="qsend('Công thức nấu phở bò')">🍜 Nấu ăn</button>
+      <button class="qbtn" onclick="qsend('Giải thích AI là gì ngắn gọn')">🤖 Kiến thức</button>
+      <button class="qbtn" onclick="qsend('Viết caption Instagram bán điện thoại')">✍️ Caption</button>
+      <button class="qbtn" onclick="qsend('Tóm tắt: [dán văn bản vào đây]')">📄 Tóm tắt</button>`;
+    addMsg('bot', '🌐 Đã chuyển sang <strong>Chế độ Tự do</strong> — Tôi có thể trả lời mọi câu hỏi! Vẫn nhớ dữ liệu cửa hàng của bạn nhé.');
+  } else {
+    btn.textContent = '🏪 Cửa hàng';
+    btn.className = 'store';
+    input.placeholder = 'Hỏi về kho hàng, doanh thu, chiến lược kinh doanh...';
+    quickDiv.innerHTML = `
+      <button class="qbtn" onclick="qsend('Tồn kho hôm nay như thế nào?')">📦 Tồn kho</button>
+      <button class="qbtn" onclick="qsend('Doanh thu tháng này bao nhiêu?')">💰 Doanh thu</button>
+      <button class="qbtn" onclick="qsend('Sản phẩm nào đang bán chạy nhất?')">🔥 Bán chạy</button>
+      <button class="qbtn" onclick="qsend('Tư vấn chiến lược giảm giá cuối tháng')">💡 Chiến lược</button>
+      <button class="qbtn" onclick="qsend('Liệt kê khách hàng VIP mua nhiều nhất')">👤 Khách VIP</button>
+      <button class="qbtn" onclick="qsend('Sản phẩm nào sắp hết hàng cần nhập thêm?')">⚠️ Sắp hết</button>`;
+    addMsg('bot', '🏪 Đã về <strong>Chế độ Cửa hàng</strong> — Tập trung quản lý PhoneStore VN.');
+  }
+}
+
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
 function buildStoreContext() {
   const invLines = PRODUCTS.length > 0
@@ -1456,6 +1504,20 @@ function buildStoreContext() {
   const permSection = permLines.length > 0
     ? '\nQUYỀN ĐẶC BIỆT CỦA AI:\n' + permLines.join('\n')
     : '';
+
+  if (FREE_MODE) {
+    return `Bạn là trợ lý AI thông minh, hữu ích, có thể trả lời MỌI câu hỏi bằng tiếng Việt — dịch thuật, lập trình, nấu ăn, kiến thức tổng quát, sáng tạo nội dung, toán học, khoa học, v.v.
+
+Ngoài ra bạn cũng biết thông tin cửa hàng điện thoại "PhoneStore VN" tại Nha Trang của người dùng:
+KHO HÀNG: ${invLines}
+KHÁCH VIP: ${vipLines}
+
+Trả lời ngắn gọn, rõ ràng, thân thiện bằng tiếng Việt. Nếu câu hỏi liên quan đến cửa hàng, vẫn dùng được các action tag sau:
+[ACTION:ADD_NOTE|loại|tiêu_đề|nội_dung]
+[ACTION:ADD_VIP|tên|sdt|số_lần_mua|ghi_chú]
+[ACTION:ADD_PRODUCT|tên|icon|giá|tồn_kho|tối_đa]
+[ACTION:DELETE_INVENTORY] [ACTION:DELETE_VIPS] [ACTION:DELETE_ALL]`;
+  }
 
   return `Bạn là AI trợ lý quản lý cửa hàng điện thoại "PhoneStore VN" tại Nha Trang.
 Dữ liệu cửa hàng hiện tại:
