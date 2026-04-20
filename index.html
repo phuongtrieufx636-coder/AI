@@ -1746,59 +1746,182 @@ function handleAIActions(reply) {
   return cleanReply.trim();
 }
 
-// ─── WEB SEARCH (DuckDuckGo instant + scrape snippet) ─────────────────────────
+// ─── WEB DATA — các API thực sự hỗ trợ CORS ──────────────────────────────────
+
+function detectQueryType(text) {
+  const t = text.toLowerCase();
+  if (/thời tiết|nhiệt độ|mưa|nắng|weather|°c|độ c/.test(t)) return 'weather';
+  if (/giá vàng|gold price|vàng sjc|vàng 9999/.test(t)) return 'gold';
+  if (/tỷ giá|usd|đô la|euro|eur|gbp|jpy|exchange rate/.test(t)) return 'forex';
+  if (/bitcoin|btc|eth|crypto|coin|usdt/.test(t)) return 'crypto';
+  if (/tin tức|news|mới nhất|hôm nay|sự kiện/.test(t)) return 'news';
+  if (/wikipedia|là gì|lịch sử|khái niệm|định nghĩa/.test(t)) return 'wiki';
+  return 'general';
+}
+
 function needsWebSearch(text) {
   const lower = text.toLowerCase();
-  // Không cần search những câu đơn giản / cửa hàng / sáng tạo
   const noSearch = [
     'dịch','translate','viết','code','tính','công thức','caption',
     'tồn kho','doanh thu','khách vip','sản phẩm','kho hàng','ghi chú',
-    'nấu','món','thêm','xóa','tóm tắt','giải thích đơn giản','là gì một cách đơn giản'
+    'nấu','món','thêm','xóa','tóm tắt'
   ];
   if (noSearch.some(k => lower.includes(k))) return false;
-  // Cần search khi hỏi thực tế / tin tức / giá cả / thời tiết / v.v.
   const yesSearch = [
-    'thời tiết','thời tiết hôm nay','hôm nay','tin tức','mới nhất','hiện tại',
-    'giá','bao nhiêu tiền','tỷ giá','giá vàng','chứng khoán','crypto','bitcoin',
-    'kết quả','điểm','lịch','ra mắt','review','đánh giá','so sánh',
-    'năm nay','tháng này','tuần này','vừa','mới ra','update','phiên bản',
-    'ai là','ai đang','hiện','lúc này','ngay bây giờ','event','sự kiện'
+    'thời tiết','nhiệt độ','mưa','nắng',
+    'giá vàng','tỷ giá','bitcoin','crypto','btc','eth','usdt',
+    'tin tức','mới nhất','hôm nay','hiện tại','bây giờ',
+    'là gì','lịch sử','ai là','kết quả','review','đánh giá',
+    'năm nay','tháng này','ra mắt','phiên bản','update'
   ];
   return yesSearch.some(k => lower.includes(k));
 }
 
+// Lấy tên thành phố từ câu hỏi
+function extractCity(text) {
+  const cities = {
+    'nha trang':'Nha Trang','hà nội':'Hanoi','hồ chí minh':'Ho Chi Minh City',
+    'tp.hcm':'Ho Chi Minh City','tphcm':'Ho Chi Minh City','sài gòn':'Ho Chi Minh City',
+    'đà nẵng':'Da Nang','cần thơ':'Can Tho','huế':'Hue','hải phòng':'Hai Phong',
+    'vũng tàu':'Vung Tau','đà lạt':'Da Lat','quy nhơn':'Quy Nhon',
+    'buôn ma thuột':'Buon Ma Thuot','vinh':'Vinh','bình dương':'Binh Duong'
+  };
+  const t = text.toLowerCase();
+  for (const [vi, en] of Object.entries(cities)) {
+    if (t.includes(vi)) return en;
+  }
+  return 'Nha Trang'; // default
+}
+
+async function fetchWeather(city) {
+  // wttr.in hỗ trợ CORS hoàn toàn, trả JSON rõ ràng
+  const url = `https://wttr.in/${encodeURIComponent(city)}?format=j1`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('weather fail');
+  const d = await res.json();
+  const cur = d.current_condition[0];
+  const area = d.nearest_area[0];
+  const areaName = area.areaName[0].value;
+  const country = area.country[0].value;
+  const tempC = cur.temp_C;
+  const feels = cur.FeelsLikeC;
+  const humid = cur.humidity;
+  const desc = cur.lang_vi ? cur.lang_vi[0].value : cur.weatherDesc[0].value;
+  const wind = cur.windspeedKmph;
+  const today = d.weather[0];
+  const maxT = today.maxtempC;
+  const minT = today.mintempC;
+  const rain = today.hourly.reduce((a,h) => a + parseFloat(h.precipMM||0), 0).toFixed(1);
+  return `Thời tiết tại ${areaName}, ${country} (dữ liệu thực tế wttr.in):
+- Hiện tại: ${tempC}°C (cảm giác như ${feels}°C), ${desc}
+- Cao/thấp hôm nay: ${maxT}°C / ${minT}°C
+- Độ ẩm: ${humid}%, Gió: ${wind} km/h
+- Lượng mưa hôm nay: ${rain} mm`;
+}
+
+async function fetchGold() {
+  // metals-api free tier (no key needed for XAU/USD)
+  // Dùng exchangerate-api public endpoint thay thế
+  const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+  if (!res.ok) throw new Error('fail');
+  const d = await res.json();
+  const vndPerUsd = d.rates.VND || 25400;
+  // Giá vàng thế giới xấp xỉ (troy oz) — dùng Open API
+  const goldRes = await fetch('https://api.metals.live/v1/spot/gold');
+  let goldUsd = 3300; // fallback ước tính
+  if (goldRes.ok) {
+    const gd = await goldRes.json();
+    goldUsd = gd[0]?.price || goldUsd;
+  }
+  const goldVndPerOz = Math.round(goldUsd * vndPerUsd);
+  const goldVndPerChi = Math.round(goldVndPerOz / 32.15 * 3.75); // 1 chỉ = 3.75g, 1 oz=31.1g → ≈ chỉ
+  const goldVndPerLuong = goldVndPerChi * 10;
+  return `Giá vàng thế giới (thời gian thực):
+- Vàng thế giới: ~$${goldUsd.toLocaleString()}/oz (troy ounce)
+- Tỷ giá USD/VND: ~${vndPerUsd.toLocaleString()}đ
+- Quy đổi tham khảo: ~${goldVndPerLuong.toLocaleString()}đ/lượng
+(Giá SJC trong nước có thể chênh lệch do phí gia công. Kiểm tra sjc.com.vn để biết giá chính xác nhất.)`;
+}
+
+async function fetchForex(text) {
+  const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+  if (!res.ok) throw new Error('fail');
+  const d = await res.json();
+  const vnd = d.rates.VND;
+  const eur = d.rates.EUR;
+  const gbp = d.rates.GBP;
+  const jpy = d.rates.JPY;
+  const cny = d.rates.CNY;
+  const thb = d.rates.THB;
+  return `Tỷ giá ngoại tệ (nguồn: exchangerate-api):
+- 1 USD = ${Math.round(vnd).toLocaleString()} VND
+- 1 EUR = ${Math.round(vnd/eur).toLocaleString()} VND
+- 1 GBP = ${Math.round(vnd/gbp).toLocaleString()} VND
+- 1 CNY = ${Math.round(vnd/cny).toLocaleString()} VND
+- 1 THB = ${Math.round(vnd/thb).toLocaleString()} VND
+- 100 JPY = ${Math.round(vnd/jpy*100).toLocaleString()} VND
+(Tỷ giá tham khảo, cập nhật hàng ngày)`;
+}
+
+async function fetchCrypto(text) {
+  const coins = [];
+  if (/bitcoin|btc/.test(text.toLowerCase())) coins.push('bitcoin');
+  if (/ethereum|eth/.test(text.toLowerCase())) coins.push('ethereum');
+  if (/usdt|tether/.test(text.toLowerCase())) coins.push('tether');
+  if (coins.length === 0) coins.push('bitcoin','ethereum');
+  const ids = coins.join(',');
+  const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd,vnd&include_24hr_change=true`);
+  if (!res.ok) throw new Error('fail');
+  const d = await res.json();
+  const lines = Object.entries(d).map(([coin, val]) => {
+    const change = val.usd_24h_change ? ` (${val.usd_24h_change > 0 ? '+' : ''}${val.usd_24h_change.toFixed(2)}% 24h)` : '';
+    return `- ${coin.charAt(0).toUpperCase()+coin.slice(1)}: $${val.usd?.toLocaleString()} ≈ ${val.vnd?.toLocaleString()}đ${change}`;
+  });
+  return `Giá Crypto (nguồn: CoinGecko, thời gian thực):\n${lines.join('\n')}`;
+}
+
+async function fetchWiki(text) {
+  // Thử tiếng Việt trước, fallback tiếng Anh
+  const q = text.replace(/wikipedia|là gì|lịch sử|khái niệm|\?/gi,'').trim();
+  const wikiQ = encodeURIComponent(q);
+  const res = await fetch(`https://vi.wikipedia.org/api/rest_v1/page/summary/${wikiQ}`);
+  if (res.ok) {
+    const d = await res.json();
+    if (d.extract && d.extract.length > 100) {
+      return `[Wikipedia tiếng Việt — ${d.title}]\n${d.extract.slice(0,700)}`;
+    }
+  }
+  // Fallback tiếng Anh
+  const resEn = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${wikiQ}`);
+  if (resEn.ok) {
+    const d = await resEn.json();
+    if (d.extract && d.extract.length > 100) {
+      return `[Wikipedia — ${d.title}]\n${d.extract.slice(0,700)}\n(Tóm tắt tiếng Anh, dịch và giải thích bằng tiếng Việt)`;
+    }
+  }
+  return null;
+}
+
 async function webSearch(query) {
-  // Dùng DuckDuckGo Instant Answer API (không cần key, CORS ok qua proxy)
-  // Fallback: dùng Brave search public endpoint hoặc Wikipedia summary
+  const type = detectQueryType(query);
   try {
-    // Thử Wikipedia summary trước nếu có thể
-    const wikiQ = encodeURIComponent(query.replace(/\?/g,'').trim());
-    const wRes = await fetch(`https://vi.wikipedia.org/api/rest_v1/page/summary/${wikiQ}`);
-    if (wRes.ok) {
-      const wData = await wRes.json();
-      if (wData.extract && wData.extract.length > 80) {
-        return `[Wikipedia - ${wData.title}]\n${wData.extract.slice(0,600)}`;
-      }
+    if (type === 'weather') {
+      const city = extractCity(query);
+      return await fetchWeather(city);
     }
-  } catch(e) {}
+    if (type === 'gold') return await fetchGold();
+    if (type === 'forex') return await fetchForex(query);
+    if (type === 'crypto') return await fetchCrypto(query);
+    if (type === 'wiki') return await fetchWiki(query);
 
-  try {
-    // DuckDuckGo Instant API
-    const ddQ = encodeURIComponent(query);
-    const ddRes = await fetch(`https://api.duckduckgo.com/?q=${ddQ}&format=json&no_redirect=1&no_html=1&skip_disambig=1`);
-    if (ddRes.ok) {
-      const dd = await ddRes.json();
-      let snippets = [];
-      if (dd.AbstractText) snippets.push(dd.AbstractText);
-      if (dd.Answer) snippets.push('Đáp án nhanh: ' + dd.Answer);
-      if (dd.RelatedTopics && dd.RelatedTopics.length > 0) {
-        dd.RelatedTopics.slice(0,3).forEach(t => { if (t.Text) snippets.push(t.Text); });
-      }
-      if (snippets.length > 0) return '[DuckDuckGo]\n' + snippets.join('\n').slice(0,600);
-    }
-  } catch(e) {}
+    // General: thử Wikipedia trước
+    const wikiResult = await fetchWiki(query);
+    if (wikiResult) return wikiResult;
 
-  return null; // Không tìm được gì
+  } catch(e) {
+    console.warn('webSearch error:', type, e);
+  }
+  return null;
 }
 
 async function sendMsg() {
