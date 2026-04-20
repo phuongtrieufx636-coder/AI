@@ -32,6 +32,104 @@
     --shadow: 0 4px 24px rgba(0,0,0,0.4);
   }
 
+  /* LIGHT MODE */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f0f2f8;
+      --bg2: #ffffff;
+      --bg3: #e8ebf4;
+      --border: rgba(0,0,0,0.08);
+      --border2: rgba(0,0,0,0.14);
+      --text: #1a1d2e;
+      --text2: #4a5068;
+      --text3: #8892b0;
+      --accent: #3b78e7;
+      --accent-dim: rgba(59,120,231,0.10);
+      --accent-dark: #2257c5;
+      --green: #1aab5e;
+      --green-dim: rgba(26,171,94,0.10);
+      --red: #d93025;
+      --red-dim: rgba(217,48,37,0.10);
+      --amber: #c27d00;
+      --amber-dim: rgba(194,125,0,0.10);
+      --purple: #7c3aed;
+      --purple-dim: rgba(124,58,237,0.10);
+      --shadow: 0 4px 24px rgba(0,0,0,0.10);
+    }
+  }
+  body.force-light {
+    --bg: #f0f2f8;
+    --bg2: #ffffff;
+    --bg3: #e8ebf4;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #1a1d2e;
+    --text2: #4a5068;
+    --text3: #8892b0;
+    --accent: #3b78e7;
+    --accent-dim: rgba(59,120,231,0.10);
+    --accent-dark: #2257c5;
+    --green: #1aab5e;
+    --green-dim: rgba(26,171,94,0.10);
+    --red: #d93025;
+    --red-dim: rgba(217,48,37,0.10);
+    --amber: #c27d00;
+    --amber-dim: rgba(194,125,0,0.10);
+    --purple: #7c3aed;
+    --purple-dim: rgba(124,58,237,0.10);
+    --shadow: 0 4px 24px rgba(0,0,0,0.10);
+  }
+  body.force-dark {
+    --bg: #0f1117;
+    --bg2: #1a1d27;
+    --bg3: #22263a;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #e8eaf0;
+    --text2: #8b90a7;
+    --text3: #555c78;
+    --accent: #4f8ef7;
+    --accent-dim: rgba(79,142,247,0.12);
+    --accent-dark: #2d6dd4;
+    --green: #34c87a;
+    --green-dim: rgba(52,200,122,0.12);
+    --red: #f05252;
+    --red-dim: rgba(240,82,82,0.12);
+    --amber: #f0a030;
+    --amber-dim: rgba(240,160,48,0.12);
+    --purple: #9b72f5;
+    --purple-dim: rgba(155,114,245,0.12);
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+
+  /* THEME TOGGLE BTN */
+  #theme-toggle {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid var(--border2);
+    background: var(--bg3);
+    color: var(--text2); font-size: 15px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  #theme-toggle:hover { background: var(--accent-dim); color: var(--accent); }
+
+  /* AI FACE */
+  .ai-face {
+    width: 28px; height: 28px;
+  }
+  .face-eye { transition: transform 0.1s; transform-origin: center; }
+  .face-mouth { transition: d 0.3s; }
+  @keyframes blink {
+    0%,90%,100% { transform: scaleY(1); }
+    95% { transform: scaleY(0.08); }
+  }
+  @keyframes blink2 {
+    0%,85%,100% { transform: scaleY(1); }
+    90% { transform: scaleY(0.08); }
+  }
+  .eye-blink-l { animation: blink 3s infinite; }
+  .eye-blink-r { animation: blink2 3s 0.15s infinite; }
+
   html, body { height: 100%; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
 
   #app { display: flex; height: 100vh; overflow: hidden; }
@@ -696,6 +794,7 @@
     <div id="topbar">
       <h2 id="tab-title">Trợ lý quản lý cửa hàng</h2>
       <span class="tag">Groq AI</span>
+      <button id="theme-toggle" onclick="cycleTheme()" title="Đổi giao diện">🌙</button>
     </div>
 
     <div id="apibar">
@@ -710,7 +809,14 @@
       <div id="messages">
         <div class="msg bot">
           <div class="msg-row">
-            <div class="avatar ai">AI</div>
+            <div class="avatar ai" id="ai-avatar-main">
+              <svg class="ai-face" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="14" cy="14" r="13" fill="#4f8ef7"/>
+                <ellipse class="face-eye eye-blink-l" cx="10" cy="12" rx="1.6" ry="2" fill="white"/>
+                <ellipse class="face-eye eye-blink-r" cx="18" cy="12" rx="1.6" ry="2" fill="white"/>
+                <path id="ai-mouth-main" d="M10 18 Q14 21 18 18" stroke="white" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+              </svg>
+            </div>
             <div class="bubble">
               Xin chào! Tôi là trợ lý AI quản lý <strong>PhoneStore VN</strong> tại Nha Trang. Tôi nắm rõ toàn bộ dữ liệu cửa hàng và có thể hỗ trợ bạn:<br><br>
               📦 Kiểm tra &amp; quản lý tồn kho<br>
@@ -1390,15 +1496,47 @@ Quan trọng: Sau khi thêm dữ liệu, hãy xác nhận đã thêm thành côn
 Hãy trả lời ngắn gọn, chuyên nghiệp bằng tiếng Việt. Đưa ra gợi ý cụ thể và thực tế khi được hỏi.`;
 }
 
+function makeFaceSVG(mood, id) {
+  // mood: 'happy' | 'sad' | 'neutral' | 'thinking'
+  const faceColor = mood === 'sad' ? '#f05252' : mood === 'happy' ? '#34c87a' : '#4f8ef7';
+  const mouthPath = mood === 'happy'
+    ? 'M10 18 Q14 22 18 18'   // big smile
+    : mood === 'sad'
+    ? 'M10 20 Q14 16 18 20'   // frown
+    : 'M10 19 Q14 19 18 19';  // neutral line
+  const blinkClass1 = mood === 'thinking' ? '' : 'eye-blink-l';
+  const blinkClass2 = mood === 'thinking' ? '' : 'eye-blink-r';
+  const eyeRy = mood === 'thinking' ? '1.2' : '2';
+  return `<svg class="ai-face" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="14" cy="14" r="13" fill="${faceColor}"/>
+    <ellipse class="face-eye ${blinkClass1}" cx="10" cy="12" rx="1.6" ry="${eyeRy}" fill="white"/>
+    <ellipse class="face-eye ${blinkClass2}" cx="18" cy="12" rx="1.6" ry="${eyeRy}" fill="white"/>
+    <path d="${mouthPath}" stroke="white" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+    ${mood === 'thinking' ? '<circle cx="10" cy="12" r="0.6" fill="#fff" opacity="0.5"/><circle cx="18" cy="12" r="0.6" fill="#fff" opacity="0.5"/>' : ''}
+  </svg>`;
+}
+
+function detectMood(text) {
+  const t = text.toLowerCase();
+  if (/lãi|lợi nhuận|bán chạy|tốt|tuyệt|thành công|✅|🎉|tăng|cao|vui|hoàn hảo/.test(t)) return 'happy';
+  if (/lỗi|❌|không|thiếu|hết hàng|sắp hết|nợ|⚠|giảm|thấp|xấu|buồn/.test(t)) return 'sad';
+  if (/đang|chờ|phân tích|kiểm tra|tính|xem/.test(t)) return 'thinking';
+  return 'neutral';
+}
+
 function addMsg(role, html) {
   const wrap = document.getElementById('messages');
   const now = new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
   const isBot = role === 'bot';
   const div = document.createElement('div');
   div.className = `msg ${role}`;
+  const mood = isBot ? detectMood(html) : 'neutral';
+  const avatarHtml = isBot
+    ? `<div class="avatar ai">${makeFaceSVG(mood)}</div>`
+    : `<div class="avatar user">👤</div>`;
   div.innerHTML = `
     <div class="msg-row">
-      <div class="avatar ${isBot ? 'ai' : 'user'}">${isBot ? 'AI' : '👤'}</div>
+      ${avatarHtml}
       <div class="bubble">${html}</div>
     </div>
     <div class="msg-meta">${isBot ? 'AI' : 'Bạn'} · ${now}</div>`;
@@ -1411,7 +1549,7 @@ function showTyping() {
   const div = document.createElement('div');
   div.className = 'msg bot';
   div.id = 'typing';
-  div.innerHTML = `<div class="msg-row"><div class="avatar ai">AI</div><div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+  div.innerHTML = `<div class="msg-row"><div class="avatar ai">${makeFaceSVG('thinking')}</div><div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
   wrap.appendChild(div);
   wrap.scrollTop = wrap.scrollHeight;
 }
@@ -1619,6 +1757,26 @@ function importData(event) {
   reader.readAsText(file);
 }
 
+// ─── THEME ────────────────────────────────────────────────────────────────────
+const THEME_ICONS = { auto: '🌓', light: '☀️', dark: '🌙' };
+const THEME_CYCLE = ['auto', 'light', 'dark'];
+
+function applyTheme(theme) {
+  document.body.classList.remove('force-light', 'force-dark');
+  if (theme === 'light') document.body.classList.add('force-light');
+  else if (theme === 'dark') document.body.classList.add('force-dark');
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = THEME_ICONS[theme] || '🌓';
+  localStorage.setItem('ps_theme', theme);
+}
+
+function cycleTheme() {
+  const cur = localStorage.getItem('ps_theme') || 'auto';
+  const idx = THEME_CYCLE.indexOf(cur);
+  const next = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
+  applyTheme(next);
+}
+
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 // Detect mobile → add class for bottom nav spacing
 if (window.innerWidth <= 700) {
@@ -1627,6 +1785,8 @@ if (window.innerWidth <= 700) {
 window.addEventListener('resize', () => {
   document.body.classList.toggle('has-bnav', window.innerWidth <= 700);
 });
+// Apply saved theme
+applyTheme(localStorage.getItem('ps_theme') || 'auto');
 init();
 </script>
 </body>
