@@ -419,41 +419,6 @@
     border-radius: var(--radius-sm);
     display: flex; align-items: center; justify-content: center;
     font-size: 22px; flex-shrink: 0;
-    overflow: hidden;
-  }
-  .inv-icon img {
-    width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius-sm);
-  }
-
-  /* Image upload input */
-  .img-upload-label {
-    display: flex; align-items: center; gap: 6px;
-    padding: 7px 12px; border-radius: var(--radius-sm);
-    border: 1px dashed var(--border2);
-    background: var(--bg3); color: var(--text2);
-    font-size: 12px; cursor: pointer;
-    transition: all 0.15s; white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .img-upload-label:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-  .img-upload-label input { display: none; }
-
-  .img-preview-wrap {
-    position: relative; display: inline-flex; align-items: center;
-    flex-shrink: 0;
-  }
-  .img-preview {
-    width: 42px; height: 42px; object-fit: cover;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border2);
-  }
-  .img-clear-btn {
-    position: absolute; top: -5px; right: -5px;
-    width: 16px; height: 16px; border-radius: 50%;
-    background: var(--red); color: #fff;
-    border: none; cursor: pointer;
-    font-size: 9px; line-height: 1;
-    display: flex; align-items: center; justify-content: center;
   }
   .inv-name { font-size: 13.5px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
   .inv-price { font-size: 12px; color: var(--accent); font-weight: 600; }
@@ -947,14 +912,6 @@
             <input type="text" id="inv-price" placeholder="Giá (vd: 32.990.000đ)" />
             <input type="number" id="inv-stock" placeholder="Tồn kho" min="0" style="max-width:110px;" />
             <input type="number" id="inv-max" placeholder="Tối đa" min="1" style="max-width:90px;" />
-            <label class="img-upload-label" title="Tải ảnh sản phẩm">
-              📷 Ảnh
-              <input type="file" id="inv-img-input" accept="image/*" onchange="previewInvImg(this)" />
-            </label>
-            <div class="img-preview-wrap" id="inv-img-preview-wrap" style="display:none;">
-              <img class="img-preview" id="inv-img-preview" src="" alt="preview" />
-              <button class="img-clear-btn" onclick="clearInvImg()" title="Xóa ảnh">✕</button>
-            </div>
             <button class="btn-add" onclick="addProduct()">Thêm</button>
           </div>
         </div>
@@ -1318,39 +1275,15 @@ function addProduct() {
   const price = document.getElementById('inv-price').value.trim();
   const stock = parseInt(document.getElementById('inv-stock').value) || 0;
   const max   = parseInt(document.getElementById('inv-max').value) || 20;
-  const img   = document.getElementById('inv-img-preview').src || '';
   if (!name || !price) { alert('Vui lòng nhập tên và giá sản phẩm!'); return; }
-  PRODUCTS.push({ name, icon, price, stock, max, img: img.startsWith('data:') ? img : '' });
+  PRODUCTS.push({ name, icon, price, stock, max });
   saveProducts();
   buildInventory();
   updateStats();
   ['inv-name','inv-icon','inv-price','inv-stock','inv-max'].forEach(id => document.getElementById(id).value = '');
-  clearInvImg();
 }
 
-function previewInvImg(input) {
-  if (!input.files || !input.files[0]) return;
-  const file = input.files[0];
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const preview = document.getElementById('inv-img-preview');
-    const wrap = document.getElementById('inv-img-preview-wrap');
-    preview.src = e.target.result;
-    wrap.style.display = 'inline-flex';
-  };
-  reader.readAsDataURL(file);
-}
-
-function clearInvImg() {
-  const preview = document.getElementById('inv-img-preview');
-  const wrap = document.getElementById('inv-img-preview-wrap');
-  const input = document.getElementById('inv-img-input');
-  preview.src = '';
-  wrap.style.display = 'none';
-  if (input) input.value = '';
-}
-
-
+function deleteProduct(idx) {
   if (!confirm('Xóa sản phẩm "' + PRODUCTS[idx].name + '"?')) return;
   PRODUCTS.splice(idx, 1);
   saveProducts();
@@ -1383,13 +1316,10 @@ function buildInventory() {
     const cls = p.stock <= 2 ? 'critical' : p.stock <= 5 ? 'low' : 'ok';
     const label = p.stock <= 2 ? 'Sắp hết' : p.stock <= 5 ? 'Ít hàng' : 'Còn hàng';
     const unitWord = p.icon === '🎧' || p.icon === '⌚' ? 'chiếc' : 'máy';
-    const iconHtml = p.img
-      ? `<img src="${p.img}" alt="${p.name}" />`
-      : p.icon;
     grid.innerHTML += `
       <div class="inv-card">
         <div class="inv-card-top">
-          <div class="inv-icon">${iconHtml}</div>
+          <div class="inv-icon">${p.icon}</div>
           <div>
             <div class="inv-name">${p.name}</div>
             <div class="inv-price">${p.price}</div>
