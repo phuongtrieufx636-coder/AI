@@ -328,6 +328,7 @@
     white-space: nowrap;
   }
   .qbtn:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+  .qbtn.engine-btn.active { opacity: 1 !important; box-shadow: 0 0 0 2px currentColor; }
 
   /* input */
   #inputbar {
@@ -846,10 +847,13 @@
     </div>
 
     <div id="apibar">
-      <label>🔑 Groq API Key:</label>
-      <input type="password" id="key-input" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx" />
+      <label>🔑 Groq:</label>
+      <input type="password" id="key-input" placeholder="gsk_xxxxxxxxxxxx" style="max-width:180px;" />
+      <label id="claude-key-label" style="display:none;">🤖 Claude:</label>
+      <input type="password" id="claude-key-input" placeholder="sk-ant-xxxxxxxxxxxx" style="max-width:180px;display:none;" />
       <button onclick="saveKey()">Lưu key</button>
       <span class="key-status none" id="key-status">Chưa có key</span>
+      <span id="claude-key-status" style="display:none;"></span>
     </div>
 
     <!-- CHAT TAB -->
@@ -1124,6 +1128,12 @@ function init() {
     setKeyStatus(true);
   }
 
+  // Load Claude key
+  const savedClaudeKey = localStorage.getItem('ps_claude_key') || '';
+  if (savedClaudeKey) {
+    claudeKey = savedClaudeKey;
+  }
+
   // Load products
   const savedProds = localStorage.getItem(SK_PRODUCTS);
   PRODUCTS = savedProds ? JSON.parse(savedProds) : [];
@@ -1165,12 +1175,27 @@ function init() {
 
 // ─── KEY MANAGEMENT ───────────────────────────────────────────────────────────
 function saveKey() {
-  const val = document.getElementById('key-input').value.trim();
-  if (!val) return;
-  groqKey = val;
-  localStorage.setItem(SK_KEY, val);
-  setKeyStatus(true);
-  addMsg('bot', '✅ API key đã được lưu thành công! Bây giờ bạn có thể đặt câu hỏi cho tôi.');
+  const groqVal = document.getElementById('key-input').value.trim();
+  const claudeEl = document.getElementById('claude-key-input');
+  const claudeVal = claudeEl ? claudeEl.value.trim() : '';
+
+  if (groqVal && !groqVal.startsWith('••')) {
+    groqKey = groqVal;
+    localStorage.setItem(SK_KEY, groqVal);
+    setKeyStatus(true);
+  }
+
+  if (claudeVal && !claudeVal.startsWith('••')) {
+    claudeKey = claudeVal;
+    localStorage.setItem('ps_claude_key', claudeVal);
+    const st = document.getElementById('claude-key-status');
+    if (st) { st.className = 'key-status ok'; st.textContent = '✓ Claude OK'; }
+    if (claudeEl) claudeEl.value = '••••••••';
+  }
+
+  if (groqVal || claudeVal) {
+    addMsg('bot', '✅ API key đã được lưu! ' + (claudeVal && !claudeVal.startsWith('••') ? '🟣 Claude key OK — chuyển sang Claude để hỏi bất kỳ điều gì!' : 'Bây giờ bạn có thể đặt câu hỏi.'));
+  }
   updateSettingsStatus();
 }
 
@@ -1491,29 +1516,74 @@ function updateStats() {
 // ─── CHAT MODE ────────────────────────────────────────────────────────────────
 let FREE_MODE = false;
 
+// ─── AI ENGINE (free mode) ────────────────────────────────────────────────────
+let FREE_ENGINE = localStorage.getItem('ps_free_engine') || 'groq'; // 'groq' | 'claude'
+let claudeKey = localStorage.getItem('ps_claude_key') || '';
+
+function switchEngine(engine) {
+  FREE_ENGINE = engine;
+  localStorage.setItem('ps_free_engine', engine);
+  const groqBtn = document.getElementById('engine-groq');
+  const claudeBtn = document.getElementById('engine-claude');
+  if (groqBtn) groqBtn.classList.toggle('active', engine === 'groq');
+  if (claudeBtn) claudeBtn.classList.toggle('active', engine === 'claude');
+  updateModelChip();
+  const engineName = engine === 'claude' ? 'Claude Sonnet (Anthropic)' : 'Llama-3.3-70b (Groq)';
+  addMsg('bot', `🔄 Đã chuyển sang engine <strong>${engineName}</strong>. ${engine === 'claude' ? 'Bạn có thể hỏi bất kỳ điều gì, không giới hạn chủ đề!' : 'Tốc độ cao, phù hợp câu hỏi nhanh.'}`);
+}
+
+function updateModelChip() {
+  const chip = document.getElementById('model-chip-groq');
+  if (!chip) return;
+  if (FREE_MODE && FREE_ENGINE === 'claude') {
+    chip.innerHTML = `<div class="model-dot" style="background:var(--purple);box-shadow:0 0 6px var(--purple);"></div>
+      <div class="model-info">
+        <div class="model-name">claude-sonnet-4</div>
+        <div class="model-sub">Anthropic · Tự do</div>
+      </div>`;
+  } else {
+    chip.innerHTML = `<div class="model-dot"></div>
+      <div class="model-info">
+        <div class="model-name">llama-3.3-70b</div>
+        <div class="model-sub">Groq · Tốc độ cao</div>
+      </div>`;
+  }
+}
+
 function toggleMode() {
   FREE_MODE = !FREE_MODE;
   const btn = document.getElementById('mode-toggle');
   const input = document.getElementById('msg-input');
   const quickDiv = document.getElementById('quick');
+  // show/hide Claude key inputs
+  const claudeLabel = document.getElementById('claude-key-label');
+  const claudeInput = document.getElementById('claude-key-input');
+  const claudeStatus = document.getElementById('claude-key-status');
   if (FREE_MODE) {
     btn.textContent = '🌐 Tự do';
     btn.className = 'free';
-    input.placeholder = 'Hỏi bất cứ điều gì — dịch, code, nấu ăn, kiến thức...';
-    quickDiv.innerHTML = `
-      <button class="qbtn" onclick="qsend('Thời tiết Nha Trang hôm nay?')">🌤️ Thời tiết</button>
-      <button class="qbtn" onclick="qsend('Giá vàng hôm nay bao nhiêu?')">🥇 Giá vàng</button>
-      <button class="qbtn" onclick="qsend('1 USD bằng bao nhiêu VND?')">💱 Tỷ giá</button>
-      <button class="qbtn" onclick="qsend('Bitcoin hôm nay giá bao nhiêu?')">🪙 Crypto</button>
-      <button class="qbtn" onclick="qsend('Dịch sang tiếng Anh: Xin chào')">🌍 Dịch</button>
-      <button class="qbtn" onclick="qsend('Viết caption Instagram hay')">✍️ Caption</button>
-      <button class="qbtn" onclick="qsend('Công thức nấu phở bò')">🍜 Nấu ăn</button>
-      <button class="qbtn" onclick="qsend('Giải thích AI là gì?')">🤖 Kiến thức</button>`;
-    addMsg('bot', '🌐 Đã chuyển sang <strong>Chế độ Tự do</strong> — Tôi có thể trả lời mọi câu hỏi và <strong>tìm kiếm thông tin trực tiếp từ internet</strong> khi cần! Hỏi thời tiết, tin tức, giá vàng, review sản phẩm... đều được nhé.');
+    input.placeholder = 'Hỏi bất cứ điều gì — dịch, code, nấu ăn, kiến thức, lập trình...';
+    // Show Claude key fields
+    if (claudeLabel) claudeLabel.style.display = '';
+    if (claudeInput) { claudeInput.style.display = ''; if (claudeKey) claudeInput.value = '••••••••'; }
+    if (claudeStatus) {
+      claudeStatus.className = 'key-status ' + (claudeKey ? 'ok' : 'none');
+      claudeStatus.textContent = claudeKey ? '✓ Claude OK' : 'Chưa có Claude key';
+      claudeStatus.style.display = '';
+    }
+    renderFreeQuickBtns();
+    updateModelChip();
+    addMsg('bot', `🌐 Đã chuyển sang <strong>Chế độ Tự do</strong>!<br><br>
+🤖 <strong>Groq (Llama)</strong> — Tốc độ siêu nhanh, phù hợp câu hỏi đơn giản<br>
+🟣 <strong>Claude (Anthropic)</strong> — Thông minh hơn, trả lời sâu hơn, không giới hạn chủ đề<br><br>
+Chọn engine bên dưới và bắt đầu hỏi bất kỳ điều gì nhé!`);
   } else {
     btn.textContent = '🏪 Cửa hàng';
     btn.className = 'store';
     input.placeholder = 'Hỏi về kho hàng, doanh thu, chiến lược kinh doanh...';
+    if (claudeLabel) claudeLabel.style.display = 'none';
+    if (claudeInput) claudeInput.style.display = 'none';
+    if (claudeStatus) claudeStatus.style.display = 'none';
     quickDiv.innerHTML = `
       <button class="qbtn" onclick="qsend('Tồn kho hôm nay như thế nào?')">📦 Tồn kho</button>
       <button class="qbtn" onclick="qsend('Doanh thu tháng này bao nhiêu?')">💰 Doanh thu</button>
@@ -1521,8 +1591,27 @@ function toggleMode() {
       <button class="qbtn" onclick="qsend('Tư vấn chiến lược giảm giá cuối tháng')">💡 Chiến lược</button>
       <button class="qbtn" onclick="qsend('Liệt kê khách hàng VIP mua nhiều nhất')">👤 Khách VIP</button>
       <button class="qbtn" onclick="qsend('Sản phẩm nào sắp hết hàng cần nhập thêm?')">⚠️ Sắp hết</button>`;
+    updateModelChip();
     addMsg('bot', '🏪 Đã về <strong>Chế độ Cửa hàng</strong> — Tập trung quản lý PhoneStore VN.');
   }
+}
+
+function renderFreeQuickBtns() {
+  const quickDiv = document.getElementById('quick');
+  quickDiv.innerHTML = `
+    <button class="qbtn engine-btn ${FREE_ENGINE==='groq'?'active':''}" id="engine-groq" onclick="switchEngine('groq')" style="background:var(--green-dim);color:var(--green);border-color:var(--green);font-weight:700;">⚡ Groq</button>
+    <button class="qbtn engine-btn ${FREE_ENGINE==='claude'?'active':''}" id="engine-claude" onclick="switchEngine('claude')" style="background:var(--purple-dim);color:var(--purple);border-color:var(--purple);font-weight:700;">🟣 Claude</button>
+    <span style="width:1px;height:18px;background:var(--border2);display:inline-block;margin:0 2px;align-self:center;"></span>
+    <button class="qbtn" onclick="qsend('Thời tiết Nha Trang hôm nay?')">🌤️ Thời tiết</button>
+    <button class="qbtn" onclick="qsend('Giá vàng hôm nay bao nhiêu?')">🥇 Giá vàng</button>
+    <button class="qbtn" onclick="qsend('1 USD bằng bao nhiêu VND?')">💱 Tỷ giá</button>
+    <button class="qbtn" onclick="qsend('Bitcoin hôm nay giá bao nhiêu?')">🪙 Crypto</button>
+    <button class="qbtn" onclick="qsend('Dịch sang tiếng Anh: Xin chào bạn')">🌍 Dịch</button>
+    <button class="qbtn" onclick="qsend('Viết caption Instagram hay về điện thoại')">✍️ Caption</button>
+    <button class="qbtn" onclick="qsend('Giải thích Machine Learning là gì?')">🤖 AI/ML</button>
+    <button class="qbtn" onclick="qsend('Viết code Python đọc file CSV')">💻 Code</button>
+    <button class="qbtn" onclick="qsend('Công thức nấu phở bò ngon')">🍜 Nấu ăn</button>
+    <button class="qbtn" onclick="qsend('Tư vấn cách học tiếng Anh hiệu quả')">📚 Học tập</button>`;
 }
 
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
@@ -1889,11 +1978,41 @@ async function webSearch(query) {
   }
 }
 
+// ─── CLAUDE API CALL ──────────────────────────────────────────────────────────
+async function callClaude(systemPrompt, messages) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': claudeKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1500,
+      system: systemPrompt,
+      messages: messages
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || 'Claude API error');
+  return data.content[0].text;
+}
+
 async function sendMsg() {
   const input = document.getElementById('msg-input');
   const text = input.value.trim();
   if (!text) return;
-  if (!groqKey) {
+
+  // Check required key based on mode/engine
+  const needClaude = FREE_MODE && FREE_ENGINE === 'claude';
+  const needGroq   = !needClaude;
+  if (needClaude && !claudeKey) {
+    addMsg('bot', '⚠️ Vui lòng nhập <strong>Anthropic Claude key</strong> (sk-ant-...) vào ô phía trên và nhấn "Lưu key"!');
+    return;
+  }
+  if (needGroq && !groqKey) {
     addMsg('bot', '⚠️ Vui lòng nhập <strong>Groq API key</strong> và nhấn "Lưu key" trước khi chat!');
     return;
   }
@@ -1908,9 +2027,9 @@ async function sendMsg() {
   btn.disabled = true;
   showTyping();
 
-  // Chế độ tự do + câu hỏi cần tìm web → search trước
+  // Chế độ tự do + câu hỏi cần tìm web → search trước (chỉ cho Groq, Claude tự biết)
   let webContext = '';
-  if (FREE_MODE && needsWebSearch(text)) {
+  if (FREE_MODE && FREE_ENGINE === 'groq' && needsWebSearch(text)) {
     try {
       const result = await webSearch(text);
       if (result) {
@@ -1920,37 +2039,61 @@ async function sendMsg() {
   }
 
   try {
+    let reply = '';
     const systemPrompt = buildStoreContext() + webContext;
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + groqKey },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 800,
-        temperature: 0.7,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...history
-        ]
-      })
-    });
-    const data = await res.json();
-    hideTyping();
-    if (!res.ok) {
-      addMsg('bot', '❌ Lỗi API: ' + (data.error?.message || 'Không xác định'));
-    } else {
-      let reply = data.choices[0].message.content;
-      reply = handleAIActions(reply);
+
+    if (FREE_MODE && FREE_ENGINE === 'claude') {
+      // ─── CLAUDE PATH ────────────────────────────────────────────────────────
+      // Fetch real-time data if needed
+      let rtData = '';
+      if (needsWebSearch(text)) {
+        try {
+          const result = await webSearch(text);
+          if (result) rtData = `\n\n[DỮ LIỆU THỜI GIAN THỰC]:\n${result}`;
+        } catch(e) {}
+      }
+      const claudeSystem = buildStoreContext() + rtData;
+      reply = await callClaude(claudeSystem, history);
+      hideTyping();
+      const prefix = '<span style="font-size:10px;color:var(--purple);opacity:0.8;">🟣 Claude · </span>';
+      const rtBadge = rtData ? '<span style="font-size:10px;color:var(--accent);opacity:0.7;">🌐 · </span>' : '';
       history.push({role:'assistant', content: reply});
       localStorage.setItem(SK_HISTORY, JSON.stringify(history));
-      // Thêm badge 🌐 nếu có dùng web search
-      const prefix = (FREE_MODE && webContext) ? '<span style="font-size:10px;color:var(--accent);opacity:0.7;">🌐 Từ internet · </span>' : '';
-      addMsg('bot', prefix + reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
+      addMsg('bot', prefix + rtBadge + reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
       speakText(reply);
+    } else {
+      // ─── GROQ PATH (original) ───────────────────────────────────────────────
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + groqKey },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          max_tokens: 800,
+          temperature: 0.7,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...history
+          ]
+        })
+      });
+      const data = await res.json();
+      hideTyping();
+      if (!res.ok) {
+        addMsg('bot', '❌ Lỗi API: ' + (data.error?.message || 'Không xác định'));
+      } else {
+        reply = data.choices[0].message.content;
+        reply = handleAIActions(reply);
+        history.push({role:'assistant', content: reply});
+        localStorage.setItem(SK_HISTORY, JSON.stringify(history));
+        const prefix = (FREE_MODE && webContext) ? '<span style="font-size:10px;color:var(--accent);opacity:0.7;">🌐 Từ internet · </span>' : '';
+        addMsg('bot', prefix + reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
+        speakText(reply);
+      }
     }
   } catch(e) {
     hideTyping();
-    addMsg('bot', '❌ Không thể kết nối Groq API. Kiểm tra internet và API key.');
+    const isClaudeMode = FREE_MODE && FREE_ENGINE === 'claude';
+    addMsg('bot', `❌ Không thể kết nối ${isClaudeMode ? 'Claude (Anthropic)' : 'Groq'} API. Kiểm tra internet, API key và thử lại.<br><small style="color:var(--text3)">${e.message}</small>`);
   }
 
   btn.disabled = false;
