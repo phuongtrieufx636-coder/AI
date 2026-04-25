@@ -1611,7 +1611,10 @@ function renderFreeQuickBtns() {
     <button class="qbtn" onclick="qsend('Giải thích Machine Learning là gì?')">🤖 AI/ML</button>
     <button class="qbtn" onclick="qsend('Viết code Python đọc file CSV')">💻 Code</button>
     <button class="qbtn" onclick="qsend('Công thức nấu phở bò ngon')">🍜 Nấu ăn</button>
-    <button class="qbtn" onclick="qsend('Tư vấn cách học tiếng Anh hiệu quả')">📚 Học tập</button>`;
+    <button class="qbtn" onclick="qsend('Tư vấn cách học tiếng Anh hiệu quả')">📚 Học tập</button>
+    <button class="qbtn" onclick="qsend('Kết quả bóng đá hôm nay?')">⚽ Bóng đá</button>
+    <button class="qbtn" onclick="qsend('Tin tức thể thao mới nhất hôm nay?')">🏆 Thể thao</button>
+    <button class="qbtn" onclick="qsend('Tin tức sự kiện mới nhất hôm nay?')">📰 Tin tức</button>`;
 }
 
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
@@ -1857,6 +1860,8 @@ function detectQueryType(text) {
   if (/giá vàng|vàng sjc|vàng 9999|gold/.test(t)) return 'gold';
   if (/tỷ giá|usd|đô la|euro|eur|gbp|jpy|exchange/.test(t)) return 'forex';
   if (/bitcoin|btc|ethereum|eth|crypto|coin|usdt/.test(t)) return 'crypto';
+  if (/bóng đá|bóng rổ|tennis|thể thao|u17|u23|đội tuyển|kết quả|trận đấu|thi đấu|world cup|asian cup|v.league|premier league|champions league|la liga|ghi bàn|tỷ số/.test(t)) return 'sport';
+  if (/tin tức|tin mới|thời sự|sự kiện|hôm nay|mới nhất|xảy ra|vụ|tai nạn|thiên tai|chính trị|kinh tế vĩ mô/.test(t)) return 'news';
   if (/wikipedia|lịch sử của|là gì|ai là/.test(t)) return 'wiki';
   return 'general';
 }
@@ -1865,7 +1870,13 @@ function needsWebSearch(text) {
   const s = text.toLowerCase();
   const skip = ['dịch','code','viết','tính','công thức','nấu','tồn kho','doanh thu','khách vip','kho hàng','ghi chú','thêm','xóa','tóm tắt','caption'];
   if (skip.some(k => s.includes(k))) return false;
-  const hit = ['thời tiết','nhiệt độ','giá vàng','tỷ giá','bitcoin','crypto','eth','btc','usd','eur','tin tức','mới nhất','hôm nay','hiện tại','bây giờ','giá','lịch sử của','là gì','ai là'];
+  const hit = [
+    'thời tiết','nhiệt độ','giá vàng','tỷ giá','bitcoin','crypto','eth','btc','usd','eur',
+    'tin tức','mới nhất','hôm nay','hiện tại','bây giờ','giá','lịch sử của','là gì','ai là',
+    'bóng đá','bóng rổ','tennis','thể thao','u17','u23','đội tuyển','kết quả trận',
+    'thi đấu','world cup','asian cup','v.league','premier league','champions league',
+    'la liga','tỷ số','ghi bàn','thời sự','sự kiện','vụ','tai nạn'
+  ];
   return hit.some(k => s.includes(k));
 }
 
@@ -1963,6 +1974,51 @@ async function fetchWiki(text) {
   return null;
 }
 
+// ─── NEWS / SPORT via RSS (CORS-proxy) ────────────────────────────────────────
+async function fetchNewsByRSS(query) {
+  const PROXIES = [
+    'https://api.allorigins.win/get?url=',
+    'https://corsproxy.io/?'
+  ];
+  // Pick RSS feeds based on query type
+  const s = query.toLowerCase();
+  let feedUrl;
+  if (/bóng đá|thể thao|u17|u23|đội tuyển|kết quả|trận đấu|thi đấu|tỷ số|ghi bàn/.test(s)) {
+    feedUrl = 'https://vnexpress.net/rss/the-thao.rss';
+  } else {
+    feedUrl = 'https://vnexpress.net/rss/tin-tuc-su-kien.rss';
+  }
+
+  for (const proxy of PROXIES) {
+    try {
+      const url = proxy === 'https://api.allorigins.win/get?url='
+        ? proxy + encodeURIComponent(feedUrl)
+        : proxy + encodeURIComponent(feedUrl);
+      const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      if (!r.ok) continue;
+      const json = await r.json();
+      const xmlStr = json.contents || json.body || '';
+      if (!xmlStr) continue;
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(xmlStr, 'text/xml');
+      const items = Array.from(xml.querySelectorAll('item')).slice(0, 8);
+      if (items.length === 0) continue;
+      const today = new Date();
+      const lines = items.map(item => {
+        const title = item.querySelector('title')?.textContent?.trim() || '';
+        const pubDate = item.querySelector('pubDate')?.textContent?.trim() || '';
+        const desc = item.querySelector('description')?.textContent?.replace(/<[^>]+>/g,'').trim().slice(0,120) || '';
+        const dateStr = pubDate ? new Date(pubDate).toLocaleString('vi-VN') : '';
+        return `• ${title}${dateStr ? ' (' + dateStr + ')' : ''}\n  ${desc}`;
+      }).filter(Boolean);
+      if (lines.length === 0) continue;
+      const srcLabel = feedUrl.includes('the-thao') ? 'Thể thao' : 'Tin tức';
+      return `[${srcLabel} mới nhất từ VnExpress — ${today.toLocaleDateString('vi-VN')}]:\n${lines.join('\n\n')}\n\nHãy tóm tắt và trả lời câu hỏi dựa vào các tin trên bằng tiếng Việt.`;
+    } catch(e) { continue; }
+  }
+  return null;
+}
+
 async function webSearch(query) {
   const type = detectQueryType(query);
   try {
@@ -1970,8 +2026,11 @@ async function webSearch(query) {
     if (type === 'gold')    return await fetchGold();
     if (type === 'forex')   return await fetchForex();
     if (type === 'crypto')  return await fetchCrypto(query);
+    if (type === 'sport')   return await fetchNewsByRSS(query) || await fetchWiki(query);
+    if (type === 'news')    return await fetchNewsByRSS(query) || await fetchWiki(query);
     if (type === 'wiki')    return await fetchWiki(query);
-    return await fetchWiki(query); // general fallback
+    // general: try news first, then wiki
+    return await fetchNewsByRSS(query) || await fetchWiki(query);
   } catch(e) {
     console.warn('webSearch error:', type, e);
     return null;
