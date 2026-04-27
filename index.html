@@ -1257,10 +1257,11 @@
 // ─── STORAGE KEYS ─────────────────────────────────────────────────────────────
 const SK_KEY      = 'ps_groq_key';
 const SK_PRODUCTS = 'ps_products';
-const SK_VIPS     = 'ps_vips';
-const SK_PERMS    = 'ps_perms';
-const SK_HISTORY  = 'ps_chat_history';
-const SK_NOTES    = 'ps_notes';
+const SK_VIPS         = 'ps_vips';
+const SK_PERMS        = 'ps_perms';
+const SK_HISTORY      = 'ps_chat_history';
+const SK_NOTES        = 'ps_notes';
+const SK_TRANSACTIONS = 'ps_transactions';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let groqKey = '';
@@ -1269,6 +1270,7 @@ let PRODUCTS = [];
 let VIPS = [];
 let PERMS = { delInventory: false, delVip: false, delAll: false };
 let NOTES = [];
+let TRANSACTIONS = [];
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 function init() {
@@ -1604,8 +1606,6 @@ function buildNotesList() {
 }
 
 // ─── STATS / GIAO DỊCH THU CHI ────────────────────────────────────────────────
-const SK_TRANSACTIONS = 'ps_transactions';
-let TRANSACTIONS = [];
 
 function loadTransactions() {
   const saved = localStorage.getItem(SK_TRANSACTIONS);
@@ -1657,41 +1657,41 @@ function buildTransactionList() {
   const lnl = totalThu - totalChi;
   const isProfit = lnl >= 0;
 
-  // Update KPI cards
-  document.getElementById('kpi-thu').textContent = fmtMoney(totalThu);
-  document.getElementById('kpi-chi').textContent = fmtMoney(totalChi);
-  document.getElementById('kpi-loinhuan').textContent = (isProfit ? '+' : '') + fmtMoney(lnl);
-  document.getElementById('kpi-loinhuan').style.color = isProfit ? 'var(--green)' : 'var(--red)';
-  document.getElementById('kpi-lnl-label').textContent = isProfit ? '📈 Lợi nhuận' : '📉 Thua lỗ';
-  const pct = totalThu > 0 ? ((Math.abs(lnl) / totalThu) * 100).toFixed(1) : '0';
-  document.getElementById('kpi-lnl-sub').textContent = totalThu > 0 ? `biên ${pct}%` : '—';
-
-  // Count
-  const countEl = document.getElementById('tx-count');
-  if (countEl) countEl.textContent = TRANSACTIONS.length;
-
-  // List
-  const list = document.getElementById('tx-list');
-  if (!list) return;
-  if (TRANSACTIONS.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div>Chưa có giao dịch nào.<br>Thêm thu hoặc chi để bắt đầu theo dõi!</div>';
-    return;
+  // Update KPI cards — chỉ update nếu element tồn tại (tab stats đang mở)
+  const kpiThu = document.getElementById('kpi-thu');
+  if (kpiThu) {
+    kpiThu.textContent = fmtMoney(totalThu);
+    document.getElementById('kpi-chi').textContent = fmtMoney(totalChi);
+    document.getElementById('kpi-loinhuan').textContent = (isProfit ? '+' : '') + fmtMoney(lnl);
+    document.getElementById('kpi-loinhuan').style.color = isProfit ? 'var(--green)' : 'var(--red)';
+    document.getElementById('kpi-lnl-label').textContent = isProfit ? '📈 Lợi nhuận' : '📉 Thua lỗ';
+    const pct = totalThu > 0 ? ((Math.abs(lnl) / totalThu) * 100).toFixed(1) : '0';
+    document.getElementById('kpi-lnl-sub').textContent = totalThu > 0 ? `biên ${pct}%` : '—';
+    const countEl = document.getElementById('tx-count');
+    if (countEl) countEl.textContent = TRANSACTIONS.length;
+    const list = document.getElementById('tx-list');
+    if (list) {
+      if (TRANSACTIONS.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div>Chưa có giao dịch nào.<br>Thêm thu hoặc chi để bắt đầu theo dõi!</div>';
+      } else {
+        list.innerHTML = TRANSACTIONS.map((t, i) => {
+          const isThu = t.type === 'thu';
+          const sign = isThu ? '+' : '-';
+          const color = isThu ? 'var(--green)' : 'var(--red)';
+          const bg = isThu ? 'var(--green-dim)' : 'var(--red-dim)';
+          return `<div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+            <div style="width:38px; height:38px; border-radius:8px; background:${bg}; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">${isThu ? '💰' : '💸'}</div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.desc}</div>
+              <div style="font-size:11px; color:var(--text3); margin-top:2px;">${t.time}</div>
+            </div>
+            <div style="font-size:15px; font-weight:700; color:${color}; white-space:nowrap;">${sign}${fmtMoney(t.amount)}</div>
+            <button onclick="deleteTransaction(${i})" style="background:var(--red-dim); color:var(--red); border:1px solid rgba(240,82,82,0.2); border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer; font-family:inherit; flex-shrink:0;">🗑</button>
+          </div>`;
+        }).join('');
+      }
+    }
   }
-  list.innerHTML = TRANSACTIONS.map((t, i) => {
-    const isThu = t.type === 'thu';
-    const sign = isThu ? '+' : '-';
-    const color = isThu ? 'var(--green)' : 'var(--red)';
-    const bg = isThu ? 'var(--green-dim)' : 'var(--red-dim)';
-    return `<div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-      <div style="width:38px; height:38px; border-radius:8px; background:${bg}; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">${isThu ? '💰' : '💸'}</div>
-      <div style="flex:1; min-width:0;">
-        <div style="font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.desc}</div>
-        <div style="font-size:11px; color:var(--text3); margin-top:2px;">${t.time}</div>
-      </div>
-      <div style="font-size:15px; font-weight:700; color:${color}; white-space:nowrap;">${sign}${fmtMoney(t.amount)}</div>
-      <button onclick="deleteTransaction(${i})" style="background:var(--red-dim); color:var(--red); border:1px solid rgba(240,82,82,0.2); border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer; font-family:inherit; flex-shrink:0;">🗑</button>
-    </div>`;
-  }).join('');
 }
 
 function updateStats() {
