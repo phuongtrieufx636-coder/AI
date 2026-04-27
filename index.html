@@ -328,7 +328,6 @@
     white-space: nowrap;
   }
   .qbtn:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
-  .qbtn.engine-btn.active { opacity: 1 !important; box-shadow: 0 0 0 2px currentColor; }
 
   /* input */
   #inputbar {
@@ -399,6 +398,20 @@
   }
   #tts-toggle:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
   #tts-toggle.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+
+  /* IMG ATTACH BUTTON */
+  #img-attach-btn {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-sm);
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 0.15s;
+  }
+  #img-attach-btn:hover { background: var(--green-dim); color: var(--green); border-color: var(--green); }
+  #img-attach-btn.has-img { background: var(--green-dim); color: var(--green); border-color: var(--green); }
 
   /* INVENTORY TAB */
   #tab-inventory { overflow-y: auto; padding: 20px 22px; }
@@ -641,6 +654,65 @@
   #mode-toggle.free { background: var(--purple-dim); color: var(--purple); border-color: rgba(155,114,245,0.3); }
   #mode-toggle.store { background: var(--accent-dim); color: var(--accent); border-color: rgba(79,142,247,0.3); }
 
+  /* IMAGE UPLOAD AI */
+  .ai-scan-box {
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 10px;
+    background: var(--bg);
+    transition: border-color 0.2s, background 0.2s;
+    cursor: pointer;
+    text-align: center;
+  }
+  .ai-scan-box:hover, .ai-scan-box.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+  .ai-scan-box input[type="file"] { display: none; }
+  .ai-scan-label {
+    font-size: 12.5px; color: var(--text2);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    cursor: pointer;
+  }
+  .ai-scan-label .scan-icon { font-size: 28px; }
+  .ai-scan-label span { font-size: 11px; color: var(--text3); }
+  .ai-scan-preview {
+    display: none; margin-top: 10px; position: relative;
+  }
+  .ai-scan-preview img {
+    max-height: 160px; max-width: 100%; border-radius: var(--radius-sm);
+    border: 1px solid var(--border2); object-fit: contain;
+  }
+  .ai-scan-preview .remove-img {
+    position: absolute; top: -6px; right: -6px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--red); color: #fff; font-size: 12px;
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .btn-ai-scan {
+    margin-top: 10px; width: 100%; padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    color: #fff; border: none;
+    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    transition: opacity 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-ai-scan:hover { opacity: 0.88; }
+  .btn-ai-scan:disabled { opacity: 0.45; cursor: not-allowed; }
+  .ai-scan-status {
+    margin-top: 8px; font-size: 11.5px; text-align: center;
+    color: var(--text3); min-height: 18px;
+  }
+  .ai-scan-status.ok { color: var(--green); }
+  .ai-scan-status.err { color: var(--red); }
+  .ai-scan-toggle {
+    font-size: 11.5px; color: var(--accent); cursor: pointer;
+    text-decoration: underline; background: none; border: none;
+    font-family: inherit; padding: 0; margin-top: 4px;
+    display: flex; align-items: center; gap: 4px;
+  }
+
   /* DATA IMPORT/EXPORT */
   .export-btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
   .btn-export {
@@ -847,13 +919,10 @@
     </div>
 
     <div id="apibar">
-      <label>🔑 Groq:</label>
-      <input type="password" id="key-input" placeholder="gsk_xxxxxxxxxxxx" style="max-width:180px;" />
-      <label id="claude-key-label" style="display:none;">🤖 Claude:</label>
-      <input type="password" id="claude-key-input" placeholder="sk-ant-xxxxxxxxxxxx" style="max-width:180px;display:none;" />
+      <label>🔑 Groq API Key:</label>
+      <input type="password" id="key-input" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx" />
       <button onclick="saveKey()">Lưu key</button>
       <span class="key-status none" id="key-status">Chưa có key</span>
-      <span id="claude-key-status" style="display:none;"></span>
     </div>
 
     <!-- CHAT TAB -->
@@ -891,9 +960,25 @@
         <button class="qbtn" onclick="qsend('Sản phẩm nào sắp hết hàng cần nhập thêm?')">⚠️ Sắp hết</button>
       </div>
 
+      <!-- CHAT IMAGE PREVIEW -->
+      <div id="chat-img-preview-bar" style="display:none; padding:6px 22px 0; background:var(--bg2);">
+        <div style="display:flex; align-items:center; gap:8px; background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius-sm); padding:6px 10px;">
+          <img id="chat-preview-thumb" src="" style="height:48px; max-width:80px; object-fit:cover; border-radius:4px; border:1px solid var(--border);">
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:11.5px; color:var(--text2); font-weight:600;">📷 Ảnh đã chọn</div>
+            <div id="chat-img-name" style="font-size:10.5px; color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+          </div>
+          <button onclick="clearChatImg()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+      </div>
+      <input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="handleChatImgSelect(event)">
+
       <div id="inputbar">
         <button id="mic-btn" onclick="toggleMic()" title="Nhấn để nói">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v6a2 2 0 0 0 4 0V5a2 2 0 0 0-2-2zm7 9a1 1 0 0 1 1 1 8 8 0 0 1-7 7.938V23h-2v-2.062A8 8 0 0 1 4 13a1 1 0 1 1 2 0 6 6 0 0 0 12 0 1 1 0 0 1 1-1z"/></svg>
+        </button>
+        <button id="img-attach-btn" onclick="document.getElementById('chat-img-input').click()" title="Đính kèm ảnh để AI đọc">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-1.1 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
         </button>
         <textarea id="msg-input" rows="1" placeholder="Hỏi về kho hàng, doanh thu, chiến lược kinh doanh..."></textarea>
         <button id="tts-toggle" onclick="toggleTTS()" title="Bật/tắt đọc phản hồi bằng giọng nói">
@@ -909,17 +994,36 @@
     <div class="tab hidden" id="tab-inventory">
       <div style="padding:20px 22px; overflow-y:auto; flex:1;">
         <div class="add-form">
-          <h4>➕ Thêm sản phẩm mới</h4>
+          <h4>&#x2795; Th&#xEA;m s&#x1EA3;n ph&#x1EA9;m m&#x1EDB;i</h4>
           <div class="form-row">
-            <input type="text" id="inv-name" placeholder="Tên sản phẩm (vd: iPhone 16 Pro)" />
-            <input type="text" id="inv-icon" placeholder="Icon (vd: 📱)" maxlength="2" style="max-width:80px;" />
-            <input type="text" id="inv-price" placeholder="Giá (vd: 32.990.000đ)" />
-            <input type="number" id="inv-stock" placeholder="Tồn kho" min="0" style="max-width:110px;" />
-            <input type="number" id="inv-max" placeholder="Tối đa" min="1" style="max-width:90px;" />
-            <button class="btn-add" onclick="addProduct()">Thêm</button>
+            <input type="text" id="inv-name" placeholder="T&#xEA;n s&#x1EA3;n ph&#x1EA9;m (vd: iPhone 16 Pro)" />
+            <input type="text" id="inv-icon" placeholder="Icon (vd: &#x1F4F1;)" maxlength="2" style="max-width:80px;" />
+            <input type="text" id="inv-price" placeholder="Gi&#xE1; (vd: 32.990.000&#x111;)" />
+            <input type="number" id="inv-stock" placeholder="T&#x1ED3;n kho" min="0" style="max-width:110px;" />
+            <input type="number" id="inv-max" placeholder="T&#x1ED1;i &#x111;a" min="1" style="max-width:90px;" />
+            <button class="btn-add" onclick="addProduct()">Th&#xEA;m</button>
           </div>
+          <button class="ai-scan-toggle" onclick="toggleScanBox('inv')">&#x1F4F7; Nh&#x1EAD;p b&#x1EB1;ng h&#xEC;nh &#x1EA3;nh (AI &#x111;&#x1ECD;c t&#x1EF1; &#x111;&#x1ED9;ng)</button>
+          <div id="inv-scan-box" class="ai-scan-box" style="display:none;"
+               ondragover="handleDragOver(event,'inv')" ondragleave="handleDragLeave(event,'inv')" ondrop="handleDrop(event,'inv')"
+               onclick="document.getElementById('inv-img-input').click()">
+            <input type="file" id="inv-img-input" accept="image/*" onchange="handleImgSelect(event,'inv')">
+            <label class="ai-scan-label" onclick="event.stopPropagation()">
+              <span class="scan-icon">&#x1F5BC;&#xFE0F;</span>
+              <strong>K&#xE9;o th&#x1EA3; ho&#x1EB7;c nh&#x1EA5;n &#x111;&#x1EC3; ch&#x1ECD;n &#x1EA3;nh</strong>
+              <span>&#x1EA2;nh ho&#xE1; &#x111;&#x1EE1;n, b&#x1EA3;ng gi&#xE1;, danh s&#xE1;ch kho &#x2014; AI s&#x1EBD; t&#x1EF1; &#x111;&#x1ECD;c v&#xE0; nh&#x1EAD;p v&#xE0;o kho h&#xE0;ng</span>
+            </label>
+            <div class="ai-scan-preview" id="inv-preview">
+              <img id="inv-preview-img" src="" alt="preview">
+              <button class="remove-img" onclick="clearImg('inv',event)">&#x2715;</button>
+            </div>
+          </div>
+          <button class="btn-ai-scan" id="inv-scan-btn" style="display:none;" onclick="scanImage('inv')" disabled>
+            &#x2728; AI &#x111;&#x1ECD;c &#x1EA3;nh &amp; t&#x1EF1; nh&#x1EAD;p kho h&#xE0;ng
+          </button>
+          <div class="ai-scan-status" id="inv-scan-status"></div>
         </div>
-        <div class="section-hd" id="inv-hd">Danh sách sản phẩm</div>
+        <div class="section-hd" id="inv-hd">Danh s&#xE1;ch s&#x1EA3;n ph&#x1EA9;m</div>
         <div class="inv-grid" id="inv-grid"></div>
       </div>
     </div>
@@ -936,6 +1040,25 @@
             <input type="text" id="vip-note" placeholder="Ghi chú (tuỳ chọn)" />
             <button class="btn-add" onclick="addVip()">Thêm</button>
           </div>
+          <button class="ai-scan-toggle" onclick="toggleScanBox('vip')">📷 Nhập từ hình ảnh (AI đọc tự động)</button>
+          <div id="vip-scan-box" class="ai-scan-box" style="display:none;"
+               ondragover="handleDragOver(event,'vip')" ondragleave="handleDragLeave(event,'vip')" ondrop="handleDrop(event,'vip')"
+               onclick="document.getElementById('vip-img-input').click()">
+            <input type="file" id="vip-img-input" accept="image/*" onchange="handleImgSelect(event,'vip')">
+            <label class="ai-scan-label" onclick="event.stopPropagation()">
+              <span class="scan-icon">📋</span>
+              <strong>Kéo thả hoặc nhấn để chọn ảnh</strong>
+              <span>Ảnh danh sách khách, hoá đơn, thẻ khách hàng — AI sẽ tự đọc và thêm vào danh sách VIP</span>
+            </label>
+            <div class="ai-scan-preview" id="vip-preview">
+              <img id="vip-preview-img" src="" alt="preview">
+              <button class="remove-img" onclick="clearImg('vip',event)">✕</button>
+            </div>
+          </div>
+          <button class="btn-ai-scan" id="vip-scan-btn" style="display:none;" onclick="scanImage('vip')" disabled>
+            ✨ AI đọc ảnh &amp; tự nhập khách VIP
+          </button>
+          <div class="ai-scan-status" id="vip-scan-status"></div>
         </div>
         <div class="section-hd">Danh sách khách VIP</div>
         <div class="vip-list" id="vip-list"></div>
@@ -1128,12 +1251,6 @@ function init() {
     setKeyStatus(true);
   }
 
-  // Load Claude key
-  const savedClaudeKey = localStorage.getItem('ps_claude_key') || '';
-  if (savedClaudeKey) {
-    claudeKey = savedClaudeKey;
-  }
-
   // Load products
   const savedProds = localStorage.getItem(SK_PRODUCTS);
   PRODUCTS = savedProds ? JSON.parse(savedProds) : [];
@@ -1175,27 +1292,12 @@ function init() {
 
 // ─── KEY MANAGEMENT ───────────────────────────────────────────────────────────
 function saveKey() {
-  const groqVal = document.getElementById('key-input').value.trim();
-  const claudeEl = document.getElementById('claude-key-input');
-  const claudeVal = claudeEl ? claudeEl.value.trim() : '';
-
-  if (groqVal && !groqVal.startsWith('••')) {
-    groqKey = groqVal;
-    localStorage.setItem(SK_KEY, groqVal);
-    setKeyStatus(true);
-  }
-
-  if (claudeVal && !claudeVal.startsWith('••')) {
-    claudeKey = claudeVal;
-    localStorage.setItem('ps_claude_key', claudeVal);
-    const st = document.getElementById('claude-key-status');
-    if (st) { st.className = 'key-status ok'; st.textContent = '✓ Claude OK'; }
-    if (claudeEl) claudeEl.value = '••••••••';
-  }
-
-  if (groqVal || claudeVal) {
-    addMsg('bot', '✅ API key đã được lưu! ' + (claudeVal && !claudeVal.startsWith('••') ? '🟣 Claude key OK — chuyển sang Claude để hỏi bất kỳ điều gì!' : 'Bây giờ bạn có thể đặt câu hỏi.'));
-  }
+  const val = document.getElementById('key-input').value.trim();
+  if (!val) return;
+  groqKey = val;
+  localStorage.setItem(SK_KEY, val);
+  setKeyStatus(true);
+  addMsg('bot', '✅ API key đã được lưu thành công! Bây giờ bạn có thể đặt câu hỏi cho tôi.');
   updateSettingsStatus();
 }
 
@@ -1516,74 +1618,29 @@ function updateStats() {
 // ─── CHAT MODE ────────────────────────────────────────────────────────────────
 let FREE_MODE = false;
 
-// ─── AI ENGINE (free mode) ────────────────────────────────────────────────────
-let FREE_ENGINE = localStorage.getItem('ps_free_engine') || 'groq'; // 'groq' | 'claude'
-let claudeKey = localStorage.getItem('ps_claude_key') || '';
-
-function switchEngine(engine) {
-  FREE_ENGINE = engine;
-  localStorage.setItem('ps_free_engine', engine);
-  const groqBtn = document.getElementById('engine-groq');
-  const claudeBtn = document.getElementById('engine-claude');
-  if (groqBtn) groqBtn.classList.toggle('active', engine === 'groq');
-  if (claudeBtn) claudeBtn.classList.toggle('active', engine === 'claude');
-  updateModelChip();
-  const engineName = engine === 'claude' ? 'Claude Sonnet (Anthropic)' : 'Llama-3.3-70b (Groq)';
-  addMsg('bot', `🔄 Đã chuyển sang engine <strong>${engineName}</strong>. ${engine === 'claude' ? 'Bạn có thể hỏi bất kỳ điều gì, không giới hạn chủ đề!' : 'Tốc độ cao, phù hợp câu hỏi nhanh.'}`);
-}
-
-function updateModelChip() {
-  const chip = document.getElementById('model-chip-groq');
-  if (!chip) return;
-  if (FREE_MODE && FREE_ENGINE === 'claude') {
-    chip.innerHTML = `<div class="model-dot" style="background:var(--purple);box-shadow:0 0 6px var(--purple);"></div>
-      <div class="model-info">
-        <div class="model-name">claude-sonnet-4</div>
-        <div class="model-sub">Anthropic · Tự do</div>
-      </div>`;
-  } else {
-    chip.innerHTML = `<div class="model-dot"></div>
-      <div class="model-info">
-        <div class="model-name">llama-3.3-70b</div>
-        <div class="model-sub">Groq · Tốc độ cao</div>
-      </div>`;
-  }
-}
-
 function toggleMode() {
   FREE_MODE = !FREE_MODE;
   const btn = document.getElementById('mode-toggle');
   const input = document.getElementById('msg-input');
   const quickDiv = document.getElementById('quick');
-  // show/hide Claude key inputs
-  const claudeLabel = document.getElementById('claude-key-label');
-  const claudeInput = document.getElementById('claude-key-input');
-  const claudeStatus = document.getElementById('claude-key-status');
   if (FREE_MODE) {
     btn.textContent = '🌐 Tự do';
     btn.className = 'free';
-    input.placeholder = 'Hỏi bất cứ điều gì — dịch, code, nấu ăn, kiến thức, lập trình...';
-    // Show Claude key fields
-    if (claudeLabel) claudeLabel.style.display = '';
-    if (claudeInput) { claudeInput.style.display = ''; if (claudeKey) claudeInput.value = '••••••••'; }
-    if (claudeStatus) {
-      claudeStatus.className = 'key-status ' + (claudeKey ? 'ok' : 'none');
-      claudeStatus.textContent = claudeKey ? '✓ Claude OK' : 'Chưa có Claude key';
-      claudeStatus.style.display = '';
-    }
-    renderFreeQuickBtns();
-    updateModelChip();
-    addMsg('bot', `🌐 Đã chuyển sang <strong>Chế độ Tự do</strong>!<br><br>
-🤖 <strong>Groq (Llama)</strong> — Tốc độ siêu nhanh, phù hợp câu hỏi đơn giản<br>
-🟣 <strong>Claude (Anthropic)</strong> — Thông minh hơn, trả lời sâu hơn, không giới hạn chủ đề<br><br>
-Chọn engine bên dưới và bắt đầu hỏi bất kỳ điều gì nhé!`);
+    input.placeholder = 'Hỏi bất cứ điều gì — dịch, code, nấu ăn, kiến thức...';
+    quickDiv.innerHTML = `
+      <button class="qbtn" onclick="qsend('Thời tiết Nha Trang hôm nay?')">🌤️ Thời tiết</button>
+      <button class="qbtn" onclick="qsend('Giá vàng hôm nay bao nhiêu?')">🥇 Giá vàng</button>
+      <button class="qbtn" onclick="qsend('1 USD bằng bao nhiêu VND?')">💱 Tỷ giá</button>
+      <button class="qbtn" onclick="qsend('Bitcoin hôm nay giá bao nhiêu?')">🪙 Crypto</button>
+      <button class="qbtn" onclick="qsend('Dịch sang tiếng Anh: Xin chào')">🌍 Dịch</button>
+      <button class="qbtn" onclick="qsend('Viết caption Instagram hay')">✍️ Caption</button>
+      <button class="qbtn" onclick="qsend('Công thức nấu phở bò')">🍜 Nấu ăn</button>
+      <button class="qbtn" onclick="qsend('Giải thích AI là gì?')">🤖 Kiến thức</button>`;
+    addMsg('bot', '🌐 Đã chuyển sang <strong>Chế độ Tự do</strong> — Tôi có thể trả lời mọi câu hỏi và <strong>tìm kiếm thông tin trực tiếp từ internet</strong> khi cần! Hỏi thời tiết, tin tức, giá vàng, review sản phẩm... đều được nhé.');
   } else {
     btn.textContent = '🏪 Cửa hàng';
     btn.className = 'store';
     input.placeholder = 'Hỏi về kho hàng, doanh thu, chiến lược kinh doanh...';
-    if (claudeLabel) claudeLabel.style.display = 'none';
-    if (claudeInput) claudeInput.style.display = 'none';
-    if (claudeStatus) claudeStatus.style.display = 'none';
     quickDiv.innerHTML = `
       <button class="qbtn" onclick="qsend('Tồn kho hôm nay như thế nào?')">📦 Tồn kho</button>
       <button class="qbtn" onclick="qsend('Doanh thu tháng này bao nhiêu?')">💰 Doanh thu</button>
@@ -1591,30 +1648,8 @@ Chọn engine bên dưới và bắt đầu hỏi bất kỳ điều gì nhé!`)
       <button class="qbtn" onclick="qsend('Tư vấn chiến lược giảm giá cuối tháng')">💡 Chiến lược</button>
       <button class="qbtn" onclick="qsend('Liệt kê khách hàng VIP mua nhiều nhất')">👤 Khách VIP</button>
       <button class="qbtn" onclick="qsend('Sản phẩm nào sắp hết hàng cần nhập thêm?')">⚠️ Sắp hết</button>`;
-    updateModelChip();
     addMsg('bot', '🏪 Đã về <strong>Chế độ Cửa hàng</strong> — Tập trung quản lý PhoneStore VN.');
   }
-}
-
-function renderFreeQuickBtns() {
-  const quickDiv = document.getElementById('quick');
-  quickDiv.innerHTML = `
-    <button class="qbtn engine-btn ${FREE_ENGINE==='groq'?'active':''}" id="engine-groq" onclick="switchEngine('groq')" style="background:var(--green-dim);color:var(--green);border-color:var(--green);font-weight:700;">⚡ Groq</button>
-    <button class="qbtn engine-btn ${FREE_ENGINE==='claude'?'active':''}" id="engine-claude" onclick="switchEngine('claude')" style="background:var(--purple-dim);color:var(--purple);border-color:var(--purple);font-weight:700;">🟣 Claude</button>
-    <span style="width:1px;height:18px;background:var(--border2);display:inline-block;margin:0 2px;align-self:center;"></span>
-    <button class="qbtn" onclick="qsend('Thời tiết Nha Trang hôm nay?')">🌤️ Thời tiết</button>
-    <button class="qbtn" onclick="qsend('Giá vàng hôm nay bao nhiêu?')">🥇 Giá vàng</button>
-    <button class="qbtn" onclick="qsend('1 USD bằng bao nhiêu VND?')">💱 Tỷ giá</button>
-    <button class="qbtn" onclick="qsend('Bitcoin hôm nay giá bao nhiêu?')">🪙 Crypto</button>
-    <button class="qbtn" onclick="qsend('Dịch sang tiếng Anh: Xin chào bạn')">🌍 Dịch</button>
-    <button class="qbtn" onclick="qsend('Viết caption Instagram hay về điện thoại')">✍️ Caption</button>
-    <button class="qbtn" onclick="qsend('Giải thích Machine Learning là gì?')">🤖 AI/ML</button>
-    <button class="qbtn" onclick="qsend('Viết code Python đọc file CSV')">💻 Code</button>
-    <button class="qbtn" onclick="qsend('Công thức nấu phở bò ngon')">🍜 Nấu ăn</button>
-    <button class="qbtn" onclick="qsend('Tư vấn cách học tiếng Anh hiệu quả')">📚 Học tập</button>
-    <button class="qbtn" onclick="qsend('Kết quả bóng đá hôm nay?')">⚽ Bóng đá</button>
-    <button class="qbtn" onclick="qsend('Tin tức thể thao mới nhất hôm nay?')">🏆 Thể thao</button>
-    <button class="qbtn" onclick="qsend('Tin tức sự kiện mới nhất hôm nay?')">📰 Tin tức</button>`;
 }
 
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
@@ -1860,8 +1895,6 @@ function detectQueryType(text) {
   if (/giá vàng|vàng sjc|vàng 9999|gold/.test(t)) return 'gold';
   if (/tỷ giá|usd|đô la|euro|eur|gbp|jpy|exchange/.test(t)) return 'forex';
   if (/bitcoin|btc|ethereum|eth|crypto|coin|usdt/.test(t)) return 'crypto';
-  if (/bóng đá|bóng rổ|tennis|thể thao|u17|u23|đội tuyển|kết quả|trận đấu|thi đấu|world cup|asian cup|v.league|premier league|champions league|la liga|ghi bàn|tỷ số/.test(t)) return 'sport';
-  if (/tin tức|tin mới|thời sự|sự kiện|hôm nay|mới nhất|xảy ra|vụ|tai nạn|thiên tai|chính trị|kinh tế vĩ mô/.test(t)) return 'news';
   if (/wikipedia|lịch sử của|là gì|ai là/.test(t)) return 'wiki';
   return 'general';
 }
@@ -1870,13 +1903,7 @@ function needsWebSearch(text) {
   const s = text.toLowerCase();
   const skip = ['dịch','code','viết','tính','công thức','nấu','tồn kho','doanh thu','khách vip','kho hàng','ghi chú','thêm','xóa','tóm tắt','caption'];
   if (skip.some(k => s.includes(k))) return false;
-  const hit = [
-    'thời tiết','nhiệt độ','giá vàng','tỷ giá','bitcoin','crypto','eth','btc','usd','eur',
-    'tin tức','mới nhất','hôm nay','hiện tại','bây giờ','giá','lịch sử của','là gì','ai là',
-    'bóng đá','bóng rổ','tennis','thể thao','u17','u23','đội tuyển','kết quả trận',
-    'thi đấu','world cup','asian cup','v.league','premier league','champions league',
-    'la liga','tỷ số','ghi bàn','thời sự','sự kiện','vụ','tai nạn'
-  ];
+  const hit = ['thời tiết','nhiệt độ','giá vàng','tỷ giá','bitcoin','crypto','eth','btc','usd','eur','tin tức','mới nhất','hôm nay','hiện tại','bây giờ','giá','lịch sử của','là gì','ai là'];
   return hit.some(k => s.includes(k));
 }
 
@@ -1974,51 +2001,6 @@ async function fetchWiki(text) {
   return null;
 }
 
-// ─── NEWS / SPORT via RSS (CORS-proxy) ────────────────────────────────────────
-async function fetchNewsByRSS(query) {
-  const PROXIES = [
-    'https://api.allorigins.win/get?url=',
-    'https://corsproxy.io/?'
-  ];
-  // Pick RSS feeds based on query type
-  const s = query.toLowerCase();
-  let feedUrl;
-  if (/bóng đá|thể thao|u17|u23|đội tuyển|kết quả|trận đấu|thi đấu|tỷ số|ghi bàn/.test(s)) {
-    feedUrl = 'https://vnexpress.net/rss/the-thao.rss';
-  } else {
-    feedUrl = 'https://vnexpress.net/rss/tin-tuc-su-kien.rss';
-  }
-
-  for (const proxy of PROXIES) {
-    try {
-      const url = proxy === 'https://api.allorigins.win/get?url='
-        ? proxy + encodeURIComponent(feedUrl)
-        : proxy + encodeURIComponent(feedUrl);
-      const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
-      if (!r.ok) continue;
-      const json = await r.json();
-      const xmlStr = json.contents || json.body || '';
-      if (!xmlStr) continue;
-      const parser = new DOMParser();
-      const xml = parser.parseFromString(xmlStr, 'text/xml');
-      const items = Array.from(xml.querySelectorAll('item')).slice(0, 8);
-      if (items.length === 0) continue;
-      const today = new Date();
-      const lines = items.map(item => {
-        const title = item.querySelector('title')?.textContent?.trim() || '';
-        const pubDate = item.querySelector('pubDate')?.textContent?.trim() || '';
-        const desc = item.querySelector('description')?.textContent?.replace(/<[^>]+>/g,'').trim().slice(0,120) || '';
-        const dateStr = pubDate ? new Date(pubDate).toLocaleString('vi-VN') : '';
-        return `• ${title}${dateStr ? ' (' + dateStr + ')' : ''}\n  ${desc}`;
-      }).filter(Boolean);
-      if (lines.length === 0) continue;
-      const srcLabel = feedUrl.includes('the-thao') ? 'Thể thao' : 'Tin tức';
-      return `[${srcLabel} mới nhất từ VnExpress — ${today.toLocaleDateString('vi-VN')}]:\n${lines.join('\n\n')}\n\nHãy tóm tắt và trả lời câu hỏi dựa vào các tin trên bằng tiếng Việt.`;
-    } catch(e) { continue; }
-  }
-  return null;
-}
-
 async function webSearch(query) {
   const type = detectQueryType(query);
   try {
@@ -2026,69 +2008,71 @@ async function webSearch(query) {
     if (type === 'gold')    return await fetchGold();
     if (type === 'forex')   return await fetchForex();
     if (type === 'crypto')  return await fetchCrypto(query);
-    if (type === 'sport')   return await fetchNewsByRSS(query) || await fetchWiki(query);
-    if (type === 'news')    return await fetchNewsByRSS(query) || await fetchWiki(query);
     if (type === 'wiki')    return await fetchWiki(query);
-    // general: try news first, then wiki
-    return await fetchNewsByRSS(query) || await fetchWiki(query);
+    return await fetchWiki(query); // general fallback
   } catch(e) {
     console.warn('webSearch error:', type, e);
     return null;
   }
 }
 
-// ─── CLAUDE API CALL ──────────────────────────────────────────────────────────
-async function callClaude(systemPrompt, messages) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': claudeKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
-      system: systemPrompt,
-      messages: messages
-    })
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || 'Claude API error');
-  return data.content[0].text;
+// ─── CHAT IMAGE ATTACH ────────────────────────────────────────────────────────
+let chatImgData = null;
+
+function handleChatImgSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    chatImgData = ev.target.result;
+    document.getElementById('chat-img-preview-bar').style.display = 'block';
+    document.getElementById('chat-preview-thumb').src = chatImgData;
+    document.getElementById('chat-img-name').textContent = file.name;
+    document.getElementById('img-attach-btn').classList.add('has-img');
+    document.getElementById('msg-input').placeholder = 'Nhập câu hỏi về ảnh hoặc nhấn gửi để AI phân tích...';
+    document.getElementById('msg-input').focus();
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function clearChatImg() {
+  chatImgData = null;
+  document.getElementById('chat-img-preview-bar').style.display = 'none';
+  document.getElementById('chat-preview-thumb').src = '';
+  document.getElementById('img-attach-btn').classList.remove('has-img');
+  document.getElementById('msg-input').placeholder = 'Hỏi về kho hàng, doanh thu, chiến lược kinh doanh...';
 }
 
 async function sendMsg() {
   const input = document.getElementById('msg-input');
   const text = input.value.trim();
-  if (!text) return;
-
-  // Check required key based on mode/engine
-  const needClaude = FREE_MODE && FREE_ENGINE === 'claude';
-  const needGroq   = !needClaude;
-  if (needClaude && !claudeKey) {
-    addMsg('bot', '⚠️ Vui lòng nhập <strong>Anthropic Claude key</strong> (sk-ant-...) vào ô phía trên và nhấn "Lưu key"!');
-    return;
-  }
-  if (needGroq && !groqKey) {
+  const hasImg = !!chatImgData;
+  if (!text && !hasImg) return;
+  if (!groqKey) {
     addMsg('bot', '⚠️ Vui lòng nhập <strong>Groq API key</strong> và nhấn "Lưu key" trước khi chat!');
     return;
   }
 
-  addMsg('user', text.replace(/</g,'&lt;'));
-  history.push({role:'user', content: text});
+  const displayText = text || '📷 Phân tích ảnh này cho tôi';
+  // Show user message with thumbnail if has image
+  const imgThumbHtml = hasImg ? `<img src="${chatImgData}" style="max-height:80px;max-width:140px;border-radius:6px;display:block;margin-bottom:6px;border:1px solid rgba(255,255,255,0.15);">` : '';
+  addMsg('user', imgThumbHtml + displayText.replace(/</g,'&lt;'));
+  history.push({role:'user', content: text || 'Phân tích ảnh này cho tôi'});
   localStorage.setItem(SK_HISTORY, JSON.stringify(history));
   input.value = '';
   input.style.height = 'auto';
+
+  const capturedImg = chatImgData;
+  clearChatImg();
 
   const btn = document.getElementById('send-btn');
   btn.disabled = true;
   showTyping();
 
-  // Chế độ tự do + câu hỏi cần tìm web → search trước (chỉ cho Groq, Claude tự biết)
+  // Chế độ tự do + câu hỏi cần tìm web → search trước
   let webContext = '';
-  if (FREE_MODE && FREE_ENGINE === 'groq' && needsWebSearch(text)) {
+  if (FREE_MODE && !capturedImg && needsWebSearch(text)) {
     try {
       const result = await webSearch(text);
       if (result) {
@@ -2098,61 +2082,71 @@ async function sendMsg() {
   }
 
   try {
-    let reply = '';
     const systemPrompt = buildStoreContext() + webContext;
 
-    if (FREE_MODE && FREE_ENGINE === 'claude') {
-      // ─── CLAUDE PATH ────────────────────────────────────────────────────────
-      // Fetch real-time data if needed
-      let rtData = '';
-      if (needsWebSearch(text)) {
-        try {
-          const result = await webSearch(text);
-          if (result) rtData = `\n\n[DỮ LIỆU THỜI GIAN THỰC]:\n${result}`;
-        } catch(e) {}
-      }
-      const claudeSystem = buildStoreContext() + rtData;
-      reply = await callClaude(claudeSystem, history);
-      hideTyping();
-      const prefix = '<span style="font-size:10px;color:var(--purple);opacity:0.8;">🟣 Claude · </span>';
-      const rtBadge = rtData ? '<span style="font-size:10px;color:var(--accent);opacity:0.7;">🌐 · </span>' : '';
+    // Build user message content (with or without image)
+    let userMsgContent;
+    if (capturedImg) {
+      const userText = text || `Hãy phân tích ảnh này và cho tôi biết:\n- Đây là ảnh gì?\n- Có thông tin nào liên quan đến doanh thu, sản phẩm, hay khách hàng không?\n- Đề xuất hành động cụ thể cho cửa hàng.`;
+      userMsgContent = [
+        { type: 'text', text: userText },
+        { type: 'image_url', image_url: { url: capturedImg } }
+      ];
+    } else {
+      userMsgContent = text;
+    }
+
+    // Build messages array - for image we use vision model with just current msg
+    let messagesArr;
+    const visionModel = 'meta-llama/llama-4-scout-17b-16e-instruct';
+    const textModel = 'llama-3.3-70b-versatile';
+    const useModel = capturedImg ? visionModel : textModel;
+
+    if (capturedImg) {
+      // Vision: send system + recent history (text only) + current image msg
+      const historyTextOnly = history.slice(-6, -1).map(m => ({
+        role: m.role,
+        content: typeof m.content === 'string' ? m.content : '[ảnh]'
+      }));
+      messagesArr = [
+        { role: 'system', content: systemPrompt },
+        ...historyTextOnly,
+        { role: 'user', content: userMsgContent }
+      ];
+    } else {
+      messagesArr = [
+        { role: 'system', content: systemPrompt },
+        ...history
+      ];
+    }
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + groqKey },
+      body: JSON.stringify({
+        model: useModel,
+        max_tokens: 800,
+        temperature: 0.7,
+        messages: messagesArr
+      })
+    });
+    const data = await res.json();
+    hideTyping();
+    if (!res.ok) {
+      addMsg('bot', '❌ Lỗi API: ' + (data.error?.message || 'Không xác định'));
+    } else {
+      let reply = data.choices[0].message.content;
+      reply = handleAIActions(reply);
       history.push({role:'assistant', content: reply});
       localStorage.setItem(SK_HISTORY, JSON.stringify(history));
-      addMsg('bot', prefix + rtBadge + reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
+      const imgBadge = capturedImg ? '<span style="font-size:10px;color:var(--green);opacity:0.8;">📷 Từ ảnh · </span>' : '';
+      const prefix = imgBadge || ((FREE_MODE && webContext) ? '<span style="font-size:10px;color:var(--accent);opacity:0.7;">🌐 Từ internet · </span>' : '');
+      addMsg('bot', prefix + reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
       speakText(reply);
-    } else {
-      // ─── GROQ PATH (original) ───────────────────────────────────────────────
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + groqKey },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          max_tokens: 800,
-          temperature: 0.7,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...history
-          ]
-        })
-      });
-      const data = await res.json();
-      hideTyping();
-      if (!res.ok) {
-        addMsg('bot', '❌ Lỗi API: ' + (data.error?.message || 'Không xác định'));
-      } else {
-        reply = data.choices[0].message.content;
-        reply = handleAIActions(reply);
-        history.push({role:'assistant', content: reply});
-        localStorage.setItem(SK_HISTORY, JSON.stringify(history));
-        const prefix = (FREE_MODE && webContext) ? '<span style="font-size:10px;color:var(--accent);opacity:0.7;">🌐 Từ internet · </span>' : '';
-        addMsg('bot', prefix + reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
-        speakText(reply);
-      }
     }
   } catch(e) {
     hideTyping();
-    const isClaudeMode = FREE_MODE && FREE_ENGINE === 'claude';
-    addMsg('bot', `❌ Không thể kết nối ${isClaudeMode ? 'Claude (Anthropic)' : 'Groq'} API. Kiểm tra internet, API key và thử lại.<br><small style="color:var(--text3)">${e.message}</small>`);
+    addMsg('bot', '❌ Không thể kết nối Groq API. Kiểm tra internet và API key.');
   }
 
   btn.disabled = false;
@@ -2267,6 +2261,238 @@ document.getElementById('msg-input').addEventListener('input', function() {
   this.style.height = 'auto';
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
+
+// ─── AI IMAGE SCAN ────────────────────────────────────────────────────────────
+const scanImgData = { inv: null, vip: null };
+
+function toggleScanBox(type) {
+  const box = document.getElementById(type + '-scan-box');
+  const btn = document.getElementById(type + '-scan-btn');
+  const statusEl = document.getElementById(type + '-scan-status');
+  const isHidden = box.style.display === 'none';
+  box.style.display = isHidden ? 'block' : 'none';
+  if (btn) btn.style.display = isHidden ? 'flex' : 'none';
+  if (!isHidden) {
+    clearImg(type, null, true);
+    if (statusEl) statusEl.textContent = '';
+  }
+}
+
+function handleDragOver(e, type) {
+  e.preventDefault();
+  document.getElementById(type + '-scan-box').classList.add('drag-over');
+}
+function handleDragLeave(e, type) {
+  document.getElementById(type + '-scan-box').classList.remove('drag-over');
+}
+function handleDrop(e, type) {
+  e.preventDefault();
+  document.getElementById(type + '-scan-box').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) loadImgFile(file, type);
+}
+function handleImgSelect(e, type) {
+  const file = e.target.files[0];
+  if (file) loadImgFile(file, type);
+}
+
+function loadImgFile(file, type) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    scanImgData[type] = dataUrl;
+    const preview = document.getElementById(type + '-preview');
+    const img = document.getElementById(type + '-preview-img');
+    img.src = dataUrl;
+    preview.style.display = 'block';
+    const scanBtn = document.getElementById(type + '-scan-btn');
+    if (scanBtn) scanBtn.disabled = false;
+    const statusEl = document.getElementById(type + '-scan-status');
+    if (statusEl) statusEl.textContent = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImg(type, e, silent) {
+  if (e) e.stopPropagation();
+  scanImgData[type] = null;
+  const preview = document.getElementById(type + '-preview');
+  const img = document.getElementById(type + '-preview-img');
+  const input = document.getElementById(type + '-img-input');
+  if (img) img.src = '';
+  if (preview) preview.style.display = 'none';
+  if (input) input.value = '';
+  const scanBtn = document.getElementById(type + '-scan-btn');
+  if (scanBtn) scanBtn.disabled = true;
+  if (!silent) {
+    const statusEl = document.getElementById(type + '-scan-status');
+    if (statusEl) statusEl.textContent = '';
+  }
+}
+
+async function scanImage(type) {
+  if (!groqKey) {
+    alert('Vui lòng nhập Groq API key trước!');
+    return;
+  }
+  const dataUrl = scanImgData[type];
+  if (!dataUrl) {
+    alert('Vui lòng chọn ảnh trước!');
+    return;
+  }
+
+  const btn = document.getElementById(type + '-scan-btn');
+  const statusEl = document.getElementById(type + '-scan-status');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="animation:spin 1s linear infinite;display:inline-block;">⏳</span> AI đang đọc ảnh...';
+  statusEl.textContent = '';
+  statusEl.className = 'ai-scan-status';
+
+  // Convert dataUrl to base64
+  const base64 = dataUrl.split(',')[1];
+  const mimeMatch = dataUrl.match(/data:([^;]+);/);
+  const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+
+  let prompt, responseSchema;
+  if (type === 'inv') {
+    prompt = `Bạn là AI đọc ảnh hóa đơn/bảng giá/danh sách hàng hóa cho cửa hàng điện thoại Việt Nam.
+Hãy phân tích ảnh và trích xuất thông tin sản phẩm. Trả về JSON theo đúng format sau, KHÔNG có markdown, chỉ JSON thuần:
+{
+  "products": [
+    {
+      "name": "Tên sản phẩm",
+      "icon": "emoji phù hợp (📱 cho điện thoại, 💻 laptop, 🎧 tai nghe, ⌚ đồng hồ, 📦 khác)",
+      "price": "Giá dạng text (vd: 25.990.000đ)",
+      "stock": số_tồn_kho_là_số_nguyên (nếu không có thì mặc định 10),
+      "max": số_tối_đa_là_số_nguyên (thường gấp 2-3 lần stock, mặc định 20)
+    }
+  ],
+  "note": "ghi chú ngắn về những gì AI đọc được từ ảnh"
+}
+Nếu ảnh không rõ hoặc không phải danh sách hàng: trả về {"products": [], "note": "lý do không đọc được"}.`;
+  } else {
+    prompt = `Bạn là AI đọc ảnh danh sách khách hàng/thẻ khách hàng/hóa đơn cho cửa hàng điện thoại Việt Nam.
+Hãy phân tích ảnh và trích xuất thông tin khách hàng. Trả về JSON theo đúng format sau, KHÔNG có markdown, chỉ JSON thuần:
+{
+  "customers": [
+    {
+      "name": "Họ tên khách hàng",
+      "phone": "số điện thoại (để trống nếu không có)",
+      "count": số_lần_mua_là_số_nguyên (mặc định 1 nếu không rõ),
+      "note": "ghi chú (vd: mua iPhone, khách thân thiết, v.v.)"
+    }
+  ],
+  "note": "ghi chú ngắn về những gì AI đọc được từ ảnh"
+}
+Nếu ảnh không rõ hoặc không phải danh sách khách: trả về {"customers": [], "note": "lý do không đọc được"}.`;
+  }
+
+  try {
+    // Use Groq with vision (llama-4-scout-17b-16e-instruct supports vision)
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + groqKey },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        max_tokens: 1500,
+        temperature: 0.1,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: dataUrl } }
+          ]
+        }]
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error?.message || 'Lỗi API');
+    }
+
+    let rawText = data.choices[0].message.content.trim();
+    // Strip markdown fences if any
+    rawText = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+
+    let parsed;
+    try { parsed = JSON.parse(rawText); } catch(e) {
+      throw new Error('AI trả về dữ liệu không hợp lệ. Hãy thử lại với ảnh rõ hơn.');
+    }
+
+    if (type === 'inv') {
+      const products = parsed.products || [];
+      if (products.length === 0) {
+        statusEl.textContent = '⚠️ ' + (parsed.note || 'Không tìm thấy sản phẩm trong ảnh.');
+        statusEl.className = 'ai-scan-status err';
+      } else {
+        let added = 0, skipped = 0;
+        products.forEach(p => {
+          if (!p.name) return;
+          const dup = PRODUCTS.find(x => x.name.toLowerCase() === p.name.toLowerCase());
+          if (dup) { skipped++; return; }
+          PRODUCTS.push({
+            name: p.name,
+            icon: p.icon || '📦',
+            price: p.price || '0đ',
+            stock: parseInt(p.stock) || 10,
+            max: parseInt(p.max) || 20
+          });
+          added++;
+        });
+        saveProducts();
+        buildInventory();
+        updateStats();
+        const note = parsed.note ? ' · ' + parsed.note : '';
+        statusEl.textContent = `✅ Đã thêm ${added} sản phẩm${skipped > 0 ? ', bỏ qua ' + skipped + ' trùng' : ''}${note}`;
+        statusEl.className = 'ai-scan-status ok';
+        if (added > 0) clearImg(type, null, true);
+      }
+    } else {
+      const customers = parsed.customers || [];
+      if (customers.length === 0) {
+        statusEl.textContent = '⚠️ ' + (parsed.note || 'Không tìm thấy khách hàng trong ảnh.');
+        statusEl.className = 'ai-scan-status err';
+      } else {
+        let added = 0, skipped = 0;
+        customers.forEach(c => {
+          if (!c.name) return;
+          const dup = VIPS.find(v => v.name.toLowerCase() === c.name.toLowerCase());
+          if (dup) { skipped++; return; }
+          VIPS.push({
+            name: c.name,
+            phone: c.phone || '',
+            count: parseInt(c.count) || 1,
+            note: c.note || ''
+          });
+          added++;
+        });
+        VIPS.sort((a,b) => b.count - a.count);
+        saveVips();
+        buildVipList();
+        updateStats();
+        const note = parsed.note ? ' · ' + parsed.note : '';
+        statusEl.textContent = `✅ Đã thêm ${added} khách VIP${skipped > 0 ? ', bỏ qua ' + skipped + ' trùng' : ''}${note}`;
+        statusEl.className = 'ai-scan-status ok';
+        if (added > 0) clearImg(type, null, true);
+      }
+    }
+  } catch(err) {
+    statusEl.textContent = '❌ ' + err.message;
+    statusEl.className = 'ai-scan-status err';
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = type === 'inv'
+    ? '✨ AI đọc ảnh &amp; tự nhập kho hàng'
+    : '✨ AI đọc ảnh &amp; tự nhập khách VIP';
+}
+
+// Add spin animation
+const spinStyle = document.createElement('style');
+spinStyle.textContent = '@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }';
+document.head.appendChild(spinStyle);
 
 // ─── EXPORT / IMPORT DATA ─────────────────────────────────────────────────────
 function exportData() {
