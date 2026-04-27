@@ -1090,36 +1090,52 @@
     <!-- STATS TAB -->
     <div class="tab hidden" id="tab-stats">
       <div id="tab-stats-inner" style="overflow-y:auto; padding:20px 22px; flex:1; display:flex; flex-direction:column; gap:20px;">
+
+        <!-- KPI TỔNG KẾT -->
         <div>
-          <div class="section-hd">Tổng quan</div>
-          <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+          <div class="section-hd">Tổng kết tài chính</div>
+          <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:10px;">
             <div class="kpi">
-              <div class="kpi-label">Loại sản phẩm</div>
-              <div class="kpi-val" id="kpi-total-products" style="color:#4f8ef7;">0</div>
-              <div class="kpi-sub" id="kpi-products-sub" style="color:var(--text3);">loại hàng</div>
+              <div class="kpi-label">💰 Tổng thu</div>
+              <div class="kpi-val" id="kpi-thu" style="color:var(--green); font-size:18px;">0đ</div>
+              <div class="kpi-sub" style="color:var(--text3);">doanh thu</div>
             </div>
             <div class="kpi">
-              <div class="kpi-label">Tổng tồn kho</div>
-              <div class="kpi-val" id="kpi-stock" style="color:#f0a030;">0</div>
-              <div class="kpi-sub warn" id="kpi-stock-sub">—</div>
+              <div class="kpi-label">💸 Tổng chi</div>
+              <div class="kpi-val" id="kpi-chi" style="color:var(--red); font-size:18px;">0đ</div>
+              <div class="kpi-sub" style="color:var(--text3);">chi phí</div>
             </div>
             <div class="kpi">
-              <div class="kpi-label">Khách VIP</div>
-              <div class="kpi-val" id="kpi-vip-count" style="color:#9b72f5;">0</div>
-              <div class="kpi-sub" style="color:var(--text3);">khách hàng</div>
+              <div class="kpi-label" id="kpi-lnl-label">📈 Lợi nhuận</div>
+              <div class="kpi-val" id="kpi-loinhuan" style="color:var(--accent); font-size:18px;">0đ</div>
+              <div class="kpi-sub" id="kpi-lnl-sub" style="color:var(--text3);">—</div>
             </div>
           </div>
         </div>
 
-        <div>
-          <div class="section-hd">Tồn kho theo sản phẩm</div>
-          <div class="top-list" id="stats-stock-list"></div>
+        <!-- NHẬP GIAO DỊCH -->
+        <div class="add-form">
+          <h4>➕ Thêm giao dịch</h4>
+          <div class="form-row" style="flex-wrap:wrap; gap:8px;">
+            <select id="tx-type" style="max-width:120px; padding:8px 10px; border-radius:6px; background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:inherit; font-size:13px;">
+              <option value="thu">💰 Thu</option>
+              <option value="chi">💸 Chi</option>
+            </select>
+            <input type="text" id="tx-desc" placeholder="Mô tả (vd: Bán iPhone 15)" style="flex:2; min-width:140px;" />
+            <input type="number" id="tx-amount" placeholder="Số tiền (đồng)" min="0" style="flex:1; min-width:120px;" />
+            <button class="btn-add" onclick="addTransaction()">Thêm</button>
+          </div>
         </div>
 
+        <!-- DANH SÁCH GIAO DỊCH -->
         <div>
-          <div class="section-hd">Khách hàng VIP</div>
-          <div class="panel" id="stats-vip-panel"></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <div class="section-hd" style="margin:0;">Lịch sử giao dịch (<span id="tx-count">0</span>)</div>
+            <button onclick="clearAllTransactions()" style="font-size:11px; padding:4px 10px; border-radius:20px; background:var(--red-dim); color:var(--red); border:1px solid rgba(240,82,82,0.2); cursor:pointer; font-family:inherit;">🗑 Xóa hết</button>
+          </div>
+          <div id="tx-list"></div>
         </div>
+
       </div>
     </div>
 
@@ -1284,6 +1300,9 @@ function init() {
   // Load notes
   const savedNotes = localStorage.getItem(SK_NOTES);
   NOTES = savedNotes ? JSON.parse(savedNotes) : [];
+
+  // Load transactions
+  loadTransactions();
 
   // Load chat history
   const savedHistory = localStorage.getItem(SK_HISTORY);
@@ -1584,48 +1603,99 @@ function buildNotesList() {
     </div>`).join('');
 }
 
-// ─── STATS ────────────────────────────────────────────────────────────────────
+// ─── STATS / GIAO DỊCH THU CHI ────────────────────────────────────────────────
+const SK_TRANSACTIONS = 'ps_transactions';
+let TRANSACTIONS = [];
+
+function loadTransactions() {
+  const saved = localStorage.getItem(SK_TRANSACTIONS);
+  TRANSACTIONS = saved ? JSON.parse(saved) : [];
+}
+
+function saveTransactions() {
+  localStorage.setItem(SK_TRANSACTIONS, JSON.stringify(TRANSACTIONS));
+}
+
+function fmtMoney(n) {
+  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2).replace(/\.?0+$/, '') + 'tỷ';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(2).replace(/\.?0+$/, '') + 'tr';
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'k';
+  return n.toLocaleString('vi-VN') + 'đ';
+}
+
+function addTransaction() {
+  const type   = document.getElementById('tx-type').value;
+  const desc   = document.getElementById('tx-desc').value.trim();
+  const amount = parseFloat(document.getElementById('tx-amount').value);
+  if (!desc) { alert('Vui lòng nhập mô tả giao dịch!'); return; }
+  if (!amount || amount <= 0) { alert('Vui lòng nhập số tiền hợp lệ!'); return; }
+  const now = new Date().toLocaleString('vi-VN');
+  TRANSACTIONS.unshift({ type, desc, amount, time: now });
+  saveTransactions();
+  document.getElementById('tx-desc').value = '';
+  document.getElementById('tx-amount').value = '';
+  buildTransactionList();
+}
+
+function deleteTransaction(idx) {
+  if (!confirm('Xóa giao dịch này?')) return;
+  TRANSACTIONS.splice(idx, 1);
+  saveTransactions();
+  buildTransactionList();
+}
+
+function clearAllTransactions() {
+  if (!confirm('Xóa toàn bộ lịch sử giao dịch?')) return;
+  TRANSACTIONS = [];
+  saveTransactions();
+  buildTransactionList();
+}
+
+function buildTransactionList() {
+  const totalThu = TRANSACTIONS.filter(t => t.type === 'thu').reduce((s, t) => s + t.amount, 0);
+  const totalChi = TRANSACTIONS.filter(t => t.type === 'chi').reduce((s, t) => s + t.amount, 0);
+  const lnl = totalThu - totalChi;
+  const isProfit = lnl >= 0;
+
+  // Update KPI cards
+  document.getElementById('kpi-thu').textContent = fmtMoney(totalThu);
+  document.getElementById('kpi-chi').textContent = fmtMoney(totalChi);
+  document.getElementById('kpi-loinhuan').textContent = (isProfit ? '+' : '') + fmtMoney(lnl);
+  document.getElementById('kpi-loinhuan').style.color = isProfit ? 'var(--green)' : 'var(--red)';
+  document.getElementById('kpi-lnl-label').textContent = isProfit ? '📈 Lợi nhuận' : '📉 Thua lỗ';
+  const pct = totalThu > 0 ? ((Math.abs(lnl) / totalThu) * 100).toFixed(1) : '0';
+  document.getElementById('kpi-lnl-sub').textContent = totalThu > 0 ? `biên ${pct}%` : '—';
+
+  // Count
+  const countEl = document.getElementById('tx-count');
+  if (countEl) countEl.textContent = TRANSACTIONS.length;
+
+  // List
+  const list = document.getElementById('tx-list');
+  if (!list) return;
+  if (TRANSACTIONS.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div>Chưa có giao dịch nào.<br>Thêm thu hoặc chi để bắt đầu theo dõi!</div>';
+    return;
+  }
+  list.innerHTML = TRANSACTIONS.map((t, i) => {
+    const isThu = t.type === 'thu';
+    const sign = isThu ? '+' : '-';
+    const color = isThu ? 'var(--green)' : 'var(--red)';
+    const bg = isThu ? 'var(--green-dim)' : 'var(--red-dim)';
+    return `<div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+      <div style="width:38px; height:38px; border-radius:8px; background:${bg}; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">${isThu ? '💰' : '💸'}</div>
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.desc}</div>
+        <div style="font-size:11px; color:var(--text3); margin-top:2px;">${t.time}</div>
+      </div>
+      <div style="font-size:15px; font-weight:700; color:${color}; white-space:nowrap;">${sign}${fmtMoney(t.amount)}</div>
+      <button onclick="deleteTransaction(${i})" style="background:var(--red-dim); color:var(--red); border:1px solid rgba(240,82,82,0.2); border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer; font-family:inherit; flex-shrink:0;">🗑</button>
+    </div>`;
+  }).join('');
+}
+
 function updateStats() {
-  // KPI cards
-  const totalStock = PRODUCTS.reduce((s, p) => s + p.stock, 0);
-  const critCount  = PRODUCTS.filter(p => p.stock <= 2).length;
-  document.getElementById('kpi-total-products').textContent = PRODUCTS.length;
-  document.getElementById('kpi-stock').textContent = totalStock;
-  document.getElementById('kpi-stock-sub').textContent =
-    critCount > 0 ? `⚠ ${critCount} sản phẩm sắp hết` : PRODUCTS.length === 0 ? '—' : 'Tồn kho bình thường';
-  document.getElementById('kpi-vip-count').textContent = VIPS.length;
-
-  // Stock list
-  const sl = document.getElementById('stats-stock-list');
-  if (PRODUCTS.length === 0) {
-    sl.innerHTML = '<div class="empty-state" style="padding:20px 0;font-size:12px;color:var(--text3)">Chưa có sản phẩm</div>';
-  } else {
-    const sorted = [...PRODUCTS].sort((a,b) => b.stock - a.stock);
-    const maxStock = sorted[0]?.stock || 1;
-    sl.innerHTML = sorted.map((p, i) => {
-      const rankCls = i === 0 ? 'r1' : i === 1 ? 'r2' : 'r3';
-      const pct = Math.round((p.stock / maxStock) * 100);
-      return `<div class="top-row">
-        <div class="rank ${i < 3 ? rankCls : 'r2'}">${i + 1}</div>
-        <div class="top-name">${p.name}</div>
-        <div class="top-bar-w"><div class="top-bar" style="width:${pct}%"></div></div>
-        <div class="top-val">${p.stock} máy</div>
-      </div>`;
-    }).join('');
-  }
-
-  // VIP panel
-  const vp = document.getElementById('stats-vip-panel');
-  if (VIPS.length === 0) {
-    vp.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px 0;">Chưa có khách VIP nào</div>';
-  } else {
-    vp.innerHTML = VIPS.slice(0, 6).map(v =>
-      `<div class="stat-row">
-        <span class="stat-row-key">${v.name}${v.phone ? ' · ' + v.phone : ''}</span>
-        <span class="stat-row-val" style="color:#f5c842;">${v.count} lần mua</span>
-      </div>`
-    ).join('');
-  }
+  buildTransactionList();
 }
 
 // ─── CHAT MODE ────────────────────────────────────────────────────────────────
@@ -1673,6 +1743,11 @@ function buildStoreContext() {
         return `- ${p.name}: ${p.stock} máy${warn}, giá ${p.price}`;
       }).join('\n')
     : '(Kho hàng đang trống, chưa có sản phẩm nào)';
+
+  const totalThu = TRANSACTIONS.filter(t => t.type === 'thu').reduce((s, t) => s + t.amount, 0);
+  const totalChi = TRANSACTIONS.filter(t => t.type === 'chi').reduce((s, t) => s + t.amount, 0);
+  const lnl = totalThu - totalChi;
+  const finSummary = `TỔNG THU: ${totalThu.toLocaleString('vi-VN')}đ | TỔNG CHI: ${totalChi.toLocaleString('vi-VN')}đ | ${lnl >= 0 ? 'LỢI NHUẬN' : 'THUA LỖ'}: ${Math.abs(lnl).toLocaleString('vi-VN')}đ`;
 
   const vipLines = VIPS.length > 0
     ? VIPS.map(v => `- ${v.name}: ${v.count} lần mua${v.note ? ' — ' + v.note : ''}`).join('\n')
@@ -1727,6 +1802,9 @@ DOANH THU THÁNG 4/2026: 0 đồng
 TỔNG ĐƠN HÀNG: 0 đơn
 LỢI NHUẬN: 0 đồng
 CƠ CẤU DOANH THU: Chưa có dữ liệu
+
+TÀI CHÍNH THỰC TẾ (nhập tay):
+${finSummary}
 ${permSection}
 
 Khi người dùng muốn GHI CHÚ bất kỳ thông tin gì (sửa chữa, công nợ, đặt hàng, giao dịch, nhắc nhở...), hãy trả lời bao gồm tag:
@@ -1734,6 +1812,13 @@ Khi người dùng muốn GHI CHÚ bất kỳ thông tin gì (sửa chữa, côn
 - loại: repair (sửa chữa), debt (công nợ), order (đặt hàng), other (khác)
 - Ví dụ: [ACTION:ADD_NOTE|repair|Sửa iPhone Quang|Nhận 500k, lãi 350k, chưa giao]
 - Ví dụ: [ACTION:ADD_NOTE|debt|Công nợ Minh|Còn nợ 2 triệu, hẹn trả 20/4]
+
+Khi người dùng muốn GHI NHẬN giao dịch THU hoặc CHI tiền, hãy trả lời bao gồm tag:
+[ACTION:ADD_TRANSACTION|loại|mô_tả|số_tiền]
+- loại: thu hoặc chi
+- số_tiền: chỉ số, không có đơn vị (vd: 5000000)
+- Ví dụ: [ACTION:ADD_TRANSACTION|thu|Bán iPhone 15 Pro|35990000]
+- Ví dụ: [ACTION:ADD_TRANSACTION|chi|Nhập hàng Samsung S24|120000000]
 
 Khi người dùng yêu cầu THÊM khách VIP, hãy phân tích và trả lời bao gồm tag:
 [ACTION:ADD_VIP|tên|sdt|số_lần_mua|ghi_chú]
@@ -1823,6 +1908,22 @@ function qsend(text) {
 
 function handleAIActions(reply) {
   let cleanReply = reply;
+
+  // Handle ADD_TRANSACTION
+  const txMatches = [...cleanReply.matchAll(/\[ACTION:ADD_TRANSACTION\|([^\]]+)\]/g)];
+  txMatches.forEach(match => {
+    const parts  = match[1].split('|');
+    const type   = (parts[0] || 'thu').trim();
+    const desc   = (parts[1] || 'Giao dịch').trim();
+    const amount = parseFloat(parts[2]) || 0;
+    if (desc && amount > 0) {
+      const now = new Date().toLocaleString('vi-VN');
+      TRANSACTIONS.unshift({ type, desc, amount, time: now });
+      saveTransactions();
+      buildTransactionList();
+    }
+    cleanReply = cleanReply.replace(match[0], '');
+  });
 
   // Handle ADD_NOTE
   const noteMatches = [...cleanReply.matchAll(/\[ACTION:ADD_NOTE\|([^\]]+)\]/g)];
