@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PhoneStore AI — Quản lý cửa hàng</title>
+<title>Thuận Triều — Quản lý cửa hàng</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -870,7 +870,7 @@
     <div id="logo">
       <div class="brand">
         <div class="icon">📱</div>
-        <h1>PhoneStore AI</h1>
+        <h1>Thuận Triều</h1>
       </div>
       <p>Quản lý thông minh</p>
     </div>
@@ -939,7 +939,7 @@
               </svg>
             </div>
             <div class="bubble">
-              Xin chào! Tôi là trợ lý AI quản lý <strong>PhoneStore VN</strong> tại Nha Trang. Tôi nắm rõ toàn bộ dữ liệu cửa hàng và có thể hỗ trợ bạn:<br><br>
+              Xin chào! Tôi là trợ lý AI quản lý <strong>Thuận Triều</strong> tại Nha Trang. Tôi nắm rõ toàn bộ dữ liệu cửa hàng và có thể hỗ trợ bạn:<br><br>
               📦 Kiểm tra &amp; quản lý tồn kho<br>
               💰 Phân tích doanh thu &amp; lợi nhuận<br>
               🔥 Báo cáo sản phẩm bán chạy<br>
@@ -1191,6 +1191,19 @@
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div id="del-confirm-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+  <div style="background:var(--bg2); border:1px solid var(--border2); border-radius:14px; padding:28px 28px 22px; max-width:380px; width:90%; box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+    <div style="font-size:30px; text-align:center; margin-bottom:10px;">⚠️</div>
+    <h3 id="del-modal-title" style="color:var(--red); font-size:15px; text-align:center; margin-bottom:10px;"></h3>
+    <p id="del-modal-desc" style="font-size:13px; color:var(--text2); text-align:center; line-height:1.6; margin-bottom:22px;"></p>
+    <div style="display:flex; gap:10px;">
+      <button onclick="closeDeleteModal(false)" style="flex:1; padding:10px; border-radius:8px; background:var(--bg3); border:1px solid var(--border2); color:var(--text); font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;">✕ Hủy bỏ</button>
+      <button onclick="closeDeleteModal(true)" style="flex:1; padding:10px; border-radius:8px; background:var(--red); border:none; color:#fff; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;">✅ Xác nhận xóa</button>
+    </div>
   </div>
 </div>
 
@@ -1648,7 +1661,7 @@ function toggleMode() {
       <button class="qbtn" onclick="qsend('Tư vấn chiến lược giảm giá cuối tháng')">💡 Chiến lược</button>
       <button class="qbtn" onclick="qsend('Liệt kê khách hàng VIP mua nhiều nhất')">👤 Khách VIP</button>
       <button class="qbtn" onclick="qsend('Sản phẩm nào sắp hết hàng cần nhập thêm?')">⚠️ Sắp hết</button>`;
-    addMsg('bot', '🏪 Đã về <strong>Chế độ Cửa hàng</strong> — Tập trung quản lý PhoneStore VN.');
+    addMsg('bot', '🏪 Đã về <strong>Chế độ Cửa hàng</strong> — Tập trung quản lý Thuận Triều.');
   }
 }
 
@@ -1686,9 +1699,9 @@ Khả năng của bạn:
 - Ẩm thực: công thức nấu ăn, nguyên liệu, cách làm
 - Tư vấn: sức khỏe cơ bản, học tập, nghề nghiệp, kinh doanh
 - Dữ liệu thực tế: thời tiết, giá vàng, tỷ giá, crypto (khi được cung cấp data từ internet)
-- Thông tin cửa hàng: bạn vẫn biết dữ liệu PhoneStore VN khi cần
+- Thông tin cửa hàng: bạn vẫn biết dữ liệu Thuận Triều khi cần
 
-Ngoài ra bạn cũng biết thông tin cửa hàng điện thoại "PhoneStore VN" tại Nha Trang:
+Ngoài ra bạn cũng biết thông tin cửa hàng điện thoại "Thuận Triều" tại Nha Trang:
 KHO HÀNG: ${invLines}
 KHÁCH VIP: ${vipLines}
 
@@ -1701,7 +1714,7 @@ Khi câu hỏi liên quan đến cửa hàng, vẫn dùng được các action t
 [ACTION:DELETE_INVENTORY] [ACTION:DELETE_VIPS] [ACTION:DELETE_ALL]`;
   }
 
-  return `Bạn là AI trợ lý quản lý cửa hàng điện thoại "PhoneStore VN" tại Nha Trang.
+  return `Bạn là AI trợ lý quản lý cửa hàng điện thoại "Thuận Triều" tại Nha Trang.
 Dữ liệu cửa hàng hiện tại:
 
 KHO HÀNG:
@@ -1710,10 +1723,10 @@ ${invLines}
 KHÁCH HÀNG VIP:
 ${vipLines}
 
-DOANH THU THÁNG 4/2026: 847 triệu đồng (+12% so tháng trước)
-TỔNG ĐƠN HÀNG: 234 đơn (+8%)
-LỢI NHUẬN: 127 triệu (biên 15%)
-CƠ CẤU DOANH THU: iPhone/Apple 42%, Samsung 28%, Phụ kiện 18%, Khác 12%
+DOANH THU THÁNG 4/2026: 0 đồng
+TỔNG ĐƠN HÀNG: 0 đơn
+LỢI NHUẬN: 0 đồng
+CƠ CẤU DOANH THU: Chưa có dữ liệu
 ${permSection}
 
 Khi người dùng muốn GHI CHÚ bất kỳ thông tin gì (sửa chữa, công nợ, đặt hàng, giao dịch, nhắc nhở...), hãy trả lời bao gồm tag:
@@ -1862,29 +1875,79 @@ function handleAIActions(reply) {
     cleanReply = cleanReply.replace(match[0], '');
   });
 
-  // Xử lý xóa — ưu tiên DELETE_ALL trước
-  if (cleanReply.includes('[ACTION:DELETE_ALL]') && PERMS.delAll) {
-    PRODUCTS = []; VIPS = []; NOTES = []; history = [];
-    localStorage.removeItem(SK_PRODUCTS);
-    localStorage.removeItem(SK_VIPS);
-    localStorage.removeItem(SK_NOTES);
-    localStorage.removeItem(SK_HISTORY);
-    buildInventory(); buildVipList(); buildNotesList(); updateStats();
-    document.getElementById('messages').innerHTML = '';
-    cleanReply = cleanReply.replace('[ACTION:DELETE_ALL]', '');
-  } else if (cleanReply.includes('[ACTION:DELETE_INVENTORY]') && PERMS.delInventory) {
-    PRODUCTS = [];
-    localStorage.removeItem(SK_PRODUCTS);
-    buildInventory(); updateStats();
-    cleanReply = cleanReply.replace('[ACTION:DELETE_INVENTORY]', '');
-  } else if (cleanReply.includes('[ACTION:DELETE_VIPS]') && PERMS.delVip) {
-    VIPS = [];
-    localStorage.removeItem(SK_VIPS);
-    buildVipList(); updateStats();
-    cleanReply = cleanReply.replace('[ACTION:DELETE_VIPS]', '');
+  // Xử lý xóa — hiện modal xác nhận trước khi thực hiện
+  const pendingDelete = { type: null, cleanReply: null, resolveCallback: null };
+
+  function executePendingDelete() {
+    const { type, cleanReply: cr } = pendingDelete;
+    let updated = cr;
+    if (type === 'all' && PERMS.delAll) {
+      PRODUCTS = []; VIPS = []; NOTES = []; history = [];
+      localStorage.removeItem(SK_PRODUCTS);
+      localStorage.removeItem(SK_VIPS);
+      localStorage.removeItem(SK_NOTES);
+      localStorage.removeItem(SK_HISTORY);
+      buildInventory(); buildVipList(); buildNotesList(); updateStats();
+      document.getElementById('messages').innerHTML = '';
+      updated = updated.replace('[ACTION:DELETE_ALL]', '');
+    } else if (type === 'inventory' && PERMS.delInventory) {
+      PRODUCTS = [];
+      localStorage.removeItem(SK_PRODUCTS);
+      buildInventory(); updateStats();
+      updated = updated.replace('[ACTION:DELETE_INVENTORY]', '');
+    } else if (type === 'vip' && PERMS.delVip) {
+      VIPS = [];
+      localStorage.removeItem(SK_VIPS);
+      buildVipList(); updateStats();
+      updated = updated.replace('[ACTION:DELETE_VIPS]', '');
+    }
+    pendingDelete.resolveCallback(updated.trim());
   }
 
-  return cleanReply.trim();
+  function showDeleteConfirmModal(type, cr, resolve) {
+    pendingDelete.type = type;
+    pendingDelete.cleanReply = cr;
+    pendingDelete.resolveCallback = resolve;
+    const labels = {
+      all: '⚠️ XÓA TOÀN BỘ DỮ LIỆU',
+      inventory: '🗑 Xóa toàn bộ kho hàng',
+      vip: '🗑 Xóa toàn bộ khách VIP'
+    };
+    const descs = {
+      all: 'AI yêu cầu xóa TẤT CẢ dữ liệu: kho hàng, khách VIP và ghi chú. Hành động này <strong>không thể hoàn tác!</strong>',
+      inventory: 'AI yêu cầu xóa toàn bộ kho hàng. Hành động này <strong>không thể hoàn tác!</strong>',
+      vip: 'AI yêu cầu xóa toàn bộ danh sách khách VIP. Hành động này <strong>không thể hoàn tác!</strong>'
+    };
+    document.getElementById('del-modal-title').textContent = labels[type] || '⚠️ Xác nhận xóa';
+    document.getElementById('del-modal-desc').innerHTML = descs[type] || 'Bạn có chắc chắn muốn xóa?';
+    document.getElementById('del-confirm-modal').style.display = 'flex';
+  }
+
+  function closeDeleteModal(confirmed) {
+    document.getElementById('del-confirm-modal').style.display = 'none';
+    if (confirmed) {
+      executePendingDelete();
+    } else {
+      pendingDelete.resolveCallback(pendingDelete.cleanReply.replace(/\[ACTION:DELETE_(ALL|INVENTORY|VIPS)\]/g,'').trim());
+    }
+  }
+  window.closeDeleteModal = closeDeleteModal;
+
+  const delType = cleanReply.includes('[ACTION:DELETE_ALL]') ? 'all'
+    : cleanReply.includes('[ACTION:DELETE_INVENTORY]') ? 'inventory'
+    : cleanReply.includes('[ACTION:DELETE_VIPS]') ? 'vip'
+    : null;
+
+  if (delType) {
+    const hasPermission = (delType === 'all' && PERMS.delAll) ||
+                          (delType === 'inventory' && PERMS.delInventory) ||
+                          (delType === 'vip' && PERMS.delVip);
+    if (hasPermission) {
+      return new Promise(resolve => showDeleteConfirmModal(delType, cleanReply, resolve));
+    }
+  }
+
+  return Promise.resolve(cleanReply.trim());
 }
 
 // ─── WEB DATA — CORS-friendly APIs ───────────────────────────────────────────
@@ -2136,13 +2199,13 @@ async function sendMsg() {
       addMsg('bot', '❌ Lỗi API: ' + (data.error?.message || 'Không xác định'));
     } else {
       let reply = data.choices[0].message.content;
-      reply = handleAIActions(reply);
-      history.push({role:'assistant', content: reply});
+      const cleanedReply = await handleAIActions(reply);
+      history.push({role:'assistant', content: cleanedReply});
       localStorage.setItem(SK_HISTORY, JSON.stringify(history));
       const imgBadge = capturedImg ? '<span style="font-size:10px;color:var(--green);opacity:0.8;">📷 Từ ảnh · </span>' : '';
       const prefix = imgBadge || ((FREE_MODE && webContext) ? '<span style="font-size:10px;color:var(--accent);opacity:0.7;">🌐 Từ internet · </span>' : '');
-      addMsg('bot', prefix + reply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
-      speakText(reply);
+      addMsg('bot', prefix + cleanedReply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
+      speakText(cleanedReply);
     }
   } catch(e) {
     hideTyping();
@@ -2522,7 +2585,7 @@ function importData(event) {
     try {
       const data = JSON.parse(e.target.result);
       if (!data.products || !data.vips || !data.notes) {
-        alert('❌ File không hợp lệ. Vui lòng chọn đúng file backup của PhoneStore AI!');
+        alert('❌ File không hợp lệ. Vui lòng chọn đúng file backup của Thuận Triều!');
         return;
       }
       if (!confirm(`Nhập dữ liệu từ file "${file.name}"?\n\nDữ liệu hiện tại sẽ bị thay thế:\n• ${data.products.length} sản phẩm\n• ${data.vips.length} khách VIP\n• ${data.notes.length} ghi chú\n\nXuất ngày: ${data.exportedAt || 'Không rõ'}`)) return;
