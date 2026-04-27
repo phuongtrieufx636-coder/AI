@@ -1813,12 +1813,19 @@ Khi người dùng muốn GHI CHÚ bất kỳ thông tin gì (sửa chữa, côn
 - Ví dụ: [ACTION:ADD_NOTE|repair|Sửa iPhone Quang|Nhận 500k, lãi 350k, chưa giao]
 - Ví dụ: [ACTION:ADD_NOTE|debt|Công nợ Minh|Còn nợ 2 triệu, hẹn trả 20/4]
 
-Khi người dùng muốn GHI NHẬN giao dịch THU hoặc CHI tiền, hãy trả lời bao gồm tag:
-[ACTION:ADD_TRANSACTION|loại|mô_tả|số_tiền]
-- loại: thu hoặc chi
-- số_tiền: chỉ số, không có đơn vị (vd: 5000000)
+⚡ QUY TẮC BẮT BUỘC VỀ GIAO DỊCH TÀI CHÍNH:
+Mỗi khi người dùng đề cập đến BẤT KỲ con số tiền nào liên quan đến doanh thu, thu nhập, chi phí, lợi nhuận, bán hàng, nhập hàng — BẮT BUỘC phải thêm tag [ACTION:ADD_TRANSACTION] vào phần cuối câu trả lời.
+- KHÔNG được chỉ trả lời bằng text mà bỏ sót tag này.
+- Nếu người dùng đề cập nhiều khoản → thêm nhiều tag.
+- Tag phải đặt ở cuối reply, ngay sau phần text.
+
+Format: [ACTION:ADD_TRANSACTION|loại|mô_tả|số_tiền_nguyên]
+- loại: thu (khi bán hàng, thu tiền, doanh thu, lợi nhuận vào) hoặc chi (khi nhập hàng, chi phí, trả tiền ra)
+- số_tiền: CHỈ số nguyên, không có dấu chấm phẩy đơn vị (vd: 35990000)
 - Ví dụ: [ACTION:ADD_TRANSACTION|thu|Bán iPhone 15 Pro|35990000]
 - Ví dụ: [ACTION:ADD_TRANSACTION|chi|Nhập hàng Samsung S24|120000000]
+- Ví dụ khi có cả doanh thu lẫn lợi nhuận riêng — chỉ ghi nhận DOANH THU (khoản thu lớn nhất):
+  [ACTION:ADD_TRANSACTION|thu|Doanh thu tháng 4|31040001]
 
 Khi người dùng yêu cầu THÊM khách VIP, hãy phân tích và trả lời bao gồm tag:
 [ACTION:ADD_VIP|tên|sdt|số_lần_mua|ghi_chú]
@@ -2180,7 +2187,84 @@ async function webSearch(query) {
   }
 }
 
-// ─── CHAT IMAGE ATTACH ────────────────────────────────────────────────────────
+// ─── CLIENT-SIDE TRANSACTION FALLBACK PARSER ─────────────────────────────────
+// Đọc số tiền từ text người dùng, dùng khi AI quên gắn action tag
+
+function parseTxFromUserText(text) {
+  const s = text.toLowerCase();
+
+  // Chỉ kích hoạt khi có từ khoá tài chính
+  const finKeywords = /doanh thu|thu nhập|bán được|bán hàng|lợi nhuận|thu về|thu được|chi phí|nhập hàng|trả tiền|chi ra|lỗ|tổng thu|tổng chi|tiền mặt|doanh số/;
+  if (!finKeywords.test(s)) return [];
+
+  const results = [];
+
+  // Tách các số tiền + ngữ cảnh xung quanh
+  // Pattern: số có thể kèm "triệu", "tr", "k", "nghìn", "tỷ", "đồng"
+  const moneyRe = /(\d[\d.,]*)\s*(tỷ|triệu|tr|k|nghìn|đồng|vnd|đ)?/gi;
+  let m;
+
+  // Phân tích toàn bộ text để tách THU và CHI riêng
+  // Approach: tìm từng cụm "doanh thu ... X", "lợi nhuận ... Y", "chi phí ... Z"
+  const patterns = [
+    { re: /(?:doanh thu|bán được|bán hàng|thu nhập|thu về|thu được|doanh số)[^:：]*[：:]\s*([\d.,]+\s*(?:tỷ|triệu|tr|k|nghìn|đồng|vnd|đ)?)/gi, type: 'thu', label: 'Doanh thu' },
+    { re: /(?:lợi nhuận|lãi|thu nhập ròng)[^:：]*[：:]\s*([\d.,]+\s*(?:tỷ|triệu|tr|k|nghìn|đồng|vnd|đ)?)/gi, type: 'thu', label: 'Lợi nhuận' },
+    { re: /(?:chi phí|nhập hàng|chi ra|trả tiền|chi|tổng chi)[^:：]*[：:]\s*([\d.,]+\s*(?:tỷ|triệu|tr|k|nghìn|đồng|vnd|đ)?)/gi, type: 'chi', label: 'Chi phí' },
+  ];
+
+  // Also match inline: "doanh thu 31tr" / "lợi nhuận 1.5 triệu"
+  const inline = [
+    { re: /(?:doanh thu|bán được|bán hàng|thu về|thu được)\s+(?:là\s+|khoảng\s+)?([\d.,]+)\s*(tỷ|triệu|tr|k|nghìn)?/gi, type: 'thu', label: 'Doanh thu' },
+    { re: /(?:lợi nhuận|lãi)\s+(?:là\s+|khoảng\s+)?([\d.,]+)\s*(tỷ|triệu|tr|k|nghìn)?/gi, type: 'thu', label: 'Lợi nhuận' },
+    { re: /(?:chi phí|nhập hàng|chi ra|tổng chi)\s+(?:là\s+|khoảng\s+)?([\d.,]+)\s*(tỷ|triệu|tr|k|nghìn)?/gi, type: 'chi', label: 'Chi phí' },
+  ];
+
+  function parseAmount(numStr, unit) {
+    const clean = numStr.replace(/[.,]/g, '');
+    const base = parseFloat(clean) || 0;
+    const u = (unit || '').toLowerCase();
+    if (u === 'tỷ') return Math.round(base * 1_000_000_000);
+    if (u === 'triệu' || u === 'tr') return Math.round(base * 1_000_000);
+    if (u === 'k' || u === 'nghìn') return Math.round(base * 1_000);
+    return Math.round(base);
+  }
+
+  const allPats = [...patterns, ...inline];
+  const seen = new Set();
+
+  allPats.forEach(({ re, type, label }) => {
+    let match;
+    re.lastIndex = 0;
+    while ((match = re.exec(s)) !== null) {
+      // Extract number + unit from matched group
+      const raw = match[1] || '';
+      const numMatch = raw.match(/([\d.,]+)\s*(tỷ|triệu|tr|k|nghìn|đồng|đ|vnd)?/i);
+      const unit2 = match[2] || (numMatch && numMatch[2]) || '';
+      if (!numMatch) continue;
+      const amount = parseAmount(numMatch[1], unit2 || numMatch[2]);
+      if (amount < 1000) continue; // bỏ qua số quá nhỏ (< 1000đ)
+      const key = `${type}-${amount}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({ type, desc: label, amount });
+    }
+  });
+
+  return results;
+}
+
+function injectMissingTxTags(userText, aiReply) {
+  // Nếu AI đã có action tag → không inject thêm
+  if (aiReply.includes('[ACTION:ADD_TRANSACTION')) return aiReply;
+
+  const txs = parseTxFromUserText(userText);
+  if (txs.length === 0) return aiReply;
+
+  const tags = txs.map(t => `[ACTION:ADD_TRANSACTION|${t.type}|${t.desc}|${t.amount}]`).join('\n');
+  return aiReply + '\n' + tags;
+}
+
+
 let chatImgData = null;
 
 function handleChatImgSelect(e) {
@@ -2300,6 +2384,8 @@ async function sendMsg() {
       addMsg('bot', '❌ Lỗi API: ' + (data.error?.message || 'Không xác định'));
     } else {
       let reply = data.choices[0].message.content;
+      // Fallback: nếu AI quên gắn tag transaction, tự parse từ text người dùng
+      if (!FREE_MODE) reply = injectMissingTxTags(text, reply);
       const cleanedReply = await handleAIActions(reply);
       history.push({role:'assistant', content: cleanedReply});
       localStorage.setItem(SK_HISTORY, JSON.stringify(history));
