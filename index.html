@@ -1243,7 +1243,7 @@ function qsend(text) { document.getElementById('msg-input').value = text; sendMs
 
 function buildContext() {
   const repLines = REPAIRS.length
-    ? REPAIRS.slice(0,20).map(r => `- [${r.status}] ${r.owner} / ${r.device} / IMEI:${r.imei||'?'} / pass:${r.pass||'?'} / lãi:${fmtMoney(r.profit||0)} chi:${fmtMoney(r.cost||0)} / ngày:${r.date}`).join('\n')
+    ? REPAIRS.slice(0,20).map(r => `- [${r.status}] Chủ:${r.owner} / Máy:${r.device} / thu:${fmtMoney(r.profit||0)} chi:${fmtMoney(r.cost||0)} lãi:${fmtMoney((r.profit||0)-(r.cost||0))} / ngày:${r.date}`).join('\n')
     : '(Chưa có phiếu sửa nào)';
   const saleLines = SALES.length
     ? SALES.slice(0,20).map(s => `- ${s.device} / IMEI:${s.imei||'?'} / ${s.conditionLabel||s.condition} / bán:${fmtMoney(s.price)} / ${s.profit>=0?'lãi':'lỗ'}:${fmtMoney(Math.abs(s.profit||0))} / ngày:${s.date}`).join('\n')
@@ -1264,7 +1264,7 @@ function buildContext() {
 Tập trung 3 mảng chính: SỬA CHỮA, BÁN MÁY, và THU/CHI TỰ DO.
 
 DỮ LIỆU CỬA HÀNG HIỆN TẠI:
-─ PHIẾU SỬA CHỮA (${REPAIRS.length} phiếu):
+─ PHIẾU SỬA CHỮA (${REPAIRS.length} phiếu, mỗi phiếu có id riêng):
 ${repLines}
 
 ─ BÁN HÀNG (${SALES.length} giao dịch):
@@ -1280,10 +1280,11 @@ Tổng lãi sửa: ${fmtMoney(totalRepairNet)} | Tổng lãi bán: ${fmtMoney(to
 
 NHIỆM VỤ — TỰ ĐỘNG NHẬN DẠNG VÀ NHẬP DỮ LIỆU:
 1. Câu hỏi về cửa hàng → trả lời dựa dữ liệu trên
-2. Mô tả nhận máy sửa / ảnh phiếu sửa → [ACTION:ADD_REPAIR|...]
-3. Mô tả bán máy / ảnh bill bán → [ACTION:ADD_SALE|...]
-4. Mô tả thu tiền (nhận tiền, khách trả, tiền vào...) / ảnh biên lai thu → [ACTION:ADD_INCOME|...]
-5. Mô tả chi tiền (mua đồ, trả tiền, chi phí, điện nước...) / ảnh hoá đơn chi → [ACTION:ADD_EXPENSE|...]
+2. Mô tả nhận máy sửa MỚI → [ACTION:ADD_REPAIR|...]
+3. Cập nhật trạng thái / thông tin phiếu SỬA ĐÃ CÓ → [ACTION:UPDATE_REPAIR|...]
+4. Mô tả bán máy / ảnh bill bán → [ACTION:ADD_SALE|...]
+5. Thu tiền → [ACTION:ADD_INCOME|...]
+6. Chi tiền → [ACTION:ADD_EXPENSE|...]
 
 QUAN TRỌNG — KHI NHẬN ẢNH:
 - Phân tích ảnh, tự xác định loại (phiếu sửa / bill bán / hoá đơn chi / biên lai thu / ảnh khác)
@@ -1292,36 +1293,68 @@ QUAN TRỌNG — KHI NHẬN ẢNH:
 - Nếu ảnh mờ/không rõ → báo không đọc được
 
 FORMAT ACTIONS:
+
 [ACTION:ADD_REPAIR|owner|phone|device|imei|pass|issue|profit|cost|date|status|note]
+- profit = số tiền THU VỀ từ khách (giá sửa khách trả)
+- cost = số tiền CHI RA mua linh kiện / vật tư
+- Lãi ròng = profit - cost (hệ thống tự tính)
+- Ví dụ: khách trả 1.200.000, mua linh kiện 350.000 → profit=1200000|cost=350000 → lãi=850k
 - status: dang_sua | xong_chua_giao | da_giao
-- profit/cost: số nguyên VND (không dấu phẩy)
 - date: yyyy-mm-dd
+
+[ACTION:UPDATE_REPAIR|owner_or_device|device_hint|new_status|profit|cost|note]
+- Dùng khi người dùng nói "đã giao", "đã xong", "cập nhật" phiếu CŨ đã có trong danh sách
+- owner_or_device: tên chủ máy HOẶC tên máy để tìm phiếu
+- device_hint: gợi ý thêm (để trống nếu không có)
+- new_status: dang_sua | xong_chua_giao | da_giao
+- profit/cost: để trống nếu không thay đổi
+- Ví dụ: "máy hoàng gia đã giao" → [ACTION:UPDATE_REPAIR|hoàng gia||da_giao||]
 
 [ACTION:ADD_SALE|device|imei|condition|price|profit|date|buyer|source|note]
 - condition: moi | like_new | 99 | 97 | cu_dep | cu_thuong
 - source: nhap_moi | hang_cu | khac
-- profit: âm nếu lỗ
+- profit: lãi ròng (âm nếu lỗ)
 
 [ACTION:ADD_INCOME|amount|desc|date|cat|note]
-- Thu tiền: nhận tiền sửa, tiền bán, hoa hồng, v.v.
 - amount: số nguyên VND dương
-- Ví dụ: [ACTION:ADD_INCOME|500000|Khách trả tiền sửa iPhone 13|2026-04-28|Sửa chữa|]
 
 [ACTION:ADD_EXPENSE|amount|desc|date|cat|note]
-- Chi tiền: mua linh kiện, điện nước, lương, vận chuyển, v.v.
 - amount: số nguyên VND dương
-- Ví dụ: [ACTION:ADD_EXPENSE|150000|Mua màn hình iPhone thay thế|2026-04-28|Linh kiện|]
 
-QUY TẮC:
-- Thiếu thông tin → dùng giá trị mặc định hợp lý, KHÔNG hỏi lại trừ khi thiếu cả tên + số tiền
-- Luôn xác nhận bằng văn bản những gì đã nhập
-- Dùng tiếng Việt tự nhiên, ngắn gọn
+QUY TẮC QUAN TRỌNG:
+- Khi người dùng nhắc "đã giao", "đã xong", "cập nhật" → dùng UPDATE_REPAIR (không tạo phiếu mới)
+- Khi người dùng mô tả nhận máy hoàn toàn mới → dùng ADD_REPAIR
+- profit là TIỀN THU (giá sửa), cost là TIỀN CHI (linh kiện). Không nhập profit = lãi ròng
+- Thiếu thông tin → dùng mặc định hợp lý, KHÔNG hỏi lại trừ khi thiếu tên + máy
+- Luôn xác nhận ngắn gọn đã làm gì
 - KHÔNG nói về chủ đề ngoài quản lý cửa hàng`;
 }
 
 // Handle AI actions
 function handleActions(reply) {
   let clean = reply;
+
+  // UPDATE_REPAIR_STATUS — phải xử lý TRƯỚC ADD_REPAIR để tránh tạo bản ghi mới
+  const updMatches = [...clean.matchAll(/\[ACTION:UPDATE_REPAIR\|([^\]]+)\]/g)];
+  updMatches.forEach(m => {
+    const p = m[1].split('|');
+    const ownerKey = (p[0]||'').toLowerCase().trim();
+    const deviceKey = (p[1]||'').toLowerCase().trim();
+    const newStatus = p[2]||'da_giao';
+    // Tìm phiếu phù hợp nhất
+    const found = REPAIRS.find(r =>
+      (ownerKey && r.owner.toLowerCase().includes(ownerKey)) ||
+      (deviceKey && r.device.toLowerCase().includes(deviceKey))
+    );
+    if (found) {
+      found.status = newStatus;
+      if (p[3]) found.profit = parseFloat(p[3]) || found.profit;
+      if (p[4]) found.cost   = parseFloat(p[4]) || found.cost;
+      if (p[5]) found.note   = p[5];
+      saveRepairs(); buildRepairList(); updateStats();
+    }
+    clean = clean.replace(m[0], '');
+  });
 
   // ADD_REPAIR
   const repMatches = [...clean.matchAll(/\[ACTION:ADD_REPAIR\|([^\]]+)\]/g)];
