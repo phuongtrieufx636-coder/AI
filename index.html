@@ -280,8 +280,8 @@ select.field option{background:var(--bg2);}
     <div class="model-chip">
       <div class="model-dot"></div>
       <div>
-        <div class="model-name">claude-sonnet-4-20250514</div>
-        <div class="model-sub">Anthropic · AI mạnh nhất</div>
+        <div class="model-name">llama-3.3-70b (Groq)</div>
+        <div class="model-sub">Groq · Miễn phí & nhanh</div>
       </div>
     </div>
   </div>
@@ -295,8 +295,8 @@ select.field option{background:var(--bg2);}
   </div>
 
   <div id="apibar">
-    <label>🔑 Anthropic API Key:</label>
-    <input type="password" id="key-input" placeholder="sk-ant-xxxxxxxxxxxxxxxxxxxx" />
+    <label>🔑 Groq API Key:</label>
+    <input type="password" id="key-input" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx" />
     <button onclick="saveKey()">Lưu key</button>
     <span class="key-status none" id="key-status">Chưa có key</span>
   </div>
@@ -597,7 +597,7 @@ select.field option{background:var(--bg2);}
   <div class="tab hidden" id="tab-settings">
     <div class="tab-body">
       <div class="settings-section">
-        <h4>🔑 Anthropic API Key</h4>
+        <h4>🔑 Groq API Key</h4>
         <div class="settings-row">
           <div>
             <div class="settings-row-label">Trạng thái key</div>
@@ -605,7 +605,7 @@ select.field option{background:var(--bg2);}
           </div>
           <button class="btn-danger" onclick="clearKey()">Xóa key</button>
         </div>
-        <div style="font-size:12px;color:var(--text3);">Key được lưu trong trình duyệt (localStorage). Lấy key tại <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a></div>
+        <div style="font-size:12px;color:var(--text3);">Key được lưu trong trình duyệt (localStorage). Lấy key tại <a href="https://console.groq.com" target="_blank" style="color:var(--accent)">console.groq.com</a></div>
       </div>
 
       <div class="settings-section">
@@ -649,7 +649,7 @@ const SK_REPAIRS = 'tt_repairs';
 const SK_SALES   = 'tt_sales';
 const SK_CHAT    = 'tt_chat_history';
 
-let apiKey = '';
+let groqKey = '';
 let REPAIRS = [];
 let SALES = [];
 let chatHistory = [];
@@ -660,7 +660,7 @@ let chatImgData = null;
 // ─── INIT ────────────────────────────────────────────────────────────────────
 function init() {
   const k = localStorage.getItem(SK_KEY) || '';
-  if (k) { apiKey = k; document.getElementById('key-input').value = k; setKeyStatus(true); updateSettingsStatus(); }
+  if (k) { groqKey = k; document.getElementById('key-input').value = k; setKeyStatus(true); updateSettingsStatus(); }
   REPAIRS = JSON.parse(localStorage.getItem(SK_REPAIRS) || '[]');
   SALES   = JSON.parse(localStorage.getItem(SK_SALES)   || '[]');
 
@@ -691,7 +691,7 @@ function init() {
 function saveKey() {
   const v = document.getElementById('key-input').value.trim();
   if (!v) return;
-  apiKey = v;
+  groqKey = v;
   localStorage.setItem(SK_KEY, v);
   setKeyStatus(true);
   updateSettingsStatus();
@@ -699,7 +699,7 @@ function saveKey() {
 }
 function clearKey() {
   if (!confirm('Xóa API key?')) return;
-  apiKey = '';
+  groqKey = '';
   localStorage.removeItem(SK_KEY);
   document.getElementById('key-input').value = '';
   setKeyStatus(false);
@@ -712,8 +712,8 @@ function setKeyStatus(ok) {
 }
 function updateSettingsStatus() {
   const el = document.getElementById('settings-key-status');
-  if (apiKey) {
-    el.textContent = '✓ ' + apiKey.substring(0,12) + '••••' + apiKey.slice(-4);
+  if (groqKey) {
+    el.textContent = '✓ ' + groqKey.substring(0,12) + '••••' + groqKey.slice(-4);
     el.style.color = 'var(--green)';
   } else {
     el.textContent = 'Chưa lưu key nào';
@@ -1187,7 +1187,7 @@ async function sendMsg() {
   const input = document.getElementById('msg-input');
   const text = input.value.trim();
   if (!text && !chatImgData) return;
-  if (!apiKey) { addMsg('bot', '⚠️ Vui lòng nhập <strong>Anthropic API Key</strong> ở trên để dùng AI!'); return; }
+  if (!groqKey) { addMsg('bot', '⚠️ Vui lòng nhập <strong>Groq API Key</strong> ở trên để dùng AI!'); return; }
 
   const userText = text || '(Xem ảnh bill đính kèm)';
   addMsg('user', escHtml(userText));
@@ -1197,13 +1197,15 @@ async function sendMsg() {
   const imgData = chatImgData;
   clearChatImg();
 
-  // Build message content
-  const userContent = [];
+  // Build message content (Groq format)
+  let userMsgContent;
   if (imgData) {
-    userContent.push({ type:'image', source:{ type:'base64', media_type: imgData.mime, data: imgData.b64 } });
-    userContent.push({ type:'text', text: text || 'Đây là ảnh bill/phiếu. Hãy đọc và nhập dữ liệu phù hợp (phiếu sửa hoặc bán hàng).' });
+    userMsgContent = [
+      { type:'text', text: text || 'Đây là ảnh bill/phiếu. Hãy đọc và nhập dữ liệu phù hợp (phiếu sửa hoặc bán hàng).' },
+      { type:'image_url', image_url: { url: imgData } }
+    ];
   } else {
-    userContent.push({ type:'text', text });
+    userMsgContent = text;
   }
 
   // Save to history
@@ -1214,16 +1216,21 @@ async function sendMsg() {
   document.getElementById('send-btn').disabled = true;
 
   try {
-    const messages = chatHistory.slice(0,-1).map(m => ({ role: m.role, content: m.content }));
-    messages.push({ role:'user', content: userContent });
+    const useModel = imgData ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile';
+    const historyMsgs = chatHistory.slice(0,-1).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : '[ảnh]' }));
+    const messages = [
+      { role:'system', content: buildContext() },
+      ...historyMsgs,
+      { role:'user', content: userMsgContent }
+    ];
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method:'POST',
-      headers:{ 'Content-Type':'application/json', 'x-api-key': apiKey, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-calls':'true' },
+      headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + groqKey },
       body: JSON.stringify({
-        model:'claude-sonnet-4-5',
+        model: useModel,
         max_tokens:1200,
-        system: buildContext(),
+        temperature: 0.7,
         messages
       })
     });
@@ -1233,7 +1240,7 @@ async function sendMsg() {
 
     if (!res.ok) throw new Error(data.error?.message || 'Lỗi API ' + res.status);
 
-    const rawReply = data.content?.map(b => b.text||'').join('') || '';
+    const rawReply = data.choices[0].message.content || '';
     const cleanReply = handleActions(rawReply);
 
     // Format for display
@@ -1295,7 +1302,7 @@ function handleChatImgSelect(ev) {
     const dataUrl = e.target.result;
     const b64 = dataUrl.split(',')[1];
     const mime = file.type || 'image/jpeg';
-    chatImgData = { b64, mime, name: file.name };
+    chatImgData = dataUrl;
     document.getElementById('chat-preview-thumb').src = dataUrl;
     document.getElementById('chat-img-name').textContent = file.name;
     document.getElementById('chat-img-preview-bar').style.display = '';
@@ -1362,7 +1369,7 @@ function clearImg(type, e) {
 async function scanBillImage(type) {
   const dataUrl = scanImgData[type];
   if (!dataUrl) return;
-  if (!apiKey) { document.getElementById(type+'-scan-status').textContent = '⚠️ Cần nhập API Key trước!'; return; }
+  if (!groqKey) { document.getElementById(type+'-scan-status').textContent = '⚠️ Cần nhập Groq API Key trước!'; return; }
 
   const btn = document.getElementById(type+'-scan-btn');
   const statusEl = document.getElementById(type+'-scan-status');
@@ -1370,9 +1377,6 @@ async function scanBillImage(type) {
   btn.innerHTML = '<span style="animation:spin 1s linear infinite;display:inline-block">⏳</span> AI đang đọc ảnh...';
   statusEl.textContent = '';
   statusEl.className = 'ai-scan-status';
-
-  const b64 = dataUrl.split(',')[1];
-  const mime = dataUrl.match(/data:([^;]+);/)?.[1] || 'image/jpeg';
 
   const isRepair = type === 'rep';
   const prompt = isRepair
@@ -1384,15 +1388,16 @@ Nếu không đọc được: {"found":false,"note":"lý do"}`
 Nếu không đọc được: {"found":false,"note":"lý do"}`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method:'POST',
-      headers:{ 'Content-Type':'application/json', 'x-api-key':apiKey, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-calls':'true' },
+      headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + groqKey },
       body: JSON.stringify({
-        model:'claude-sonnet-4-5',
+        model:'meta-llama/llama-4-scout-17b-16e-instruct',
         max_tokens:600,
+        temperature: 0.1,
         messages:[{ role:'user', content:[
-          { type:'image', source:{ type:'base64', media_type:mime, data:b64 } },
-          { type:'text', text:prompt }
+          { type:'text', text: prompt },
+          { type:'image_url', image_url: { url: dataUrl } }
         ]}]
       })
     });
@@ -1400,7 +1405,7 @@ Nếu không đọc được: {"found":false,"note":"lý do"}`;
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Lỗi API');
 
-    let raw = data.content?.map(b=>b.text||'').join('') || '';
+    let raw = data.choices[0].message.content || '';
     raw = raw.replace(/```json\s*/i,'').replace(/```\s*/,'').replace(/\s*```$/,'').trim();
     const parsed = JSON.parse(raw);
 
