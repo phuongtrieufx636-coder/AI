@@ -956,11 +956,17 @@ function updateRepairStatus(id, status) {
 }
 function deleteRepair(id) {
   if (!confirm('Xóa phiếu sửa này?')) return;
+  const deleted = REPAIRS.find(x => x.id === id);
   REPAIRS = REPAIRS.filter(x => x.id !== id);
   saveRepairs(); buildRepairList(); updateStats();
-  // Xóa chat history để AI không "nhớ" và tạo lại phiếu đã xóa
-  chatHistory = [];
-  localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+  // Thêm ghi chú vào chat history để AI biết phiếu này đã bị xóa thủ công
+  if (deleted) {
+    const note = `[HỆ THỐNG: Người dùng vừa XÓA THỦ CÔNG phiếu sửa "${deleted.owner} - ${deleted.device}". Phiếu này KHÔNG còn tồn tại. TUYỆT ĐỐI KHÔNG tạo lại phiếu này dù người dùng có yêu cầu, trừ khi họ cung cấp thông tin hoàn toàn mới và xác nhận rõ ràng muốn tạo phiếu MỚI.]`;
+    chatHistory.push({ role: 'user', content: note });
+    chatHistory.push({ role: 'assistant', content: `Đã ghi nhận: phiếu sửa "${deleted.owner} - ${deleted.device}" đã bị xóa.` });
+    if (chatHistory.length > 20) chatHistory.splice(0, chatHistory.length - 20);
+    localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+  }
 }
 
 function setRepairFilter(f, btn) {
@@ -1539,7 +1545,8 @@ FORMAT ACTIONS:
 
 QUY TẮC QUAN TRỌNG:
 - DỮ LIỆU THỰC TẾ HIỆN TẠI trong system prompt là nguồn chính xác nhất — tin vào đó, không tin lịch sử chat
-- Nếu một phiếu KHÔNG còn trong danh sách trên → nó đã bị xóa → KHÔNG tạo lại
+- Nếu một phiếu KHÔNG còn trong danh sách trên → nó đã bị xóa → TUYỆT ĐỐI KHÔNG tạo lại, dù người dùng yêu cầu "nhập lại" hay "thêm lại"
+- Nếu người dùng muốn nhập lại phiếu đã xóa, hãy hỏi: "Bạn có muốn tạo phiếu MỚI hoàn toàn cho [tên máy]?" và chờ xác nhận rõ ràng, không tự ý tạo
 - Khi người dùng nhắc "đã giao", "đã xong", "cập nhật" → dùng UPDATE_REPAIR (không tạo phiếu mới)
 - Khi người dùng mô tả nhận máy hoàn toàn mới → dùng ADD_REPAIR
 - profit là TIỀN THU (giá sửa), cost là TIỀN CHI (linh kiện). Không nhập profit = lãi ròng
@@ -1585,7 +1592,7 @@ function handleActions(reply) {
       date: p[8]||todayStr(), status: p[9]||'dang_sua', note: p[10]||''
     };
     if (d.owner && d.device) {
-      d.id = Date.now() + Math.random();
+      d.id = Date.now() + Math.floor(Math.random() * 1000);
       d.createdAt = new Date().toLocaleString('vi-VN');
       REPAIRS.unshift(d);
       saveRepairs(); buildRepairList(); updateStats();
@@ -1605,7 +1612,7 @@ function handleActions(reply) {
     };
     d.conditionLabel = condMap[d.condition] || d.condition;
     if (d.device && d.price) {
-      d.id = Date.now() + Math.random();
+      d.id = Date.now() + Math.floor(Math.random() * 1000);
       d.createdAt = new Date().toLocaleString('vi-VN');
       SALES.unshift(d);
       saveSales(); buildSaleList(); updateStats();
