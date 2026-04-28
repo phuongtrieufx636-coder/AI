@@ -273,6 +273,7 @@ select.field option{background:var(--bg2);}
     <button class="nav-btn active" onclick="switchTab('chat')" id="nav-chat"><span class="ni">💬</span> Trợ lý AI</button>
     <button class="nav-btn" onclick="switchTab('repair')" id="nav-repair"><span class="ni">🔧</span> Nhận máy sửa <span class="nav-badge" id="repair-badge" style="display:none">0</span></button>
     <button class="nav-btn" onclick="switchTab('sales')" id="nav-sales"><span class="ni">💰</span> Bán máy</button>
+    <button class="nav-btn" onclick="switchTab('finance')" id="nav-finance"><span class="ni">💳</span> Thu / Chi</button>
     <button class="nav-btn" onclick="switchTab('stats')" id="nav-stats"><span class="ni">📊</span> Thống kê</button>
     <button class="nav-btn" onclick="switchTab('settings')" id="nav-settings"><span class="ni">⚙️</span> Cài đặt</button>
   </div>
@@ -311,9 +312,10 @@ select.field option{background:var(--bg2);}
             Xin chào! Tôi là AI quản lý <strong>Thuận Triều</strong>. Bạn có thể:<br><br>
             🔧 Nhập thông tin máy sửa bằng cách kể tự nhiên<br>
             💰 Ghi nhận máy bán ra nhanh chóng<br>
-            📷 Chụp ảnh bill/phiếu — AI tự đọc và nhập<br>
+            💳 Ghi thu/chi: "thu 500k tiền sửa iPhone" hoặc "chi 200k mua linh kiện"<br>
+            📷 Gửi ảnh bill/phiếu — AI tự nhận dạng và nhập đúng mục<br>
             📊 Xem thống kê lợi nhuận theo ngày/tháng<br><br>
-            <em style="color:var(--text3);font-size:12px;">Ví dụ: "Nhận máy sửa của anh Quang, iPhone 13, IMEI 123456, pass 1234, lãi 300k" — AI sẽ tự nhập đúng mục!</em>
+            <em style="color:var(--text3);font-size:12px;">Ví dụ: "Nhận máy anh Quang, iPhone 13, vỡ màn, lãi 300k" hoặc "chi 150k mua màn hình thay thế" — AI tự nhập luôn!</em>
           </div>
         </div>
         <div class="msg-meta">Hệ thống · Sẵn sàng</div>
@@ -324,6 +326,7 @@ select.field option{background:var(--bg2);}
       <button class="qbtn" onclick="qsend('Máy nào đã sửa xong chưa giao?')">✅ Chờ giao</button>
       <button class="qbtn" onclick="qsend('Doanh thu hôm nay bao nhiêu?')">💰 Doanh thu hôm nay</button>
       <button class="qbtn" onclick="qsend('Tổng lợi nhuận tháng này?')">📊 Lợi nhuận tháng</button>
+      <button class="qbtn" onclick="qsend('Thu chi tháng này thế nào?')">💳 Thu/Chi tháng</button>
       <button class="qbtn" onclick="qsend('Máy nào bán lỗ nhiều nhất?')">📉 Bán lỗ</button>
     </div>
     <div id="chat-img-preview-bar">
@@ -537,6 +540,55 @@ select.field option{background:var(--bg2);}
     </div>
   </div>
 
+  <!-- ── THU / CHI TAB ── -->
+  <div class="tab hidden" id="tab-finance">
+    <div class="tab-body">
+      <div class="add-form">
+        <h4>💳 Ghi nhận thu / chi</h4>
+        <div class="form-grid col2">
+          <div class="field-wrap">
+            <label class="field-label">Loại *</label>
+            <select class="field" id="fin-type">
+              <option value="thu">📥 Thu tiền</option>
+              <option value="chi">📤 Chi tiền</option>
+            </select>
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Số tiền *</label>
+            <input class="field" type="number" id="fin-amount" placeholder="VD: 500000" min="0" />
+          </div>
+          <div class="field-wrap" style="grid-column:1/-1;">
+            <label class="field-label">Mô tả *</label>
+            <input class="field" id="fin-desc" placeholder="VD: Khách trả tiền sửa iPhone 13, Mua linh kiện..." />
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Danh mục</label>
+            <input class="field" id="fin-cat" placeholder="VD: Sửa chữa, Linh kiện, Điện nước..." />
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Ngày</label>
+            <input class="field" type="date" id="fin-date" />
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Ghi chú</label>
+          <textarea class="field" id="fin-note" placeholder="Ghi chú thêm..."></textarea>
+        </div>
+        <div class="btn-row">
+          <button class="btn-add" onclick="addFinance()">➕ Ghi nhận</button>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+          <div class="section-hd" style="margin:0;padding:0;border:none;">Danh sách thu/chi</div>
+          <div id="fin-summary" style="font-size:12px;"></div>
+        </div>
+        <div class="card-list" id="finance-list"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── THỐNG KÊ TAB ── -->
   <div class="tab hidden" id="tab-stats">
     <div class="tab-body">
@@ -584,12 +636,22 @@ select.field option{background:var(--bg2);}
           <div class="kpi-label" id="stat-total-sale-label">💰 Tổng lãi/lỗ bán</div>
           <div class="kpi-val" id="stat-total-sale" style="color:var(--accent);font-size:18px;">0đ</div>
         </div>
+        <div class="kpi">
+          <div class="kpi-label">📥 Tổng thu ngoài</div>
+          <div class="kpi-val" id="stat-total-income" style="color:var(--green);font-size:18px;">0đ</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">📤 Tổng chi ngoài</div>
+          <div class="kpi-val" id="stat-total-expense" style="color:var(--red);font-size:18px;">0đ</div>
+        </div>
       </div>
 
       <div class="section-hd" style="margin-top:8px;">Phiếu sửa gần đây</div>
       <div id="stat-recent-repair"></div>
       <div class="section-hd" style="margin-top:8px;">Bán hàng gần đây</div>
       <div id="stat-recent-sale"></div>
+      <div class="section-hd" style="margin-top:8px;">Thu/Chi gần đây</div>
+      <div id="stat-recent-finance"></div>
     </div>
   </div>
 
@@ -624,6 +686,7 @@ select.field option{background:var(--bg2);}
         <div class="export-btn-row">
           <button class="btn-full-danger" onclick="confirmClear('repairs')">🗑 Xóa hết phiếu sửa</button>
           <button class="btn-full-danger" onclick="confirmClear('sales')">🗑 Xóa hết bán hàng</button>
+          <button class="btn-full-danger" onclick="confirmClear('finance')">🗑 Xóa hết thu/chi</button>
           <button class="btn-full-danger" onclick="confirmClear('all')" style="border-color:rgba(240,82,82,0.6);background:rgba(240,82,82,0.18);">⚠️ Xóa hết tất cả</button>
         </div>
       </div>
@@ -638,6 +701,7 @@ select.field option{background:var(--bg2);}
   <button class="bnav-btn active" onclick="switchTab('chat')" id="bnav-chat"><span class="bnav-icon">💬</span><span class="bnav-label">AI</span></button>
   <button class="bnav-btn" onclick="switchTab('repair')" id="bnav-repair"><span class="bnav-icon">🔧</span><span class="bnav-label">Sửa máy</span></button>
   <button class="bnav-btn" onclick="switchTab('sales')" id="bnav-sales"><span class="bnav-icon">💰</span><span class="bnav-label">Bán máy</span></button>
+  <button class="bnav-btn" onclick="switchTab('finance')" id="bnav-finance"><span class="bnav-icon">💳</span><span class="bnav-label">Thu/Chi</span></button>
   <button class="bnav-btn" onclick="switchTab('stats')" id="bnav-stats"><span class="bnav-icon">📊</span><span class="bnav-label">Thống kê</span></button>
   <button class="bnav-btn" onclick="switchTab('settings')" id="bnav-settings"><span class="bnav-icon">⚙️</span><span class="bnav-label">Cài đặt</span></button>
 </nav>
@@ -648,10 +712,12 @@ const SK_KEY     = 'tt_api_key';
 const SK_REPAIRS = 'tt_repairs';
 const SK_SALES   = 'tt_sales';
 const SK_CHAT    = 'tt_chat_history';
+const SK_FINANCE = 'tt_finance';
 
 let groqKey = '';
 let REPAIRS = [];
 let SALES = [];
+let FINANCE = []; // thu/chi tự do
 let chatHistory = [];
 let repairFilter = 'all';
 let saleFilter = 'all';
@@ -663,11 +729,13 @@ function init() {
   if (k) { groqKey = k; document.getElementById('key-input').value = k; setKeyStatus(true); updateSettingsStatus(); }
   REPAIRS = JSON.parse(localStorage.getItem(SK_REPAIRS) || '[]');
   SALES   = JSON.parse(localStorage.getItem(SK_SALES)   || '[]');
+  FINANCE = JSON.parse(localStorage.getItem(SK_FINANCE) || '[]');
 
   // Set today's date on forms
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('rep-date').value = today;
   document.getElementById('sale-date').value = today;
+  document.getElementById('fin-date').value = today;
 
   // Restore chat
   const savedChat = localStorage.getItem(SK_CHAT);
@@ -681,6 +749,7 @@ function init() {
 
   buildRepairList();
   buildSaleList();
+  buildFinanceList();
   updateStats();
   if (window.innerWidth <= 700) document.body.classList.add('has-bnav');
   window.addEventListener('resize', () => document.body.classList.toggle('has-bnav', window.innerWidth <= 700));
@@ -723,7 +792,7 @@ function updateSettingsStatus() {
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
 function switchTab(tab) {
-  ['chat','repair','sales','stats','settings'].forEach(t => {
+  ['chat','repair','sales','finance','stats','settings'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
     const nb = document.getElementById('nav-'+t);
     if (nb) nb.classList.toggle('active', t === tab);
@@ -734,11 +803,13 @@ function switchTab(tab) {
     chat:'Trợ lý AI',
     repair:'Nhận máy sửa',
     sales:'Bán máy',
+    finance:'Thu / Chi',
     stats:'Thống kê & Báo cáo',
     settings:'Cài đặt'
   };
   document.getElementById('tab-title').textContent = titles[tab] || tab;
   if (tab === 'stats') updateStats();
+  if (tab === 'finance') buildFinanceList();
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -981,6 +1052,13 @@ function updateStats() {
   document.getElementById('stat-total-sale').textContent = fmtMoney(totalSaleProfit);
   document.getElementById('stat-total-sale').style.color = totalSaleProfit >= 0 ? 'var(--green)' : 'var(--red)';
 
+  const totalIncome  = FINANCE.filter(f=>f.type==='thu').reduce((s,f)=>s+f.amount,0);
+  const totalExpense = FINANCE.filter(f=>f.type==='chi').reduce((s,f)=>s+f.amount,0);
+  const tiEl = document.getElementById('stat-total-income');
+  const teEl = document.getElementById('stat-total-expense');
+  if (tiEl) tiEl.textContent = fmtMoney(totalIncome);
+  if (teEl) teEl.textContent = fmtMoney(totalExpense);
+
   // Recent
   const recR = document.getElementById('stat-recent-repair');
   const recent5R = REPAIRS.slice(0,5);
@@ -1000,20 +1078,101 @@ function updateStats() {
       <span style="color:${(s.profit||0)>=0?'var(--green)':'var(--red)'};">${(s.profit||0)>=0?'+':''}${fmtMoney(s.profit||0)}</span>
     </div>`;
   }).join('') : '<div style="color:var(--text3);font-size:12px;padding:8px 0;">Chưa có giao dịch</div>';
+
+  const recF = document.getElementById('stat-recent-finance');
+  if (recF) {
+    const recent5F = FINANCE.slice(0,5);
+    recF.innerHTML = recent5F.length ? recent5F.map(f => {
+      const isThu = f.type === 'thu';
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;">
+        <span>${isThu?'📥':'📤'} <strong>${escHtml(f.desc)}</strong>${f.cat?' <span style="color:var(--text3)">· '+escHtml(f.cat)+'</span>':''} <span style="color:var(--text3)">${fmtDate(f.date)}</span></span>
+        <span style="color:${isThu?'var(--green)':'var(--red)'};">${isThu?'+':'-'}${fmtMoney(f.amount)}</span>
+      </div>`;
+    }).join('') : '<div style="color:var(--text3);font-size:12px;padding:8px 0;">Chưa có giao dịch thu/chi</div>';
+  }
+}
+
+// ─── FINANCE (THU/CHI) CRUD ───────────────────────────────────────────────────
+function saveFinance() { localStorage.setItem(SK_FINANCE, JSON.stringify(FINANCE)); }
+
+function addFinance(data) {
+  const d = data || {
+    type:   document.getElementById('fin-type').value,
+    amount: parseFloat(document.getElementById('fin-amount').value) || 0,
+    desc:   document.getElementById('fin-desc').value.trim(),
+    date:   document.getElementById('fin-date').value || todayStr(),
+    cat:    document.getElementById('fin-cat').value.trim(),
+    note:   document.getElementById('fin-note').value.trim()
+  };
+  if (!d.amount || !d.desc) { alert('Nhập số tiền và mô tả!'); return false; }
+  d.id = Date.now() + Math.random();
+  d.createdAt = new Date().toLocaleString('vi-VN');
+  FINANCE.unshift(d);
+  saveFinance();
+  buildFinanceList();
+  updateStats();
+  if (!data) {
+    document.getElementById('fin-amount').value = '';
+    document.getElementById('fin-desc').value = '';
+    document.getElementById('fin-cat').value = '';
+    document.getElementById('fin-note').value = '';
+    document.getElementById('fin-date').value = todayStr();
+  }
+  return true;
+}
+
+function deleteFinance(id) {
+  if (!confirm('Xóa giao dịch này?')) return;
+  FINANCE = FINANCE.filter(x => x.id !== id);
+  saveFinance(); buildFinanceList(); updateStats();
+}
+
+function buildFinanceList() {
+  const list = document.getElementById('finance-list');
+  if (!list) return;
+  const month = thisMonth();
+  const monthFin = FINANCE.filter(f => f.date && f.date.startsWith(month));
+  const totalIn  = monthFin.filter(f=>f.type==='thu').reduce((s,f)=>s+f.amount,0);
+  const totalOut = monthFin.filter(f=>f.type==='chi').reduce((s,f)=>s+f.amount,0);
+  const el = document.getElementById('fin-summary');
+  if (el) el.innerHTML = `<span style="color:var(--green)">📥 Thu: ${fmtMoney(totalIn)}</span> &nbsp;|&nbsp; <span style="color:var(--red)">📤 Chi: ${fmtMoney(totalOut)}</span> &nbsp;|&nbsp; <span style="color:${totalIn-totalOut>=0?'var(--green)':'var(--red)'}">💰 Còn: ${fmtMoney(totalIn-totalOut)}</span>`;
+
+  if (FINANCE.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">💳</div>Chưa có giao dịch thu/chi nào.</div>';
+    return;
+  }
+  list.innerHTML = FINANCE.slice(0,50).map(f => {
+    const isThu = f.type === 'thu';
+    return `<div class="sale-card" style="border-left:3px solid ${isThu?'var(--green)':'var(--red)'};">
+      <div class="card-top">
+        <div class="card-icon" style="background:${isThu?'var(--green-dim)':'var(--red-dim)'};border:1px solid ${isThu?'rgba(52,200,122,0.2)':'rgba(240,82,82,0.2)'};">${isThu?'📥':'📤'}</div>
+        <div class="card-info">
+          <div class="card-title">${escHtml(f.desc)}</div>
+          <div class="card-sub">${f.cat?'🏷 '+escHtml(f.cat)+' · ':''}📅 ${fmtDate(f.date)}</div>
+          ${f.note?`<div class="card-meta">${escHtml(f.note)}</div>`:''}
+        </div>
+        <div style="font-size:16px;font-weight:700;color:${isThu?'var(--green)':'var(--red)'};white-space:nowrap;">${isThu?'+':'-'}${fmtMoney(f.amount)}</div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-del" onclick="deleteFinance(${f.id})">🗑 Xóa</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ─── CLEAR DATA ───────────────────────────────────────────────────────────────
 function confirmClear(type) {
-  if (!confirm({ repairs:'Xóa hết phiếu sửa?', sales:'Xóa hết bán hàng?', all:'Xóa TẤT CẢ dữ liệu?' }[type])) return;
+  if (!confirm({ repairs:'Xóa hết phiếu sửa?', sales:'Xóa hết bán hàng?', finance:'Xóa hết thu/chi?', all:'Xóa TẤT CẢ dữ liệu?' }[type])) return;
   if (type === 'repairs' || type === 'all') { REPAIRS = []; localStorage.removeItem(SK_REPAIRS); buildRepairList(); }
   if (type === 'sales'   || type === 'all') { SALES   = []; localStorage.removeItem(SK_SALES);   buildSaleList();  }
+  if (type === 'finance' || type === 'all') { FINANCE = []; localStorage.removeItem(SK_FINANCE); buildFinanceList(); }
   if (type === 'all') { chatHistory = []; localStorage.removeItem(SK_CHAT); document.getElementById('messages').innerHTML = ''; }
   updateStats();
 }
 
 // ─── EXPORT / IMPORT ──────────────────────────────────────────────────────────
 function exportData() {
-  const blob = new Blob([JSON.stringify({ version:2, exportedAt: new Date().toLocaleString('vi-VN'), repairs:REPAIRS, sales:SALES }, null, 2)], { type:'application/json' });
+  const blob = new Blob([JSON.stringify({ version:3, exportedAt: new Date().toLocaleString('vi-VN'), repairs:REPAIRS, sales:SALES, finance:FINANCE }, null, 2)], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `thuantieu-backup-${todayStr()}.json`;
@@ -1030,6 +1189,7 @@ function importData(ev) {
       if (!confirm(`Nhập dữ liệu từ "${f.name}"?\n• ${(d.repairs||[]).length} phiếu sửa\n• ${(d.sales||[]).length} bán hàng\n\nDữ liệu hiện tại sẽ bị thay thế!`)) return;
       if (d.repairs) { REPAIRS = d.repairs; saveRepairs(); buildRepairList(); }
       if (d.sales)   { SALES   = d.sales;   saveSales();   buildSaleList();   }
+      if (d.finance) { FINANCE = d.finance; saveFinance(); buildFinanceList(); }
       updateStats();
       addMsg('bot', `✅ Nhập thành công từ <strong>${f.name}</strong>!<br>🔧 ${REPAIRS.length} phiếu sửa · 💰 ${SALES.length} bán hàng`);
       switchTab('chat');
@@ -1081,7 +1241,6 @@ function showTyping() {
 function hideTyping() { const t = document.getElementById('typing'); if(t) t.remove(); }
 function qsend(text) { document.getElementById('msg-input').value = text; sendMsg(); }
 
-// Build context for AI
 function buildContext() {
   const repLines = REPAIRS.length
     ? REPAIRS.slice(0,20).map(r => `- [${r.status}] ${r.owner} / ${r.device} / IMEI:${r.imei||'?'} / pass:${r.pass||'?'} / lãi:${fmtMoney(r.profit||0)} chi:${fmtMoney(r.cost||0)} / ngày:${r.date}`).join('\n')
@@ -1089,15 +1248,20 @@ function buildContext() {
   const saleLines = SALES.length
     ? SALES.slice(0,20).map(s => `- ${s.device} / IMEI:${s.imei||'?'} / ${s.conditionLabel||s.condition} / bán:${fmtMoney(s.price)} / ${s.profit>=0?'lãi':'lỗ'}:${fmtMoney(Math.abs(s.profit||0))} / ngày:${s.date}`).join('\n')
     : '(Chưa có giao dịch bán nào)';
+  const finLines = FINANCE.length
+    ? FINANCE.slice(0,15).map(f => `- [${f.type==='thu'?'THU':'CHI'}] ${f.desc} / ${fmtMoney(f.amount)} / ngày:${f.date}${f.cat?' / '+f.cat:''}`).join('\n')
+    : '(Chưa có thu/chi nào)';
 
   const totalRepairNet = REPAIRS.reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
   const totalSaleNet   = SALES.reduce((s,x)=>s+(x.profit||0),0);
   const month = thisMonth();
   const monthRepairNet = REPAIRS.filter(r=>r.date?.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
   const monthSaleNet   = SALES.filter(s=>s.date?.startsWith(month)).reduce((s,x)=>s+(x.profit||0),0);
+  const monthFinIn     = FINANCE.filter(f=>f.date?.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
+  const monthFinOut    = FINANCE.filter(f=>f.date?.startsWith(month)&&f.type==='chi').reduce((s,f)=>s+f.amount,0);
 
   return `Bạn là AI quản lý cửa hàng điện thoại "Thuận Triều" tại Nha Trang.
-Tập trung 2 mảng chính: SỬA CHỮA và BÁN MÁY.
+Tập trung 3 mảng chính: SỬA CHỮA, BÁN MÁY, và THU/CHI TỰ DO.
 
 DỮ LIỆU CỬA HÀNG HIỆN TẠI:
 ─ PHIẾU SỬA CHỮA (${REPAIRS.length} phiếu):
@@ -1106,34 +1270,53 @@ ${repLines}
 ─ BÁN HÀNG (${SALES.length} giao dịch):
 ${saleLines}
 
-─ TÀI CHÍNH:
-Lãi sửa tháng này: ${fmtMoney(monthRepairNet)} | Tổng: ${fmtMoney(totalRepairNet)}
-Lãi bán tháng này: ${fmtMoney(monthSaleNet)} | Tổng: ${fmtMoney(totalSaleNet)}
+─ THU/CHI TỰ DO (${FINANCE.length} giao dịch gần nhất):
+${finLines}
 
-NHIỆM VỤ CỦA BẠN:
-1. Trả lời câu hỏi về tình hình cửa hàng dựa trên dữ liệu trên
-2. Khi người dùng mô tả nhận máy sửa → phát hiện và trích xuất: tên chủ, SĐT, tên máy, IMEI, mật khẩu, lỗi, giá lãi, giá âm, ngày nhận, tình trạng → thêm [ACTION:ADD_REPAIR|...]
-3. Khi người dùng mô tả bán máy → trích xuất: tên máy, IMEI, tình trạng, giá bán, lãi/lỗ, ngày, khách → thêm [ACTION:ADD_SALE|...]
+─ TÀI CHÍNH THÁNG NÀY:
+Lãi sửa: ${fmtMoney(monthRepairNet)} | Lãi bán: ${fmtMoney(monthSaleNet)}
+Thu ngoài: ${fmtMoney(monthFinIn)} | Chi ngoài: ${fmtMoney(monthFinOut)}
+Tổng lãi sửa: ${fmtMoney(totalRepairNet)} | Tổng lãi bán: ${fmtMoney(totalSaleNet)}
 
-FORMAT ACTION:
+NHIỆM VỤ — TỰ ĐỘNG NHẬN DẠNG VÀ NHẬP DỮ LIỆU:
+1. Câu hỏi về cửa hàng → trả lời dựa dữ liệu trên
+2. Mô tả nhận máy sửa / ảnh phiếu sửa → [ACTION:ADD_REPAIR|...]
+3. Mô tả bán máy / ảnh bill bán → [ACTION:ADD_SALE|...]
+4. Mô tả thu tiền (nhận tiền, khách trả, tiền vào...) / ảnh biên lai thu → [ACTION:ADD_INCOME|...]
+5. Mô tả chi tiền (mua đồ, trả tiền, chi phí, điện nước...) / ảnh hoá đơn chi → [ACTION:ADD_EXPENSE|...]
+
+QUAN TRỌNG — KHI NHẬN ẢNH:
+- Phân tích ảnh, tự xác định loại (phiếu sửa / bill bán / hoá đơn chi / biên lai thu / ảnh khác)
+- Tự trích xuất thông tin và thêm action NGAY, KHÔNG hỏi lại
+- Báo ngắn gọn đã nhập gì, thiếu gì để bổ sung
+- Nếu ảnh mờ/không rõ → báo không đọc được
+
+FORMAT ACTIONS:
 [ACTION:ADD_REPAIR|owner|phone|device|imei|pass|issue|profit|cost|date|status|note]
 - status: dang_sua | xong_chua_giao | da_giao
-- profit/cost: chỉ số nguyên (VND)
+- profit/cost: số nguyên VND (không dấu phẩy)
 - date: yyyy-mm-dd
-- Ví dụ: [ACTION:ADD_REPAIR|Anh Quang|0901234567|iPhone 13|353012345678901|1234|Vỡ màn|300000|150000|2026-04-28|dang_sua|]
 
 [ACTION:ADD_SALE|device|imei|condition|price|profit|date|buyer|source|note]
 - condition: moi | like_new | 99 | 97 | cu_dep | cu_thuong
 - source: nhap_moi | hang_cu | khac
-- profit: có thể âm nếu lỗ
-- Ví dụ: [ACTION:ADD_SALE|iPhone 15 Pro 256GB|352012345678901|99|22000000|500000|2026-04-28|Chị Hương|nhap_moi|]
+- profit: âm nếu lỗ
+
+[ACTION:ADD_INCOME|amount|desc|date|cat|note]
+- Thu tiền: nhận tiền sửa, tiền bán, hoa hồng, v.v.
+- amount: số nguyên VND dương
+- Ví dụ: [ACTION:ADD_INCOME|500000|Khách trả tiền sửa iPhone 13|2026-04-28|Sửa chữa|]
+
+[ACTION:ADD_EXPENSE|amount|desc|date|cat|note]
+- Chi tiền: mua linh kiện, điện nước, lương, vận chuyển, v.v.
+- amount: số nguyên VND dương
+- Ví dụ: [ACTION:ADD_EXPENSE|150000|Mua màn hình iPhone thay thế|2026-04-28|Linh kiện|]
 
 QUY TẮC:
-- Nếu thông tin không có, để trống (giữ nguyên dấu |)
-- Luôn xác nhận bằng văn bản TRước khi dùng action
-- Hỏi lại nếu thiếu thông tin quan trọng (tên chủ, tên máy)
+- Thiếu thông tin → dùng giá trị mặc định hợp lý, KHÔNG hỏi lại trừ khi thiếu cả tên + số tiền
+- Luôn xác nhận bằng văn bản những gì đã nhập
 - Dùng tiếng Việt tự nhiên, ngắn gọn
-- KHÔNG nói về bất cứ chủ đề nào ngoài quản lý cửa hàng`;
+- KHÔNG nói về chủ đề ngoài quản lý cửa hàng`;
 }
 
 // Handle AI actions
@@ -1151,7 +1334,6 @@ function handleActions(reply) {
       date: p[8]||todayStr(), status: p[9]||'dang_sua', note: p[10]||''
     };
     if (d.owner && d.device) {
-      const condMap = { moi:'Mới 100%', like_new:'Like New', '99':'99%', '97':'97%', cu_dep:'Cũ đẹp', cu_thuong:'Cũ thường' };
       d.id = Date.now() + Math.random();
       d.createdAt = new Date().toLocaleString('vi-VN');
       REPAIRS.unshift(d);
@@ -1180,6 +1362,32 @@ function handleActions(reply) {
     clean = clean.replace(m[0], '');
   });
 
+  // ADD_INCOME
+  const incMatches = [...clean.matchAll(/\[ACTION:ADD_INCOME\|([^\]]+)\]/g)];
+  incMatches.forEach(m => {
+    const p = m[1].split('|');
+    const d = { type:'thu', amount: parseFloat(p[0])||0, desc: p[1]||'Thu tiền', date: p[2]||todayStr(), cat: p[3]||'', note: p[4]||'' };
+    if (d.amount && d.desc) {
+      d.id = Date.now() + Math.random();
+      d.createdAt = new Date().toLocaleString('vi-VN');
+      FINANCE.unshift(d); saveFinance(); buildFinanceList(); updateStats();
+    }
+    clean = clean.replace(m[0], '');
+  });
+
+  // ADD_EXPENSE
+  const expMatches = [...clean.matchAll(/\[ACTION:ADD_EXPENSE\|([^\]]+)\]/g)];
+  expMatches.forEach(m => {
+    const p = m[1].split('|');
+    const d = { type:'chi', amount: parseFloat(p[0])||0, desc: p[1]||'Chi tiền', date: p[2]||todayStr(), cat: p[3]||'', note: p[4]||'' };
+    if (d.amount && d.desc) {
+      d.id = Date.now() + Math.random();
+      d.createdAt = new Date().toLocaleString('vi-VN');
+      FINANCE.unshift(d); saveFinance(); buildFinanceList(); updateStats();
+    }
+    clean = clean.replace(m[0], '');
+  });
+
   return clean.trim();
 }
 
@@ -1201,7 +1409,7 @@ async function sendMsg() {
   let userMsgContent;
   if (imgData) {
     userMsgContent = [
-      { type:'text', text: text || 'Đây là ảnh bill/phiếu. Hãy đọc và nhập dữ liệu phù hợp (phiếu sửa hoặc bán hàng).' },
+      { type:'text', text: text || 'Đây là ảnh từ cửa hàng. Hãy phân tích ảnh, xác định loại (phiếu sửa máy / bill bán hàng / hoá đơn chi tiền / biên lai thu tiền / ảnh khác), trích xuất thông tin và tự động nhập vào đúng mục. Không hỏi lại, cứ nhập những gì đọc được và báo ngắn gọn.' },
       { type:'image_url', image_url: { url: imgData } }
     ];
   } else {
