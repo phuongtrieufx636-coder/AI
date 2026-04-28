@@ -890,6 +890,8 @@ function switchTab(tab) {
   };
   document.getElementById('tab-title').textContent = titles[tab] || tab;
   if (tab === 'stats') updateStats();
+  if (tab === 'repair') buildRepairList();
+  if (tab === 'sales') buildSaleList();
   if (tab === 'finance') buildFinanceList();
   if (tab === 'warehouse') buildWarehouseList();
 }
