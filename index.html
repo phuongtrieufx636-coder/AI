@@ -1221,7 +1221,7 @@ async function sendMsg() {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'x-api-key': apiKey, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-calls':'true' },
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-5',
         max_tokens:1200,
         system: buildContext(),
         messages
@@ -1388,7 +1388,7 @@ Nếu không đọc được: {"found":false,"note":"lý do"}`;
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'x-api-key':apiKey, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-calls':'true' },
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-5',
         max_tokens:600,
         messages:[{ role:'user', content:[
           { type:'image', source:{ type:'base64', media_type:mime, data:b64 } },
