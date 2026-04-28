@@ -1594,10 +1594,28 @@ function handleActions(reply) {
       date: p[8]||todayStr(), status: p[9]||'dang_sua', note: p[10]||''
     };
     if (d.owner && d.device) {
-      d.id = Date.now() + Math.floor(Math.random() * 1000);
-      d.createdAt = new Date().toLocaleString('vi-VN');
-      REPAIRS.unshift(d);
-      saveRepairs(); buildRepairList(); updateStats();
+      // Kiểm tra trùng: cùng tên chủ VÀ tên máy (không phân biệt hoa thường)
+      const duplicate = REPAIRS.find(r =>
+        r.owner.toLowerCase().trim() === d.owner.toLowerCase().trim() &&
+        r.device.toLowerCase().trim() === d.device.toLowerCase().trim()
+      );
+      if (duplicate) {
+        const overwrite = confirm(
+          `⚠️ Đã tồn tại phiếu:\n"${duplicate.owner} — ${duplicate.device}"\nTrạng thái: ${duplicate.status}\n\nBạn có muốn nhập CHỒNG lên phiếu cũ không?\n(Nhấn OK = ghi đè, Hủy = bỏ qua)`
+        );
+        if (overwrite) {
+          // Ghi đè phiếu cũ
+          Object.assign(duplicate, d);
+          duplicate.updatedAt = new Date().toLocaleString('vi-VN');
+          saveRepairs(); buildRepairList(); updateStats();
+        }
+        // Nếu hủy thì bỏ qua, không thêm mới
+      } else {
+        d.id = Date.now() + Math.floor(Math.random() * 1000);
+        d.createdAt = new Date().toLocaleString('vi-VN');
+        REPAIRS.unshift(d);
+        saveRepairs(); buildRepairList(); updateStats();
+      }
     }
     clean = clean.replace(m[0], '');
   });
