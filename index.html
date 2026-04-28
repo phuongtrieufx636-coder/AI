@@ -713,7 +713,52 @@
     display: flex; align-items: center; gap: 4px;
   }
 
-  /* DATA IMPORT/EXPORT */
+  .store-badge {
+    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
+    background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(79,142,247,0.3);
+    letter-spacing: 0.02em;
+  }
+  /* Repair tab styles */
+  .repair-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+    transition: border-color 0.15s;
+  }
+  .repair-card:hover { border-color: var(--border2); }
+  .repair-header { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+  .repair-name { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; }
+  .repair-status {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+  }
+  .status-pending { background: var(--amber-dim); color: var(--amber); }
+  .status-done    { background: var(--green-dim); color: var(--green); }
+  .status-waiting { background: var(--purple-dim); color: var(--purple); }
+  .repair-meta { font-size: 12px; color: var(--text2); display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .repair-parts { font-size: 12px; color: var(--text3); }
+  .repair-money { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+  .money-tag {
+    font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
+  }
+  .money-thu  { background: var(--green-dim); color: var(--green); }
+  .money-chi  { background: var(--red-dim); color: var(--red); }
+  .money-lai  { background: var(--accent-dim); color: var(--accent); }
+  .repair-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+  .btn-sm {
+    font-size: 11px; padding: 4px 10px; border-radius: 6px; cursor: pointer;
+    font-family: inherit; font-weight: 600; border: 1px solid var(--border2); background: var(--bg3);
+    color: var(--text2); transition: background 0.15s;
+  }
+  .btn-sm:hover { background: var(--border2); }
+  .btn-sm.green { background: var(--green-dim); color: var(--green); border-color: rgba(52,200,122,0.3); }
+  .btn-sm.red   { background: var(--red-dim); color: var(--red); border-color: rgba(240,82,82,0.3); }
+  .btn-sm.purple{ background: var(--purple-dim); color: var(--purple); border-color: rgba(155,114,245,0.3); }
+  .repair-filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .filter-btn {
+    font-size: 12px; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-family: inherit;
+    font-weight: 600; border: 1px solid var(--border2); background: var(--bg3); color: var(--text2);
+    transition: all 0.15s;
+  }
+  .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .export-btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
   .btn-export {
     flex: 1; min-width: 140px; padding: 10px 16px;
@@ -884,6 +929,10 @@
         <span class="ni">📦</span> Kho hàng
         <span class="nav-badge" id="low-badge" style="display:none">!</span>
       </button>
+      <button class="nav-btn" onclick="switchTab('repair')" id="nav-repair">
+        <span class="ni">🔧</span> Sửa chữa
+        <span class="nav-badge" id="repair-badge" style="display:none">!</span>
+      </button>
       <button class="nav-btn" onclick="switchTab('vip')" id="nav-vip">
         <span class="ni">👤</span> Khách VIP
       </button>
@@ -914,7 +963,7 @@
   <div id="main">
     <div id="topbar">
       <h2 id="tab-title">Trợ lý quản lý cửa hàng</h2>
-      <button id="mode-toggle" class="store" onclick="toggleMode()" title="Chuyển chế độ AI">🏪 Cửa hàng</button>
+      <div class="store-badge">🏪 Thuận Triều</div>
       <button id="theme-toggle" onclick="cycleTheme()" title="Đổi giao diện">🌙</button>
     </div>
 
@@ -952,12 +1001,12 @@
       </div>
 
       <div id="quick">
-        <button class="qbtn" onclick="qsend('Tồn kho hôm nay như thế nào?')">📦 Tồn kho</button>
-        <button class="qbtn" onclick="qsend('Doanh thu tháng này bao nhiêu?')">💰 Doanh thu</button>
-        <button class="qbtn" onclick="qsend('Sản phẩm nào đang bán chạy nhất?')">🔥 Bán chạy</button>
-        <button class="qbtn" onclick="qsend('Tư vấn chiến lược giảm giá cuối tháng')">💡 Chiến lược</button>
-        <button class="qbtn" onclick="qsend('Liệt kê khách hàng VIP mua nhiều nhất')">👤 Khách VIP</button>
-        <button class="qbtn" onclick="qsend('Sản phẩm nào sắp hết hàng cần nhập thêm?')">⚠️ Sắp hết</button>
+        <button class="qbtn" onclick="qsend('Hôm nay có máy nào đang sửa chưa xong?')">🔧 Máy đang sửa</button>
+        <button class="qbtn" onclick="qsend('Tổng lợi nhuận sửa chữa tháng này?')">💰 Lợi nhuận</button>
+        <button class="qbtn" onclick="qsend('Tồn kho điện thoại hiện tại?')">📦 Tồn kho</button>
+        <button class="qbtn" onclick="qsend('Khách nào chưa lấy máy về?')">⏳ Chờ lấy máy</button>
+        <button class="qbtn" onclick="qsend('Linh kiện nào mua nhiều nhất?')">🔩 Linh kiện</button>
+        <button class="qbtn" onclick="qsend('Báo cáo thu chi hôm nay')">📊 Báo cáo</button>
       </div>
 
       <!-- CHAT IMAGE PREVIEW -->
@@ -987,6 +1036,81 @@
         <button id="send-btn" onclick="sendMsg()">
           <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
         </button>
+      </div>
+    </div>
+
+    <!-- REPAIR TAB -->
+    <div class="tab hidden" id="tab-repair">
+      <div style="padding:16px 18px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:14px;">
+
+        <!-- FORM THÊM ĐƠN SỬA -->
+        <div class="add-form">
+          <h4>🔧 Nhận máy sửa chữa</h4>
+          <div class="form-row" style="flex-wrap:wrap; gap:8px;">
+            <input type="text" id="rp-device" placeholder="Tên máy (vd: iPhone 14, Samsung S23)" style="flex:2; min-width:160px;" />
+            <input type="text" id="rp-customer" placeholder="Tên khách hàng" style="flex:1; min-width:120px;" />
+            <input type="text" id="rp-phone" placeholder="SĐT khách" style="flex:1; min-width:110px;" />
+          </div>
+          <div class="form-row" style="flex-wrap:wrap; gap:8px; margin-top:6px;">
+            <input type="text" id="rp-issue" placeholder="Lỗi / triệu chứng (vd: màn hình vỡ, pin chai)" style="flex:2; min-width:180px;" />
+            <input type="text" id="rp-parts" placeholder="Linh kiện cần mua (vd: màn, pin, ic)" style="flex:2; min-width:160px;" />
+          </div>
+          <div class="form-row" style="flex-wrap:wrap; gap:8px; margin-top:6px;">
+            <div style="display:flex; flex-direction:column; gap:4px; min-width:140px; flex:1;">
+              <label style="font-size:11px; color:var(--text3);">💸 Tiền mua linh kiện (chi)</label>
+              <input type="number" id="rp-cost" placeholder="0" min="0" />
+            </div>
+            <div style="display:flex; flex-direction:column; gap:4px; min-width:140px; flex:1;">
+              <label style="font-size:11px; color:var(--text3);">💰 Tiền thu khách (thu)</label>
+              <input type="number" id="rp-price" placeholder="0" min="0" />
+            </div>
+            <div style="display:flex; flex-direction:column; gap:4px; min-width:100px; flex:0 0 auto;">
+              <label style="font-size:11px; color:var(--text3);">Trạng thái</label>
+              <select id="rp-status" style="padding:8px 10px; border-radius:6px; background:var(--bg); border:1px solid var(--border2); color:var(--text); font-family:inherit; font-size:13px;">
+                <option value="pending">⏳ Đang sửa</option>
+                <option value="waiting">📦 Chờ linh kiện</option>
+                <option value="done">✅ Hoàn thành</option>
+              </select>
+            </div>
+            <button class="btn-add" style="align-self:flex-end;" onclick="addRepair()">Thêm</button>
+          </div>
+        </div>
+
+        <!-- KPI SỬA CHỮA -->
+        <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+          <div class="kpi">
+            <div class="kpi-label">🔧 Đang sửa</div>
+            <div class="kpi-val" id="rp-kpi-pending" style="color:var(--amber);">0</div>
+            <div class="kpi-sub" style="color:var(--text3);">đơn</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">✅ Hoàn thành</div>
+            <div class="kpi-val" id="rp-kpi-done" style="color:var(--green);">0</div>
+            <div class="kpi-sub" style="color:var(--text3);">đơn</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">💰 Tổng thu</div>
+            <div class="kpi-val" id="rp-kpi-thu" style="color:var(--green); font-size:16px;">0đ</div>
+            <div class="kpi-sub" style="color:var(--text3);">từ khách</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">📈 Lợi nhuận</div>
+            <div class="kpi-val" id="rp-kpi-lai" style="color:var(--accent); font-size:16px;">0đ</div>
+            <div class="kpi-sub" id="rp-kpi-lai-sub" style="color:var(--text3);">—</div>
+          </div>
+        </div>
+
+        <!-- FILTER -->
+        <div>
+          <div class="repair-filter-row">
+            <button class="filter-btn active" onclick="filterRepairs('all')" id="rf-all">Tất cả</button>
+            <button class="filter-btn" onclick="filterRepairs('pending')" id="rf-pending">⏳ Đang sửa</button>
+            <button class="filter-btn" onclick="filterRepairs('waiting')" id="rf-waiting">📦 Chờ linh kiện</button>
+            <button class="filter-btn" onclick="filterRepairs('done')" id="rf-done">✅ Hoàn thành</button>
+          </div>
+          <div id="repair-list"></div>
+        </div>
+
       </div>
     </div>
 
@@ -1229,6 +1353,11 @@
     <span class="bnav-icon">💬</span>
     <span class="bnav-label">Trợ lý</span>
   </button>
+  <button class="bnav-btn" onclick="switchTab('repair')" id="bnav-repair">
+    <span class="bnav-icon">🔧</span>
+    <span class="bnav-label">Sửa chữa</span>
+    <span class="bnav-badge" id="bnav-repair-badge"></span>
+  </button>
   <button class="bnav-btn" onclick="switchTab('inventory')" id="bnav-inventory">
     <span class="bnav-icon">📦</span>
     <span class="bnav-label">Kho hàng</span>
@@ -1262,6 +1391,7 @@ const SK_PERMS        = 'ps_perms';
 const SK_HISTORY      = 'ps_chat_history';
 const SK_NOTES        = 'ps_notes';
 const SK_TRANSACTIONS = 'ps_transactions';
+const SK_REPAIRS      = 'ps_repairs';
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let groqKey = '';
@@ -1271,6 +1401,8 @@ let VIPS = [];
 let PERMS = { delInventory: false, delVip: false, delAll: false };
 let NOTES = [];
 let TRANSACTIONS = [];
+let REPAIRS = [];
+let repairFilter = 'all';
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 function init() {
@@ -1306,6 +1438,10 @@ function init() {
   // Load transactions
   loadTransactions();
 
+  // Load repairs
+  const savedRepairs = localStorage.getItem(SK_REPAIRS);
+  REPAIRS = savedRepairs ? JSON.parse(savedRepairs) : [];
+
   // Load chat history
   const savedHistory = localStorage.getItem(SK_HISTORY);
   if (savedHistory) {
@@ -1320,6 +1456,7 @@ function init() {
   buildInventory();
   buildVipList();
   buildNotesList();
+  buildRepairList();
   updateStats();
   updateSettingsStatus();
 }
@@ -1407,9 +1544,10 @@ function confirmClear(type) {
 
 // ─── NAVIGATION ───────────────────────────────────────────────────────────────
 function switchTab(tab) {
-  ['chat','inventory','vip','notes','stats','settings'].forEach(t => {
+  ['chat','inventory','vip','notes','stats','settings','repair'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
-    document.getElementById('nav-'+t).classList.toggle('active', t === tab);
+    const navEl = document.getElementById('nav-'+t);
+    if (navEl) navEl.classList.toggle('active', t === tab);
     const bb = document.getElementById('bnav-'+t);
     if (bb) bb.classList.toggle('active', t === tab);
   });
@@ -1418,11 +1556,13 @@ function switchTab(tab) {
     inventory: 'Quản lý kho hàng',
     vip: 'Khách hàng VIP',
     notes: 'Ghi chú & nhật ký',
-    stats: 'Thống kê & báo cáo',
-    settings: 'Cài đặt'
+    stats: 'Thống kê & tài chính',
+    settings: 'Cài đặt',
+    repair: 'Quản lý sửa chữa'
   };
-  document.getElementById('tab-title').textContent = titles[tab];
+  document.getElementById('tab-title').textContent = titles[tab] || tab;
   if (tab === 'stats') updateStats();
+  if (tab === 'repair') buildRepairList();
 }
 
 // ─── INVENTORY ────────────────────────────────────────────────────────────────
@@ -1616,12 +1756,6 @@ function saveTransactions() {
   localStorage.setItem(SK_TRANSACTIONS, JSON.stringify(TRANSACTIONS));
 }
 
-function fmtMoney(n) {
-  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2).replace(/\.?0+$/, '') + 'tỷ';
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(2).replace(/\.?0+$/, '') + 'tr';
-  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'k';
-  return n.toLocaleString('vi-VN') + 'đ';
-}
 
 function addTransaction() {
   const type   = document.getElementById('tx-type').value;
@@ -1698,151 +1832,220 @@ function updateStats() {
   buildTransactionList();
 }
 
-// ─── CHAT MODE ────────────────────────────────────────────────────────────────
-let FREE_MODE = false;
+// ─── REPAIR MANAGEMENT ────────────────────────────────────────────────────────
+function saveRepairs() { localStorage.setItem(SK_REPAIRS, JSON.stringify(REPAIRS)); }
 
-function toggleMode() {
-  FREE_MODE = !FREE_MODE;
-  const btn = document.getElementById('mode-toggle');
-  const input = document.getElementById('msg-input');
-  const quickDiv = document.getElementById('quick');
-  if (FREE_MODE) {
-    btn.textContent = '🌐 Tự do';
-    btn.className = 'free';
-    input.placeholder = 'Hỏi bất cứ điều gì — dịch, code, nấu ăn, kiến thức...';
-    quickDiv.innerHTML = `
-      <button class="qbtn" onclick="qsend('Thời tiết Nha Trang hôm nay?')">🌤️ Thời tiết</button>
-      <button class="qbtn" onclick="qsend('Giá vàng hôm nay bao nhiêu?')">🥇 Giá vàng</button>
-      <button class="qbtn" onclick="qsend('1 USD bằng bao nhiêu VND?')">💱 Tỷ giá</button>
-      <button class="qbtn" onclick="qsend('Bitcoin hôm nay giá bao nhiêu?')">🪙 Crypto</button>
-      <button class="qbtn" onclick="qsend('Dịch sang tiếng Anh: Xin chào')">🌍 Dịch</button>
-      <button class="qbtn" onclick="qsend('Viết caption Instagram hay')">✍️ Caption</button>
-      <button class="qbtn" onclick="qsend('Công thức nấu phở bò')">🍜 Nấu ăn</button>
-      <button class="qbtn" onclick="qsend('Giải thích AI là gì?')">🤖 Kiến thức</button>`;
-    addMsg('bot', '🌐 Đã chuyển sang <strong>Chế độ Tự do</strong> — Tôi có thể trả lời mọi câu hỏi và <strong>tìm kiếm thông tin trực tiếp từ internet</strong> khi cần! Hỏi thời tiết, tin tức, giá vàng, review sản phẩm... đều được nhé.');
-  } else {
-    btn.textContent = '🏪 Cửa hàng';
-    btn.className = 'store';
-    input.placeholder = 'Hỏi về kho hàng, doanh thu, chiến lược kinh doanh...';
-    quickDiv.innerHTML = `
-      <button class="qbtn" onclick="qsend('Tồn kho hôm nay như thế nào?')">📦 Tồn kho</button>
-      <button class="qbtn" onclick="qsend('Doanh thu tháng này bao nhiêu?')">💰 Doanh thu</button>
-      <button class="qbtn" onclick="qsend('Sản phẩm nào đang bán chạy nhất?')">🔥 Bán chạy</button>
-      <button class="qbtn" onclick="qsend('Tư vấn chiến lược giảm giá cuối tháng')">💡 Chiến lược</button>
-      <button class="qbtn" onclick="qsend('Liệt kê khách hàng VIP mua nhiều nhất')">👤 Khách VIP</button>
-      <button class="qbtn" onclick="qsend('Sản phẩm nào sắp hết hàng cần nhập thêm?')">⚠️ Sắp hết</button>`;
-    addMsg('bot', '🏪 Đã về <strong>Chế độ Cửa hàng</strong> — Tập trung quản lý Thuận Triều.');
+function fmtMoney(n) {
+  if (!n || n === 0) return '0đ';
+  if (n >= 1_000_000_000) return (n/1_000_000_000).toFixed(1).replace(/\.0$/,'') + 'tỷ';
+  if (n >= 1_000_000)     return (n/1_000_000).toFixed(1).replace(/\.0$/,'') + 'tr';
+  if (n >= 1_000)         return (n/1_000).toFixed(0) + 'k';
+  return n.toLocaleString('vi-VN') + 'đ';
+}
+
+function addRepair() {
+  const device   = document.getElementById('rp-device').value.trim();
+  const customer = document.getElementById('rp-customer').value.trim();
+  const phone    = document.getElementById('rp-phone').value.trim();
+  const issue    = document.getElementById('rp-issue').value.trim();
+  const parts    = document.getElementById('rp-parts').value.trim();
+  const cost     = parseFloat(document.getElementById('rp-cost').value) || 0;
+  const price    = parseFloat(document.getElementById('rp-price').value) || 0;
+  const status   = document.getElementById('rp-status').value;
+  if (!device || !customer) { alert('Vui lòng nhập tên máy và tên khách!'); return; }
+  const now = new Date().toLocaleString('vi-VN');
+  REPAIRS.unshift({ id: Date.now(), device, customer, phone, issue, parts, cost, price, status, createdAt: now });
+  saveRepairs();
+  // Nếu đã có giá thu → tự ghi transaction
+  if (price > 0 && status === 'done') {
+    TRANSACTIONS.unshift({ type:'thu', desc:`Sửa ${device} - ${customer}`, amount: price, time: now });
+    if (cost > 0) TRANSACTIONS.unshift({ type:'chi', desc:`Linh kiện ${device} - ${customer}`, amount: cost, time: now });
+    saveTransactions();
   }
+  ['rp-device','rp-customer','rp-phone','rp-issue','rp-parts','rp-cost','rp-price'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('rp-status').value = 'pending';
+  buildRepairList();
+  updateStats();
+}
+
+function setRepairStatus(id, status) {
+  const r = REPAIRS.find(x => x.id === id);
+  if (!r) return;
+  const wasDone = r.status === 'done';
+  r.status = status;
+  // Nếu vừa chuyển sang done → ghi transaction
+  if (status === 'done' && !wasDone && r.price > 0) {
+    const now = new Date().toLocaleString('vi-VN');
+    TRANSACTIONS.unshift({ type:'thu', desc:`Sửa ${r.device} - ${r.customer}`, amount: r.price, time: now });
+    if (r.cost > 0) TRANSACTIONS.unshift({ type:'chi', desc:`Linh kiện ${r.device} - ${r.customer}`, amount: r.cost, time: now });
+    saveTransactions();
+    buildTransactionList();
+    updateStats();
+  }
+  saveRepairs();
+  buildRepairList();
+}
+
+function deleteRepair(id) {
+  if (!confirm('Xóa đơn sửa này?')) return;
+  REPAIRS = REPAIRS.filter(x => x.id !== id);
+  saveRepairs();
+  buildRepairList();
+  updateStats();
+}
+
+function filterRepairs(f) {
+  repairFilter = f;
+  ['all','pending','waiting','done'].forEach(k => {
+    document.getElementById('rf-'+k).classList.toggle('active', k === f);
+  });
+  buildRepairList();
+}
+
+function buildRepairList() {
+  // Tính KPI
+  const allR = REPAIRS;
+  const pending = allR.filter(r => r.status === 'pending' || r.status === 'waiting');
+  const done    = allR.filter(r => r.status === 'done');
+  const totalThu = done.reduce((s, r) => s + (r.price||0), 0);
+  const totalChi = done.reduce((s, r) => s + (r.cost||0), 0);
+  const lai = totalThu - totalChi;
+  const kpiP = document.getElementById('rp-kpi-pending');
+  const kpiD = document.getElementById('rp-kpi-done');
+  const kpiT = document.getElementById('rp-kpi-thu');
+  const kpiL = document.getElementById('rp-kpi-lai');
+  const kpiLS = document.getElementById('rp-kpi-lai-sub');
+  if (kpiP) kpiP.textContent = pending.length;
+  if (kpiD) kpiD.textContent = done.length;
+  if (kpiT) kpiT.textContent = fmtMoney(totalThu);
+  if (kpiL) {
+    kpiL.textContent = (lai >= 0 ? '+' : '') + fmtMoney(lai);
+    kpiL.style.color = lai >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+  if (kpiLS) {
+    const pct = totalThu > 0 ? ((lai/totalThu)*100).toFixed(0) : 0;
+    kpiLS.textContent = totalThu > 0 ? `biên ${pct}%` : '—';
+  }
+  // Badge
+  const badge = document.getElementById('repair-badge');
+  const bnavBadge = document.getElementById('bnav-repair-badge');
+  if (badge) badge.style.display = pending.length > 0 ? 'inline-block' : 'none';
+  if (bnavBadge) bnavBadge.style.display = pending.length > 0 ? 'block' : 'none';
+
+  const list = document.getElementById('repair-list');
+  if (!list) return;
+  const filtered = repairFilter === 'all' ? allR : allR.filter(r => r.status === repairFilter);
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🔧</div>Chưa có đơn sửa chữa nào.</div>';
+    return;
+  }
+  const statusLabel = { pending:'⏳ Đang sửa', waiting:'📦 Chờ linh kiện', done:'✅ Hoàn thành' };
+  const statusCls   = { pending:'status-pending', waiting:'status-waiting', done:'status-done' };
+  list.innerHTML = filtered.map(r => {
+    const lai = (r.price||0) - (r.cost||0);
+    const laiColor = lai >= 0 ? 'var(--green)' : 'var(--red)';
+    return `<div class="repair-card" style="margin-bottom:10px;">
+      <div class="repair-header">
+        <div class="repair-name">📱 ${r.device}</div>
+        <span class="repair-status ${statusCls[r.status]}">${statusLabel[r.status]}</span>
+      </div>
+      <div class="repair-meta">
+        <span>👤 ${r.customer}${r.phone ? ' · 📞 '+r.phone : ''}</span>
+        <span style="color:var(--text3);">🕐 ${r.createdAt}</span>
+      </div>
+      ${r.issue ? `<div class="repair-parts">🛠 Lỗi: ${r.issue}</div>` : ''}
+      ${r.parts ? `<div class="repair-parts">🔩 Linh kiện: ${r.parts}</div>` : ''}
+      <div class="repair-money">
+        ${r.cost  > 0 ? `<span class="money-tag money-chi">Chi: ${fmtMoney(r.cost)}</span>` : ''}
+        ${r.price > 0 ? `<span class="money-tag money-thu">Thu: ${fmtMoney(r.price)}</span>` : ''}
+        ${(r.price > 0 || r.cost > 0) ? `<span class="money-tag" style="background:var(--bg3); color:${laiColor}; font-weight:700;">Lãi: ${fmtMoney(lai)}</span>` : ''}
+      </div>
+      <div class="repair-actions">
+        ${r.status !== 'done'    ? `<button class="btn-sm green" onclick="setRepairStatus(${r.id},'done')">✅ Xong</button>` : ''}
+        ${r.status !== 'pending' ? `<button class="btn-sm" onclick="setRepairStatus(${r.id},'pending')">⏳ Đang sửa</button>` : ''}
+        ${r.status !== 'waiting' ? `<button class="btn-sm purple" onclick="setRepairStatus(${r.id},'waiting')">📦 Chờ LK</button>` : ''}
+        <button class="btn-sm red" onclick="deleteRepair(${r.id})">🗑 Xóa</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
 function buildStoreContext() {
   const invLines = PRODUCTS.length > 0
     ? PRODUCTS.map(p => {
-        const warn = p.stock <= 2 ? ' (SẮP HẾT - cần nhập gấp)' : p.stock <= 5 ? ' (ÍT HÀNG)' : '';
+        const warn = p.stock <= 2 ? ' ⚠️ SẮP HẾT' : p.stock <= 5 ? ' (ít hàng)' : '';
         return `- ${p.name}: ${p.stock} máy${warn}, giá ${p.price}`;
       }).join('\n')
-    : '(Kho hàng đang trống, chưa có sản phẩm nào)';
+    : '(Kho hàng trống)';
+
+  const repairPending = REPAIRS.filter(r => r.status !== 'done');
+  const repairLines = repairPending.length > 0
+    ? repairPending.map(r => {
+        const s = r.status === 'waiting' ? '📦 Chờ LK' : '⏳ Đang sửa';
+        return `- [${s}] ${r.device} của ${r.customer}${r.phone?' ('+r.phone+')':''}${r.issue?' — lỗi: '+r.issue:''}${r.parts?' — LK: '+r.parts:''}${r.price?' — thu: '+fmtMoney(r.price):''}`;
+      }).join('\n')
+    : '(Không có máy nào đang sửa)';
+
+  const repairDone = REPAIRS.filter(r => r.status === 'done');
+  const rpThu = repairDone.reduce((s,r) => s+(r.price||0), 0);
+  const rpChi = repairDone.reduce((s,r) => s+(r.cost||0), 0);
+  const rpLai = rpThu - rpChi;
 
   const totalThu = TRANSACTIONS.filter(t => t.type === 'thu').reduce((s, t) => s + t.amount, 0);
   const totalChi = TRANSACTIONS.filter(t => t.type === 'chi').reduce((s, t) => s + t.amount, 0);
   const lnl = totalThu - totalChi;
-  const finSummary = `TỔNG THU: ${totalThu.toLocaleString('vi-VN')}đ | TỔNG CHI: ${totalChi.toLocaleString('vi-VN')}đ | ${lnl >= 0 ? 'LỢI NHUẬN' : 'THUA LỖ'}: ${Math.abs(lnl).toLocaleString('vi-VN')}đ`;
+  const finSummary = `Tổng thu: ${fmtMoney(totalThu)} | Tổng chi: ${fmtMoney(totalChi)} | ${lnl>=0?'Lợi nhuận':'Thua lỗ'}: ${fmtMoney(Math.abs(lnl))}`;
 
   const vipLines = VIPS.length > 0
-    ? VIPS.map(v => `- ${v.name}: ${v.count} lần mua${v.note ? ' — ' + v.note : ''}`).join('\n')
-    : '(Chưa có khách VIP nào)';
+    ? VIPS.slice(0,10).map(v => `- ${v.name}${v.phone?' ('+v.phone+')':''}: ${v.count} lần mua${v.note?' — '+v.note:''}`).join('\n')
+    : '(Chưa có khách VIP)';
 
   const permLines = [];
-  if (PERMS.delAll) permLines.push('- Được phép XÓA TOÀN BỘ dữ liệu (kho hàng + khách VIP) nếu chủ cửa hàng yêu cầu rõ ràng');
+  if (PERMS.delAll) permLines.push('- Được xóa TẤT CẢ dữ liệu nếu chủ yêu cầu rõ');
   else {
-    if (PERMS.delInventory) permLines.push('- Được phép xóa toàn bộ kho hàng nếu chủ cửa hàng yêu cầu rõ ràng');
-    if (PERMS.delVip)       permLines.push('- Được phép xóa toàn bộ danh sách khách VIP nếu chủ cửa hàng yêu cầu rõ ràng');
+    if (PERMS.delInventory) permLines.push('- Được xóa kho hàng nếu chủ yêu cầu');
+    if (PERMS.delVip)       permLines.push('- Được xóa danh sách VIP nếu chủ yêu cầu');
   }
-  const permSection = permLines.length > 0
-    ? '\nQUYỀN ĐẶC BIỆT CỦA AI:\n' + permLines.join('\n')
-    : '';
+  const permSection = permLines.length > 0 ? '\nQUYỀN AI:\n' + permLines.join('\n') : '';
 
-  if (FREE_MODE) {
-    return `Bạn là trợ lý AI thông minh, hữu ích, có thể trả lời MỌI câu hỏi bằng tiếng Việt một cách chính xác và thân thiện.
+  return `Bạn là AI trợ lý chuyên nghiệp của cửa hàng điện thoại & sửa chữa "Thuận Triều" tại Nha Trang.
+Trả lời ngắn gọn, thực tế, bằng tiếng Việt.
 
-Khả năng của bạn:
-- Kiến thức tổng quát: khoa học, lịch sử, địa lý, toán học, vật lý, hóa học, sinh học
-- Lập trình: Python, JavaScript, C++, Java, SQL, HTML/CSS và nhiều ngôn ngữ khác
-- Ngôn ngữ: dịch thuật, ngữ pháp, học tiếng Anh và các ngôn ngữ khác
-- Sáng tạo: viết văn, thơ, caption, email, bài đăng mạng xã hội
-- Ẩm thực: công thức nấu ăn, nguyên liệu, cách làm
-- Tư vấn: sức khỏe cơ bản, học tập, nghề nghiệp, kinh doanh
-- Dữ liệu thực tế: thời tiết, giá vàng, tỷ giá, crypto (khi được cung cấp data từ internet)
-- Thông tin cửa hàng: bạn vẫn biết dữ liệu Thuận Triều khi cần
-
-Ngoài ra bạn cũng biết thông tin cửa hàng điện thoại "Thuận Triều" tại Nha Trang:
-KHO HÀNG: ${invLines}
-KHÁCH VIP: ${vipLines}
-
-Phong cách trả lời: Tiếng Việt tự nhiên, thân thiện, ngắn gọn, rõ ràng, dùng emoji vừa phải. Khi có dữ liệu thực tế từ internet, hãy trình bày gọn gàng và chính xác.
-
-Khi câu hỏi liên quan đến cửa hàng, vẫn dùng được các action tag:
-[ACTION:ADD_NOTE|loại|tiêu_đề|nội_dung]
-[ACTION:ADD_VIP|tên|sdt|số_lần_mua|ghi_chú]
-[ACTION:ADD_PRODUCT|tên|icon|giá|tồn_kho|tối_đa]
-[ACTION:DELETE_INVENTORY] [ACTION:DELETE_VIPS] [ACTION:DELETE_ALL]`;
-  }
-
-  return `Bạn là AI trợ lý quản lý cửa hàng điện thoại "Thuận Triều" tại Nha Trang.
-Dữ liệu cửa hàng hiện tại:
-
-KHO HÀNG:
+=== KHO HÀNG ===
 ${invLines}
 
-KHÁCH HÀNG VIP:
-${vipLines}
+=== MÁY ĐANG SỬA (${repairPending.length} máy) ===
+${repairLines}
 
-DOANH THU THÁNG 4/2026: 0 đồng
-TỔNG ĐƠN HÀNG: 0 đơn
-LỢI NHUẬN: 0 đồng
-CƠ CẤU DOANH THU: Chưa có dữ liệu
+=== THỐNG KÊ SỬA CHỮA (đã hoàn thành: ${repairDone.length} máy) ===
+Thu từ khách: ${fmtMoney(rpThu)} | Chi linh kiện: ${fmtMoney(rpChi)} | Lãi sửa chữa: ${fmtMoney(rpLai)}
 
-TÀI CHÍNH THỰC TẾ (nhập tay):
+=== TÀI CHÍNH TỔNG (giao dịch thủ công) ===
 ${finSummary}
+
+=== KHÁCH VIP ===
+${vipLines}
 ${permSection}
 
-Khi người dùng muốn GHI CHÚ bất kỳ thông tin gì (sửa chữa, công nợ, đặt hàng, giao dịch, nhắc nhở...), hãy trả lời bao gồm tag:
-[ACTION:ADD_NOTE|loại|tiêu_đề|nội_dung]
-- loại: repair (sửa chữa), debt (công nợ), order (đặt hàng), other (khác)
-- Ví dụ: [ACTION:ADD_NOTE|repair|Sửa iPhone Quang|Nhận 500k, lãi 350k, chưa giao]
-- Ví dụ: [ACTION:ADD_NOTE|debt|Công nợ Minh|Còn nợ 2 triệu, hẹn trả 20/4]
+=== HÀNH ĐỘNG AI (thêm vào cuối reply khi cần) ===
 
-⚡ QUY TẮC BẮT BUỘC VỀ GIAO DỊCH TÀI CHÍNH:
-Mỗi khi người dùng đề cập đến BẤT KỲ con số tiền nào liên quan đến doanh thu, thu nhập, chi phí, lợi nhuận, bán hàng, nhập hàng — BẮT BUỘC phải thêm tag [ACTION:ADD_TRANSACTION] vào phần cuối câu trả lời.
-- KHÔNG được chỉ trả lời bằng text mà bỏ sót tag này.
-- Nếu người dùng đề cập nhiều khoản → thêm nhiều tag.
-- Tag phải đặt ở cuối reply, ngay sau phần text.
+GHI ĐƠN SỬA CHỮA: [ACTION:ADD_REPAIR|tên máy|khách hàng|SĐT|lỗi|linh kiện|chi LK|thu khách|trạng thái]
+- trạng thái: pending / waiting / done
+- Ví dụ: [ACTION:ADD_REPAIR|iPhone 14|Nguyễn Văn A|0901234567|màn vỡ|màn IP14|850000|1200000|done]
 
-Format: [ACTION:ADD_TRANSACTION|loại|mô_tả|số_tiền_nguyên]
-- loại: thu (khi bán hàng, thu tiền, doanh thu, lợi nhuận vào) hoặc chi (khi nhập hàng, chi phí, trả tiền ra)
-- số_tiền: CHỈ số nguyên, không có dấu chấm phẩy đơn vị (vd: 35990000)
-- Ví dụ: [ACTION:ADD_TRANSACTION|thu|Bán iPhone 15 Pro|35990000]
-- Ví dụ: [ACTION:ADD_TRANSACTION|chi|Nhập hàng Samsung S24|120000000]
-- Ví dụ khi có cả doanh thu lẫn lợi nhuận riêng — chỉ ghi nhận DOANH THU (khoản thu lớn nhất):
-  [ACTION:ADD_TRANSACTION|thu|Doanh thu tháng 4|31040001]
+GHI GIAO DỊCH TÀI CHÍNH: [ACTION:ADD_TRANSACTION|loại|mô tả|số tiền]
+- loại: thu hoặc chi
+- Ví dụ: [ACTION:ADD_TRANSACTION|thu|Bán Samsung S24|18500000]
 
-Khi người dùng yêu cầu THÊM khách VIP, hãy phân tích và trả lời bao gồm tag:
-[ACTION:ADD_VIP|tên|sdt|số_lần_mua|ghi_chú]
-Ví dụ: [ACTION:ADD_VIP|Nguyễn Văn A|0901234567|3|Khách thân thiết]
-Nếu không có SĐT hoặc ghi chú thì để trống: [ACTION:ADD_VIP|Tên khách||1|]
+THÊM KHÁCH VIP: [ACTION:ADD_VIP|tên|sdt|số lần mua|ghi chú]
 
-Khi người dùng yêu cầu THÊM sản phẩm vào kho, hãy phân tích và trả lời bao gồm tag:
-[ACTION:ADD_PRODUCT|tên|icon|giá|tồn_kho|tối_đa]
-Ví dụ: [ACTION:ADD_PRODUCT|iPhone 16 Pro|📱|35.990.000đ|10|20]
+THÊM SẢN PHẨM KHO: [ACTION:ADD_PRODUCT|tên|icon|giá|tồn kho|tối đa]
 
-Khi được yêu cầu thực hiện hành động xóa dữ liệu (nếu có quyền), hãy trả lời dạng:
-[ACTION:DELETE_INVENTORY] để xóa kho hàng
-[ACTION:DELETE_VIPS] để xóa danh sách VIP  
-[ACTION:DELETE_ALL] để xóa tất cả
+XÓA DỮ LIỆU (chỉ khi có quyền): [ACTION:DELETE_INVENTORY] [ACTION:DELETE_VIPS] [ACTION:DELETE_ALL]
 
-Quan trọng: Sau khi thêm dữ liệu, hãy xác nhận đã thêm thành công và mô tả nội dung vừa thêm.
-Hãy trả lời ngắn gọn, chuyên nghiệp bằng tiếng Việt. Đưa ra gợi ý cụ thể và thực tế khi được hỏi.`;
+⚡ BẮT BUỘC: Khi người dùng đề cập số tiền/giao dịch bất kỳ → thêm ACTION tag tương ứng. Khi người dùng muốn ghi nhận đơn sửa → dùng ADD_REPAIR.`;
+}
 }
 
 function makeFaceSVG(mood, id) {
@@ -1915,6 +2118,32 @@ function qsend(text) {
 
 function handleAIActions(reply) {
   let cleanReply = reply;
+
+  // Handle ADD_REPAIR
+  const repairMatches = [...cleanReply.matchAll(/\[ACTION:ADD_REPAIR\|([^\]]+)\]/g)];
+  repairMatches.forEach(match => {
+    const p = match[1].split('|');
+    const device   = (p[0]||'').trim();
+    const customer = (p[1]||'').trim();
+    const phone    = (p[2]||'').trim();
+    const issue    = (p[3]||'').trim();
+    const parts    = (p[4]||'').trim();
+    const cost     = parseFloat(p[5])||0;
+    const price    = parseFloat(p[6])||0;
+    const status   = (p[7]||'pending').trim();
+    if (device && customer) {
+      const now = new Date().toLocaleString('vi-VN');
+      REPAIRS.unshift({ id: Date.now(), device, customer, phone, issue, parts, cost, price, status, createdAt: now });
+      saveRepairs();
+      if (status === 'done' && price > 0) {
+        TRANSACTIONS.unshift({ type:'thu', desc:`Sửa ${device} - ${customer}`, amount: price, time: now });
+        if (cost > 0) TRANSACTIONS.unshift({ type:'chi', desc:`Linh kiện ${device} - ${customer}`, amount: cost, time: now });
+        saveTransactions();
+      }
+      buildRepairList();
+    }
+    cleanReply = cleanReply.replace(match[0], '');
+  });
 
   // Handle ADD_TRANSACTION
   const txMatches = [...cleanReply.matchAll(/\[ACTION:ADD_TRANSACTION\|([^\]]+)\]/g)];
@@ -2318,19 +2547,8 @@ async function sendMsg() {
   btn.disabled = true;
   showTyping();
 
-  // Chế độ tự do + câu hỏi cần tìm web → search trước
-  let webContext = '';
-  if (FREE_MODE && !capturedImg && needsWebSearch(text)) {
-    try {
-      const result = await webSearch(text);
-      if (result) {
-        webContext = `\n\n[DỮ LIỆU TÌM ĐƯỢC TỪ INTERNET]:\n${result}\n[HẾT DỮ LIỆU WEB]\nHãy dựa vào dữ liệu trên để trả lời câu hỏi của người dùng một cách chính xác, ngắn gọn bằng tiếng Việt.`;
-      }
-    } catch(e) {}
-  }
-
   try {
-    const systemPrompt = buildStoreContext() + webContext;
+    const systemPrompt = buildStoreContext();
 
     // Build user message content (with or without image)
     let userMsgContent;
@@ -2383,15 +2601,14 @@ async function sendMsg() {
     if (!res.ok) {
       addMsg('bot', '❌ Lỗi API: ' + (data.error?.message || 'Không xác định'));
     } else {
-      let reply = data.choices[0].message.content;
-      // Fallback: nếu AI quên gắn tag transaction, tự parse từ text người dùng
-      if (!FREE_MODE) reply = injectMissingTxTags(text, reply);
-      const cleanedReply = await handleAIActions(reply);
+  // Fallback: parse số tiền từ text người dùng nếu AI quên tag
+  let reply = data.choices[0].message.content;
+  reply = injectMissingTxTags(text, reply);
+  const cleanedReply = await handleAIActions(reply);
       history.push({role:'assistant', content: cleanedReply});
       localStorage.setItem(SK_HISTORY, JSON.stringify(history));
       const imgBadge = capturedImg ? '<span style="font-size:10px;color:var(--green);opacity:0.8;">📷 Từ ảnh · </span>' : '';
-      const prefix = imgBadge || ((FREE_MODE && webContext) ? '<span style="font-size:10px;color:var(--accent);opacity:0.7;">🌐 Từ internet · </span>' : '');
-      addMsg('bot', prefix + cleanedReply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
+      addMsg('bot', imgBadge + cleanedReply.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'));
       speakText(cleanedReply);
     }
   } catch(e) {
