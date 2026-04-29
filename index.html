@@ -806,7 +806,7 @@ function migrateSalesData() {
   SALES.forEach(s => {
     // Nếu price lớn (>= 1tr) nhưng profit nhỏ bất thường (< 10000 và != 0)
     // thì khả năng cao profit bị lưu nhầm đơn vị → nhân 1000
-    if (s.price >= 1000000 && s.profit !== 0 && Math.abs(s.profit) < 10000) {
+    if (!s.returned && s.price >= 1000000 && s.profit !== 0 && Math.abs(s.profit) < 10000) {
       s.profit = s.profit * 1000;
       changed = true;
     }
@@ -1095,16 +1095,53 @@ function deleteSale(id) {
 function markSaleReturned(id) {
   const s = SALES.find(x => x.id === id);
   if (!s) return;
+
   if (s.returned) {
-    if (!confirm('Bỏ đánh dấu hoàn trả cho máy này?\n(Lãi/lỗ sẽ được tính lại vào thống kê)')) return;
+    if (!confirm('Bo danh dau hoan tra cho may nay?\n(Lai/lo goc se duoc tinh lai vao thong ke)')) return;
     s.returned = false;
-  } else {
-    if (!confirm(`Đánh dấu "${s.device}" là đã hoàn trả / bị back?\n(Giao dịch sẽ giữ lại nhưng KHÔNG tính vào lợi nhuận)`)) return;
-    s.returned = true;
+    if (s._originalProfit !== undefined) {
+      s.profit = s._originalProfit;
+      delete s._originalProfit;
+    }
+    delete s.returnNote;
+    saveSales(); buildSaleList(); updateStats();
+    chatHistory = []; localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+    return;
   }
+
+  const choice = prompt(
+    'HOAN TRA: ' + s.device + '\nGia ban: ' + fmtMoney(s.price) + ' | Lai goc: ' + fmtMoney(s.profit) + '\n\n' +
+    'Khach chiu phi hoan tra (%)?\n' +
+    '- Nhap so % khach chiu lo (VD: 2 = khach mat 2% gia ban)\n' +
+    '- Nhap 0 = hoan tra toan bo (cua hang khong tinh lai)\n' +
+    '- Nhan Huy = khong lam gi'
+  );
+  if (choice === null) return;
+
+  const pct = parseFloat(choice);
+  if (isNaN(pct) || pct < 0 || pct > 100) {
+    alert('Phan tram khong hop le! Nhap so tu 0 den 100.'); return;
+  }
+
+  s._originalProfit = s.profit;
+  s.returned = true;
+
+  if (pct === 0) {
+    s.profit = 0;
+    s.returnNote = 'Hoan tra toan bo';
+  } else {
+    const fee = Math.round(s.price * pct / 100);
+    s.profit = fee;
+    s.returnNote = 'Hoan tra, khach chiu ' + pct + '% (' + fmtMoney(fee) + ')';
+  }
+
   saveSales(); buildSaleList(); updateStats();
-  chatHistory = [];
-  localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+  chatHistory = []; localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+
+  const msg = pct === 0
+    ? 'Da danh dau hoan tra toan bo. Lai = 0d.'
+    : 'Hoan tra voi phi ' + pct + '%. Cua hang giu lai ' + fmtMoney(s.profit) + '.';
+  alert(msg);
 }
 
 function setSaleFilter(f, btn) {
@@ -1129,7 +1166,7 @@ function buildSaleList() {
   list.innerHTML = filtered.map(s => {
     const pCls = s.returned ? 'badge-purple' : (s.profit >= 0 ? 'badge-green' : 'badge-red');
     const pLabel = s.returned
-      ? `↩ Hoàn trả (lãi ${fmtMoney(s.profit)} không tính)`
+      ? (s.returnNote ? `↩ ${s.returnNote} · giữ ${fmtMoney(s.profit)}` : `↩ Hoàn trả (lãi ${fmtMoney(s.profit)} không tính)`)
       : (s.profit >= 0 ? `📈 Lãi ${fmtMoney(s.profit)}` : `📉 Lỗ ${fmtMoney(Math.abs(s.profit))}`);
     const returnedStyle = s.returned ? 'opacity:0.6;border-left:3px solid var(--purple);' : '';
     const returnBtnLabel = s.returned ? '↩ Bỏ hoàn trả' : '↩ Đánh dấu hoàn trả';
@@ -1166,10 +1203,10 @@ function updateStats() {
   const repairProfit = repairMonth.reduce((s,r) => s + (r.profit||0) - (r.cost||0), 0);
   const totalRepairProfit = REPAIRS.reduce((s,r) => s + (r.profit||0) - (r.cost||0), 0);
 
-  const salesMonth = SALES.filter(s => s.date && s.date !== 'undefined' && s.date.startsWith(month) && !s.returned);
+  const salesMonth = SALES.filter(s => s.date && s.date !== 'undefined' && s.date.startsWith(month));
   const saleRevenue = salesMonth.reduce((s,x) => s + (x.price||0), 0);
   const saleProfit = salesMonth.reduce((s,x) => s + (x.profit||0), 0);
-  const totalSaleProfit = SALES.filter(s => !s.returned).reduce((s,x) => s + (x.profit||0), 0);
+  const totalSaleProfit = SALES.reduce((s,x) => s + (x.profit||0), 0);
 
   document.getElementById('stat-repairing').textContent = repairing;
   document.getElementById('stat-pending').textContent   = pending;
@@ -1504,7 +1541,7 @@ function buildContext() {
     : '(Chưa có phiếu sửa nào)';
   const saleLines = SALES.length
     ? SALES.slice(0,20).map(s => {
-        const returnedFlag = s.returned ? ' [ĐÃ HOÀN TRẢ - KHÔNG TÍNH LÃI]' : '';
+        const returnedFlag = s.returned ? ` [HOÀN TRẢ - lãi thực giữ: ${fmtMoney(s.profit||0)}${s.returnNote?' / '+s.returnNote:''}]` : '';
         return `- ${s.device} / IMEI:${s.imei||'?'} / ${s.conditionLabel||s.condition} / bán:${fmtMoney(s.price)} / lãi_ròng:${fmtMoney(s.profit||0)} / ngày:${s.date}${returnedFlag}`;
       }).join('\n')
     : '(Chưa có giao dịch bán nào)';
@@ -1517,10 +1554,10 @@ function buildContext() {
   const stockSummary = getStockSummary().filter(s=>s.qty>0).map(s=>`${s.name}: ${s.qty} ${s.unit||'cái'}`).join(', ') || '(Không có tồn kho)';
 
   const totalRepairNet = REPAIRS.reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
-  const totalSaleNet   = SALES.filter(s => !s.returned).reduce((s,x)=>s+(x.profit||0),0);
+  const totalSaleNet   = SALES.reduce((s,x)=>s+(x.profit||0),0);
   const month = thisMonth();
   const monthRepairNet = REPAIRS.filter(r=>r.date && r.date!=='undefined' && r.date.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
-  const monthSaleNet   = SALES.filter(s=>s.date && s.date!=='undefined' && s.date.startsWith(month) && !s.returned).reduce((s,x)=>s+(x.profit||0),0);
+  const monthSaleNet   = SALES.filter(s=>s.date && s.date!=='undefined' && s.date.startsWith(month)).reduce((s,x)=>s+(x.profit||0),0);
   const monthFinIn     = FINANCE.filter(f=>f.date && f.date!=='undefined' && f.date.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
   const monthFinOut    = FINANCE.filter(f=>f.date && f.date!=='undefined' && f.date.startsWith(month)&&f.type==='chi').reduce((s,f)=>s+f.amount,0);
 
