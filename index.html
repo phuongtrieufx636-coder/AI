@@ -958,17 +958,12 @@ function updateRepairStatus(id, status) {
 }
 function deleteRepair(id) {
   if (!confirm('Xóa phiếu sửa này?')) return;
-  const deleted = REPAIRS.find(x => x.id === id);
   REPAIRS = REPAIRS.filter(x => x.id !== id);
   saveRepairs(); buildRepairList(); updateStats();
-  // Thêm ghi chú vào chat history để AI biết phiếu này đã bị xóa thủ công
-  if (deleted) {
-    const note = `[HỆ THỐNG: Người dùng vừa XÓA THỦ CÔNG phiếu sửa "${deleted.owner} - ${deleted.device}". Phiếu này KHÔNG còn tồn tại. TUYỆT ĐỐI KHÔNG tạo lại phiếu này dù người dùng có yêu cầu, trừ khi họ cung cấp thông tin hoàn toàn mới và xác nhận rõ ràng muốn tạo phiếu MỚI.]`;
-    chatHistory.push({ role: 'user', content: note });
-    chatHistory.push({ role: 'assistant', content: `Đã ghi nhận: phiếu sửa "${deleted.owner} - ${deleted.device}" đã bị xóa.` });
-    if (chatHistory.length > 20) chatHistory.splice(0, chatHistory.length - 20);
-    localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
-  }
+  // Reset chat history để AI đọc lại dữ liệu mới nhất từ buildContext()
+  // KHÔNG inject note cấm vào history vì sẽ chặn việc tạo phiếu mới hợp lệ
+  chatHistory = [];
+  localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
 }
 
 function setRepairFilter(f, btn) {
@@ -1067,6 +1062,23 @@ function deleteSale(id) {
   if (!confirm('Xóa giao dịch bán hàng này?')) return;
   SALES = SALES.filter(x => x.id !== id);
   saveSales(); buildSaleList(); updateStats();
+  chatHistory = [];
+  localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+}
+
+function markSaleReturned(id) {
+  const s = SALES.find(x => x.id === id);
+  if (!s) return;
+  if (s.returned) {
+    if (!confirm('Bỏ đánh dấu hoàn trả cho máy này?\n(Lãi/lỗ sẽ được tính lại vào thống kê)')) return;
+    s.returned = false;
+  } else {
+    if (!confirm(`Đánh dấu "${s.device}" là đã hoàn trả / bị back?\n(Giao dịch sẽ giữ lại nhưng KHÔNG tính vào lợi nhuận)`)) return;
+    s.returned = true;
+  }
+  saveSales(); buildSaleList(); updateStats();
+  chatHistory = [];
+  localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
 }
 
 function setSaleFilter(f, btn) {
@@ -1089,13 +1101,17 @@ function buildSaleList() {
   }
 
   list.innerHTML = filtered.map(s => {
-    const pCls = s.profit >= 0 ? 'badge-green' : 'badge-red';
-    const pLabel = s.profit >= 0 ? `📈 Lãi ${fmtMoney(s.profit)}` : `📉 Lỗ ${fmtMoney(Math.abs(s.profit))}`;
-    return `<div class="sale-card">
+    const pCls = s.returned ? 'badge-purple' : (s.profit >= 0 ? 'badge-green' : 'badge-red');
+    const pLabel = s.returned
+      ? `↩ Hoàn trả (lãi ${fmtMoney(s.profit)} không tính)`
+      : (s.profit >= 0 ? `📈 Lãi ${fmtMoney(s.profit)}` : `📉 Lỗ ${fmtMoney(Math.abs(s.profit))}`);
+    const returnedStyle = s.returned ? 'opacity:0.6;border-left:3px solid var(--purple);' : '';
+    const returnBtnLabel = s.returned ? '↩ Bỏ hoàn trả' : '↩ Đánh dấu hoàn trả';
+    return `<div class="sale-card" style="${returnedStyle}">
       <div class="card-top">
         <div class="card-icon sale-icon">📱</div>
         <div class="card-info">
-          <div class="card-title">${escHtml(s.device)}</div>
+          <div class="card-title">${escHtml(s.device)}${s.returned?' <span style="color:var(--purple);font-size:11px;">[Hoàn trả]</span>':''}</div>
           <div class="card-sub">${s.buyer ? '👤 '+escHtml(s.buyer)+' · ' : ''}${s.conditionLabel || s.condition} · ${fmtMoney(s.price)}</div>
           <div class="card-meta">📅 ${fmtDate(s.date)}${s.note ? ' · '+escHtml(s.note) : ''}</div>
         </div>
@@ -1107,6 +1123,7 @@ function buildSaleList() {
         <span class="badge badge-purple">${s.conditionLabel || s.condition}</span>
       </div>
       <div class="card-actions">
+        <button class="btn-done" style="background:var(--purple-dim);color:var(--purple);border-color:rgba(155,114,245,0.2);" onclick="markSaleReturned(${s.id})">${returnBtnLabel}</button>
         <button class="btn-del" onclick="deleteSale(${s.id})">🗑 Xóa</button>
       </div>
     </div>`;
@@ -1123,10 +1140,10 @@ function updateStats() {
   const repairProfit = repairMonth.reduce((s,r) => s + (r.profit||0) - (r.cost||0), 0);
   const totalRepairProfit = REPAIRS.reduce((s,r) => s + (r.profit||0) - (r.cost||0), 0);
 
-  const salesMonth = SALES.filter(s => s.date && s.date.startsWith(month));
+  const salesMonth = SALES.filter(s => s.date && s.date.startsWith(month) && !s.returned);
   const saleRevenue = salesMonth.reduce((s,x) => s + (x.price||0), 0);
   const saleProfit = salesMonth.reduce((s,x) => s + (x.profit||0), 0);
-  const totalSaleProfit = SALES.reduce((s,x) => s + (x.profit||0), 0);
+  const totalSaleProfit = SALES.filter(s => !s.returned).reduce((s,x) => s + (x.profit||0), 0);
 
   document.getElementById('stat-repairing').textContent = repairing;
   document.getElementById('stat-pending').textContent   = pending;
@@ -1218,6 +1235,8 @@ function deleteFinance(id) {
   if (!confirm('Xóa giao dịch này?')) return;
   FINANCE = FINANCE.filter(x => x.id !== id);
   saveFinance(); buildFinanceList(); updateStats();
+  chatHistory = [];
+  localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
 }
 
 function buildFinanceList() {
@@ -1302,6 +1321,8 @@ function deleteWarehouseItem(id) {
   if (!confirm('Xóa giao dịch kho này?')) return;
   WAREHOUSE = WAREHOUSE.filter(x => x.id !== id);
   saveWarehouse(); buildWarehouseList(); updateStats();
+  chatHistory = [];
+  localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
 }
 
 function setWarehouseFilter(f, btn) {
@@ -1453,7 +1474,10 @@ function buildContext() {
     ? REPAIRS.slice(0,20).map(r => `- [${r.status}] Chủ:${r.owner} / Máy:${r.device} / thu:${fmtMoney(r.profit||0)} chi:${fmtMoney(r.cost||0)} lãi:${fmtMoney((r.profit||0)-(r.cost||0))} / ngày:${r.date}`).join('\n')
     : '(Chưa có phiếu sửa nào)';
   const saleLines = SALES.length
-    ? SALES.slice(0,20).map(s => `- ${s.device} / IMEI:${s.imei||'?'} / ${s.conditionLabel||s.condition} / bán:${fmtMoney(s.price)} / ${s.profit>=0?'lãi':'lỗ'}:${fmtMoney(Math.abs(s.profit||0))} / ngày:${s.date}`).join('\n')
+    ? SALES.slice(0,20).map(s => {
+        const returnedFlag = s.returned ? ' [ĐÃ HOÀN TRẢ - KHÔNG TÍNH LÃI]' : '';
+        return `- ${s.device} / IMEI:${s.imei||'?'} / ${s.conditionLabel||s.condition} / bán:${fmtMoney(s.price)} / lãi_ròng:${fmtMoney(s.profit||0)} / ngày:${s.date}${returnedFlag}`;
+      }).join('\n')
     : '(Chưa có giao dịch bán nào)';
   const finLines = FINANCE.length
     ? FINANCE.slice(0,15).map(f => `- [${f.type==='thu'?'THU':'CHI'}] ${f.desc} / ${fmtMoney(f.amount)} / ngày:${f.date}${f.cat?' / '+f.cat:''}`).join('\n')
@@ -1464,10 +1488,10 @@ function buildContext() {
   const stockSummary = getStockSummary().filter(s=>s.qty>0).map(s=>`${s.name}: ${s.qty} ${s.unit||'cái'}`).join(', ') || '(Không có tồn kho)';
 
   const totalRepairNet = REPAIRS.reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
-  const totalSaleNet   = SALES.reduce((s,x)=>s+(x.profit||0),0);
+  const totalSaleNet   = SALES.filter(s => !s.returned).reduce((s,x)=>s+(x.profit||0),0);
   const month = thisMonth();
   const monthRepairNet = REPAIRS.filter(r=>r.date?.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
-  const monthSaleNet   = SALES.filter(s=>s.date?.startsWith(month)).reduce((s,x)=>s+(x.profit||0),0);
+  const monthSaleNet   = SALES.filter(s=>s.date?.startsWith(month) && !s.returned).reduce((s,x)=>s+(x.profit||0),0);
   const monthFinIn     = FINANCE.filter(f=>f.date?.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
   const monthFinOut    = FINANCE.filter(f=>f.date?.startsWith(month)&&f.type==='chi').reduce((s,f)=>s+f.amount,0);
 
@@ -1546,6 +1570,8 @@ FORMAT ACTIONS:
 - Dùng khi xuất hàng/linh kiện ra khỏi kho (dùng cho sửa chữa, bán, v.v.)
 
 QUY TẮC QUAN TRỌNG:
+- Nếu người dùng nói hàng bị "back", "hoàn trả", "khách trả lại máy" → hỏi tên máy/IMEI cụ thể rồi hướng dẫn người dùng nhấn nút "↩ Đánh dấu hoàn trả" trên thẻ máy đó trong tab Bán máy. KHÔNG tự tạo giao dịch kho hay xóa bản ghi bán. Chỉ khi đánh dấu hoàn trả thì máy mới bị loại khỏi tính lãi
+- Các máy có [ĐÃ HOÀN TRẢ] trong danh sách bán → KHÔNG tính vào lãi bán khi tổng hợp
 - DỮ LIỆU THỰC TẾ HIỆN TẠI trong system prompt là nguồn chính xác nhất — tin vào đó, không tin lịch sử chat
 - Nếu một phiếu KHÔNG còn trong danh sách trên → nó đã bị xóa → TUYỆT ĐỐI KHÔNG tạo lại, dù người dùng yêu cầu "nhập lại" hay "thêm lại"
 - Nếu người dùng muốn nhập lại phiếu đã xóa, hãy hỏi: "Bạn có muốn tạo phiếu MỚI hoàn toàn cho [tên máy]?" và chờ xác nhận rõ ràng, không tự ý tạo
