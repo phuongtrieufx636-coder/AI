@@ -480,7 +480,7 @@ select.field option{background:var(--bg2);}
           </div>
           <div class="field-wrap">
             <label class="field-label">Lãi (+) / Lỗ (-)</label>
-            <input class="field" type="number" id="sale-profit" placeholder="VD: 500000 hoặc -200000" />
+            <input class="field" type="number" id="sale-profit" placeholder="VD: 3000000 (3 triệu) hoặc -200000" />
           </div>
           <div class="field-wrap">
             <label class="field-label">Ngày bán *</label>
@@ -1183,11 +1183,14 @@ function updateStats() {
   const recS = document.getElementById('stat-recent-sale');
   const recent5S = SALES.slice(0,5);
   recS.innerHTML = recent5S.length ? recent5S.map(s => {
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;">
-      <span>📱 <strong>${escHtml(s.device)}</strong> <span style="color:var(--text3)">${fmtDate(s.date)}</span></span>
-      <span style="color:${(s.profit||0)>=0?'var(--green)':'var(--red)'};">${(s.profit||0)>=0?'+':''}${fmtMoney(s.profit||0)}</span>
+    const pDisplay = s.returned
+      ? `<span style="color:var(--purple);">&#8629; Ho&#224;n tr&#7843;</span>`
+      : `<span style="color:${(s.profit||0)>=0?'var(--green)':'var(--red)'};">${(s.profit||0)>=0?'+':''}${fmtMoney(s.profit||0)}</span>`;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;${s.returned?'opacity:0.6;':''}">
+      <span>&#128241; <strong>${escHtml(s.device)}</strong>${s.returned?' <span style="color:var(--purple);font-size:10px;">[Ho&#224;n tr&#7843;]</span>':''} <span style="color:var(--text3)">${fmtDate(s.date)}</span></span>
+      ${pDisplay}
     </div>`;
-  }).join('') : '<div style="color:var(--text3);font-size:12px;padding:8px 0;">Chưa có giao dịch</div>';
+  }).join('') : '<div style="color:var(--text3);font-size:12px;padding:8px 0;">Ch&#432;a c&#243; giao d&#7883;ch</div>';
 
   const recF = document.getElementById('stat-recent-finance');
   if (recF) {
