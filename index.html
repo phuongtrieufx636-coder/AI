@@ -910,8 +910,10 @@ function fmtMoney(n) {
   return (n < 0 ? '-' : '') + s;
 }
 function fmtDate(d) {
-  if (!d) return '';
-  const [y,m,day] = d.split('-');
+  if (!d || typeof d !== 'string') return 'ngày hiện tại';
+  const parts = d.split('-');
+  if (parts.length !== 3 || parts.some(p => !p || p === 'undefined')) return 'ngày hiện tại';
+  const [y,m,day] = parts;
   return `${day}/${m}/${y}`;
 }
 function todayStr() { return new Date().toISOString().split('T')[0]; }
@@ -1136,11 +1138,11 @@ function updateStats() {
   const repairing = REPAIRS.filter(r => r.status === 'dang_sua').length;
   const pending   = REPAIRS.filter(r => r.status === 'xong_chua_giao').length;
 
-  const repairMonth = REPAIRS.filter(r => r.date && r.date.startsWith(month));
+  const repairMonth = REPAIRS.filter(r => r.date && r.date !== 'undefined' && r.date.startsWith(month));
   const repairProfit = repairMonth.reduce((s,r) => s + (r.profit||0) - (r.cost||0), 0);
   const totalRepairProfit = REPAIRS.reduce((s,r) => s + (r.profit||0) - (r.cost||0), 0);
 
-  const salesMonth = SALES.filter(s => s.date && s.date.startsWith(month) && !s.returned);
+  const salesMonth = SALES.filter(s => s.date && s.date !== 'undefined' && s.date.startsWith(month) && !s.returned);
   const saleRevenue = salesMonth.reduce((s,x) => s + (x.price||0), 0);
   const saleProfit = salesMonth.reduce((s,x) => s + (x.profit||0), 0);
   const totalSaleProfit = SALES.filter(s => !s.returned).reduce((s,x) => s + (x.profit||0), 0);
@@ -1493,10 +1495,10 @@ function buildContext() {
   const totalRepairNet = REPAIRS.reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
   const totalSaleNet   = SALES.filter(s => !s.returned).reduce((s,x)=>s+(x.profit||0),0);
   const month = thisMonth();
-  const monthRepairNet = REPAIRS.filter(r=>r.date?.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
-  const monthSaleNet   = SALES.filter(s=>s.date?.startsWith(month) && !s.returned).reduce((s,x)=>s+(x.profit||0),0);
-  const monthFinIn     = FINANCE.filter(f=>f.date?.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
-  const monthFinOut    = FINANCE.filter(f=>f.date?.startsWith(month)&&f.type==='chi').reduce((s,f)=>s+f.amount,0);
+  const monthRepairNet = REPAIRS.filter(r=>r.date && r.date!=='undefined' && r.date.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
+  const monthSaleNet   = SALES.filter(s=>s.date && s.date!=='undefined' && s.date.startsWith(month) && !s.returned).reduce((s,x)=>s+(x.profit||0),0);
+  const monthFinIn     = FINANCE.filter(f=>f.date && f.date!=='undefined' && f.date.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
+  const monthFinOut    = FINANCE.filter(f=>f.date && f.date!=='undefined' && f.date.startsWith(month)&&f.type==='chi').reduce((s,f)=>s+f.amount,0);
 
   return `Bạn là AI quản lý cửa hàng điện thoại "Thuận Triều" tại Nha Trang.
 Tập trung 4 mảng chính: SỬA CHỮA, BÁN MÁY, THU/CHI TỰ DO, và KHO HÀNG.
@@ -1557,6 +1559,7 @@ FORMAT ACTIONS:
 [ACTION:ADD_SALE|device|imei|condition|price|profit|date|buyer|source|note]
 - condition: moi | like_new | 99 | 97 | cu_dep | cu_thuong
 - source: nhap_moi | hang_cu | khac
+- price và profit: PHẢI là số nguyên VND đầy đủ (ví dụ: 32 triệu → 32000000, lãi 2 triệu → 2000000, lỗ 500k → -500000)
 - profit: lãi ròng (âm nếu lỗ)
 
 [ACTION:ADD_INCOME|amount|desc|date|cat|note]
@@ -1654,10 +1657,19 @@ function handleActions(reply) {
   saleMatches.forEach(m => {
     const p = m[1].split('|');
     const condMap = { moi:'Mới 100%', like_new:'Like New', '99':'99%', '97':'97%', cu_dep:'Cũ đẹp', cu_thuong:'Cũ thường' };
+    const rawPrice  = parseFloat(p[3])||0;
+    const rawProfit = parseFloat(p[4])||0;
+    // Smart scale: nếu AI trả về số nhỏ (đơn vị triệu/nghìn) thay vì VND đầy đủ → nhân 1000
+    // Ngưỡng: < 100000 có thể là "32" (triệu) hoặc "32000" (nghìn đồng)
+    const scalePrice  = (rawPrice > 0 && rawPrice < 100000) ? rawPrice * 1000 : rawPrice;
+    const effectivePrice = scalePrice; // dùng giá đã scale để kiểm tra profit
+    const scaleProfit = (rawProfit !== 0 && Math.abs(rawProfit) < 100000 && effectivePrice >= 1000000)
+      ? rawProfit * 1000 : rawProfit;
     const d = {
       device: p[0]||'', imei: p[1]||'', condition: p[2]||'99',
-      price: parseFloat(p[3])||0, profit: parseFloat(p[4])||0,
-      date: p[5]||todayStr(), buyer: p[6]||'', source: p[7]||'nhap_moi', note: p[8]||''
+      price: scalePrice, profit: scaleProfit,
+      date: (p[5] && p[5].match(/^\d{4}-\d{2}-\d{2}$/)) ? p[5] : todayStr(),
+      buyer: p[6]||'', source: p[7]||'nhap_moi', note: p[8]||''
     };
     d.conditionLabel = condMap[d.condition] || d.condition;
     if (d.device && d.price) {
