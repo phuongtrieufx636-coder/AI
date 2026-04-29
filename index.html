@@ -282,8 +282,8 @@ select.field option{background:var(--bg2);}
     <div class="model-chip">
       <div class="model-dot"></div>
       <div>
-        <div class="model-name">Gemini 2.0 Flash</div>
-        <div class="model-sub">Google · Miễn phí & nhanh</div>
+        <div class="model-name">Gemini Flash (OpenRouter)</div>
+        <div class="model-sub">OpenRouter · Miễn phí & ổn định</div>
       </div>
     </div>
   </div>
@@ -297,8 +297,8 @@ select.field option{background:var(--bg2);}
   </div>
 
   <div id="apibar">
-    <label>🔑 Gemini API Key:</label>
-    <input type="password" id="key-input" placeholder="AIzaSy..." />
+    <label>🔑 OpenRouter Key:</label>
+    <input type="password" id="key-input" placeholder="sk-or-v1-..." />
     <button onclick="saveKey()">Lưu key</button>
     <span class="key-status none" id="key-status">Chưa có key</span>
   </div>
@@ -660,7 +660,7 @@ select.field option{background:var(--bg2);}
   <div class="tab hidden" id="tab-settings">
     <div class="tab-body">
       <div class="settings-section">
-        <h4>🔑 Gemini API Key</h4>
+        <h4>🔑 OpenRouter API Key</h4>
         <div class="settings-row">
           <div>
             <div class="settings-row-label">Trạng thái key</div>
@@ -668,7 +668,7 @@ select.field option{background:var(--bg2);}
           </div>
           <button class="btn-danger" onclick="clearKey()">Xóa key</button>
         </div>
-        <div style="font-size:12px;color:var(--text3);">Key được lưu trong trình duyệt (localStorage). Lấy key miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com/apikey</a></div>
+        <div style="font-size:12px;color:var(--text3);">Key được lưu trong trình duyệt. Lấy key miễn phí tại <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--accent)">openrouter.ai/keys</a> · Model miễn phí: <strong>google/gemini-2.0-flash-exp:free</strong></div>
       </div>
 
       <div class="settings-section">
@@ -788,7 +788,7 @@ const SK_CHAT      = 'tt_chat_history';
 const SK_FINANCE   = 'tt_finance';
 const SK_WAREHOUSE = 'tt_warehouse';
 
-let geminiKey = '';
+let orKey = ''; // OpenRouter key
 let REPAIRS = [];
 let SALES = [];
 let FINANCE = []; // thu/chi tự do
@@ -827,7 +827,7 @@ function migrateSalesData() {
 
 function init() {
   const k = localStorage.getItem(SK_KEY) || '';
-  if (k) { geminiKey = k; document.getElementById('key-input').value = k; setKeyStatus(true); updateSettingsStatus(); }
+  if (k) { orKey = k; document.getElementById('key-input').value = k; setKeyStatus(true); updateSettingsStatus(); }
   REPAIRS = JSON.parse(localStorage.getItem(SK_REPAIRS) || '[]');
   SALES   = JSON.parse(localStorage.getItem(SK_SALES)   || '[]');
   FINANCE = JSON.parse(localStorage.getItem(SK_FINANCE) || '[]');
@@ -866,15 +866,15 @@ function init() {
 function saveKey() {
   const v = document.getElementById('key-input').value.trim();
   if (!v) return;
-  geminiKey = v;
+  orKey = v;
   localStorage.setItem(SK_KEY, v);
   setKeyStatus(true);
   updateSettingsStatus();
-  addMsg('bot', '✅ Gemini API key đã lưu! Bạn có thể bắt đầu dùng AI.');
+  addMsg('bot', '✅ OpenRouter API key đã lưu! Bạn có thể bắt đầu dùng AI.');
 }
 function clearKey() {
   if (!confirm('Xóa API key?')) return;
-  geminiKey = '';
+  orKey = '';
   localStorage.removeItem(SK_KEY);
   document.getElementById('key-input').value = '';
   setKeyStatus(false);
@@ -887,8 +887,8 @@ function setKeyStatus(ok) {
 }
 function updateSettingsStatus() {
   const el = document.getElementById('settings-key-status');
-  if (geminiKey) {
-    el.textContent = '✓ ' + geminiKey.substring(0,12) + '••••' + geminiKey.slice(-4);
+  if (orKey) {
+    el.textContent = '✓ ' + orKey.substring(0,16) + '••••' + orKey.slice(-4);
     el.style.color = 'var(--green)';
   } else {
     el.textContent = 'Chưa lưu key nào';
@@ -1823,7 +1823,7 @@ async function sendMsg() {
   const input = document.getElementById('msg-input');
   const text = input.value.trim();
   if (!text && !chatImgData) return;
-  if (!geminiKey) { addMsg('bot', '⚠️ Vui lòng nhập <strong>Gemini API Key</strong> ở trên để dùng AI! Lấy key miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com/apikey</a>'); return; }
+  if (!orKey) { addMsg('bot', '⚠️ Vui lòng nhập <strong>OpenRouter API Key</strong> ở trên! Lấy key miễn phí tại <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--accent)">openrouter.ai/keys</a>'); return; }
 
   const userText = text || '(Xem ảnh bill đính kèm)';
   addMsg('user', escHtml(userText));
@@ -1833,7 +1833,6 @@ async function sendMsg() {
   const imgData = chatImgData;
   clearChatImg();
 
-  // Save to history
   chatHistory.push({ role:'user', content: userText });
   if (chatHistory.length > 20) chatHistory.splice(0, chatHistory.length - 20);
 
@@ -1841,48 +1840,63 @@ async function sendMsg() {
   document.getElementById('send-btn').disabled = true;
 
   try {
-    // Build Gemini contents array
-    const systemPrompt = buildContext();
-    const contents = [];
+    // OpenRouter dùng OpenAI-compatible format
+    const MODEL_TEXT  = 'google/gemini-2.0-flash-exp:free';
+    const MODEL_VISION = 'google/gemini-2.0-flash-exp:free';
 
-    // Add history (excluding last user message)
-    chatHistory.slice(0,-1).forEach(m => {
-      contents.push({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: typeof m.content === 'string' ? m.content : '[ảnh]' }]
-      });
-    });
-
-    // Add current user message (with optional image)
-    const userParts = [];
+    let userMsgContent;
     if (imgData) {
-      const [header, b64] = imgData.split(',');
-      const mimeType = header.match(/:(.*?);/)?.[1] || 'image/jpeg';
-      userParts.push({ inline_data: { mime_type: mimeType, data: b64 } });
+      userMsgContent = [
+        { type: 'text', text: text || 'Đây là ảnh từ cửa hàng. Hãy phân tích ảnh, xác định loại (phiếu sửa máy / bill bán hàng / hoá đơn chi tiền / biên lai thu tiền / ảnh khác), trích xuất thông tin và tự động nhập vào đúng mục. Không hỏi lại, cứ nhập những gì đọc được và báo ngắn gọn.' },
+        { type: 'image_url', image_url: { url: imgData } }
+      ];
+    } else {
+      userMsgContent = text;
     }
-    const promptText = text || 'Đây là ảnh từ cửa hàng. Hãy phân tích ảnh, xác định loại (phiếu sửa máy / bill bán hàng / hoá đơn chi tiền / biên lai thu tiền / ảnh khác), trích xuất thông tin và tự động nhập vào đúng mục. Không hỏi lại, cứ nhập những gì đọc được và báo ngắn gọn.';
-    userParts.push({ text: promptText });
-    contents.push({ role: 'user', parts: userParts });
 
-    const model = 'gemini-2.0-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+    const historyMsgs = chatHistory.slice(0,-1).map(m => ({
+      role: m.role,
+      content: typeof m.content === 'string' ? m.content : '[ảnh]'
+    }));
 
-    const res = await fetch(url, {
+    const messages = [
+      { role: 'system', content: buildContext() },
+      ...historyMsgs,
+      { role: 'user', content: userMsgContent }
+    ];
+
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + orKey,
+        'HTTP-Referer': location.href,
+        'X-Title': 'Thuận Triều Shop'
+      },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents,
-        generationConfig: { maxOutputTokens: 1200, temperature: 0.7 }
+        model: imgData ? MODEL_VISION : MODEL_TEXT,
+        max_tokens: 1200,
+        temperature: 0.7,
+        messages
       })
     });
 
     hideTyping();
     const data = await res.json();
 
-    if (!res.ok) throw new Error(data.error?.message || 'Lỗi API ' + res.status);
+    if (!res.ok) {
+      const errMsg = data.error?.message || ('Lỗi API ' + res.status);
+      // Nếu hết quota model miễn phí, gợi ý đổi model
+      if (res.status === 429 || errMsg.includes('quota') || errMsg.includes('rate')) {
+        addMsg('bot', `⚠️ Model <strong>${imgData ? MODEL_VISION : MODEL_TEXT}</strong> đang bận/hết quota tạm thời.<br>Thử lại sau vài giây, hoặc vào <a href="https://openrouter.ai/models?q=free" target="_blank" style="color:var(--accent)">openrouter.ai/models</a> tìm model free khác.`);
+      } else {
+        throw new Error(errMsg);
+      }
+      document.getElementById('send-btn').disabled = false;
+      return;
+    }
 
-    const rawReply = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const rawReply = data.choices?.[0]?.message?.content || '';
     const cleanReply = handleActions(rawReply);
 
     const displayReply = cleanReply
@@ -2010,7 +2024,7 @@ function clearImg(type, e) {
 async function scanBillImage(type) {
   const dataUrl = scanImgData[type];
   if (!dataUrl) return;
-  if (!geminiKey) { document.getElementById(type+'-scan-status').textContent = '⚠️ Cần nhập Gemini API Key trước!'; return; }
+  if (!orKey) { document.getElementById(type+'-scan-status').textContent = '⚠️ Cần nhập OpenRouter API Key trước!'; return; }
 
   const btn = document.getElementById(type+'-scan-btn');
   const statusEl = document.getElementById(type+'-scan-status');
@@ -2029,28 +2043,32 @@ Nếu không đọc được: {"found":false,"note":"lý do"}`
 Nếu không đọc được: {"found":false,"note":"lý do"}`;
 
   try {
-    const [header, b64] = dataUrl.split(',');
-    const mimeType = header.match(/:(.*?);/)?.[1] || 'image/jpeg';
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
-    const res = await fetch(url, {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + orKey,
+        'HTTP-Referer': location.href,
+        'X-Title': 'Thuận Triều Shop'
+      },
       body: JSON.stringify({
-        contents: [{
-          parts: [
-            { inline_data: { mime_type: mimeType, data: b64 } },
-            { text: prompt }
+        model: 'google/gemini-2.0-flash-exp:free',
+        max_tokens: 600,
+        temperature: 0.1,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: dataUrl } }
           ]
-        }],
-        generationConfig: { maxOutputTokens: 600, temperature: 0.1 }
+        }]
       })
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'Lỗi API');
+    if (!res.ok) throw new Error(data.error?.message || 'Lỗi API ' + res.status);
 
-    let raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let raw = data.choices?.[0]?.message?.content || '';
     raw = raw.replace(/```json\s*/i,'').replace(/```\s*/,'').replace(/\s*```$/,'').trim();
     const parsed = JSON.parse(raw);
 
