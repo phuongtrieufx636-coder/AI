@@ -282,8 +282,8 @@ select.field option{background:var(--bg2);}
     <div class="model-chip">
       <div class="model-dot"></div>
       <div>
-        <div class="model-name">Gemini Flash (OpenRouter)</div>
-        <div class="model-sub">OpenRouter · Miễn phí & ổn định</div>
+        <div class="model-name">Qwen3-8B (OpenRouter)</div>
+        <div class="model-sub">OpenRouter · Free tier</div>
       </div>
     </div>
   </div>
@@ -297,8 +297,8 @@ select.field option{background:var(--bg2);}
   </div>
 
   <div id="apibar">
-    <label>🔑 OpenRouter Key:</label>
-    <input type="password" id="key-input" placeholder="sk-or-v1-..." />
+    <label>🔑 OpenRouter API Key:</label>
+    <input type="password" id="key-input" placeholder="sk-or-v1-xxxxxxxxxxxxxxxxxxxx" />
     <button onclick="saveKey()">Lưu key</button>
     <span class="key-status none" id="key-status">Chưa có key</span>
   </div>
@@ -668,7 +668,7 @@ select.field option{background:var(--bg2);}
           </div>
           <button class="btn-danger" onclick="clearKey()">Xóa key</button>
         </div>
-        <div style="font-size:12px;color:var(--text3);">Key được lưu trong trình duyệt. Lấy key miễn phí tại <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--accent)">openrouter.ai/keys</a> · Model miễn phí: <strong>google/gemini-2.0-flash-exp:free</strong></div>
+        <div style="font-size:12px;color:var(--text3);">Key được lưu trong trình duyệt (localStorage). Lấy key tại <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--accent)">openrouter.ai/keys</a></div>
       </div>
 
       <div class="settings-section">
@@ -788,7 +788,7 @@ const SK_CHAT      = 'tt_chat_history';
 const SK_FINANCE   = 'tt_finance';
 const SK_WAREHOUSE = 'tt_warehouse';
 
-let orKey = ''; // OpenRouter key
+let groqKey = '';
 let REPAIRS = [];
 let SALES = [];
 let FINANCE = []; // thu/chi tự do
@@ -827,7 +827,7 @@ function migrateSalesData() {
 
 function init() {
   const k = localStorage.getItem(SK_KEY) || '';
-  if (k) { orKey = k; document.getElementById('key-input').value = k; setKeyStatus(true); updateSettingsStatus(); }
+  if (k) { groqKey = k; document.getElementById('key-input').value = k; setKeyStatus(true); updateSettingsStatus(); }
   REPAIRS = JSON.parse(localStorage.getItem(SK_REPAIRS) || '[]');
   SALES   = JSON.parse(localStorage.getItem(SK_SALES)   || '[]');
   FINANCE = JSON.parse(localStorage.getItem(SK_FINANCE) || '[]');
@@ -866,15 +866,15 @@ function init() {
 function saveKey() {
   const v = document.getElementById('key-input').value.trim();
   if (!v) return;
-  orKey = v;
+  groqKey = v;
   localStorage.setItem(SK_KEY, v);
   setKeyStatus(true);
   updateSettingsStatus();
-  addMsg('bot', '✅ OpenRouter API key đã lưu! Bạn có thể bắt đầu dùng AI.');
+  addMsg('bot', '✅ API key đã lưu! Bạn có thể bắt đầu dùng AI để nhập dữ liệu.');
 }
 function clearKey() {
   if (!confirm('Xóa API key?')) return;
-  orKey = '';
+  groqKey = '';
   localStorage.removeItem(SK_KEY);
   document.getElementById('key-input').value = '';
   setKeyStatus(false);
@@ -887,8 +887,8 @@ function setKeyStatus(ok) {
 }
 function updateSettingsStatus() {
   const el = document.getElementById('settings-key-status');
-  if (orKey) {
-    el.textContent = '✓ ' + orKey.substring(0,16) + '••••' + orKey.slice(-4);
+  if (groqKey) {
+    el.textContent = '✓ ' + groqKey.substring(0,12) + '••••' + groqKey.slice(-4);
     el.style.color = 'var(--green)';
   } else {
     el.textContent = 'Chưa lưu key nào';
@@ -1823,7 +1823,7 @@ async function sendMsg() {
   const input = document.getElementById('msg-input');
   const text = input.value.trim();
   if (!text && !chatImgData) return;
-  if (!orKey) { addMsg('bot', '⚠️ Vui lòng nhập <strong>OpenRouter API Key</strong> ở trên! Lấy key miễn phí tại <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--accent)">openrouter.ai/keys</a>'); return; }
+  if (!groqKey) { addMsg('bot', '⚠️ Vui lòng nhập <strong>OpenRouter API Key</strong> ở trên để dùng AI!'); return; }
 
   const userText = text || '(Xem ảnh bill đính kèm)';
   addMsg('user', escHtml(userText));
@@ -1833,6 +1833,18 @@ async function sendMsg() {
   const imgData = chatImgData;
   clearChatImg();
 
+  // Build message content (OpenRouter format)
+  let userMsgContent;
+  if (imgData) {
+    userMsgContent = [
+      { type:'text', text: text || 'Đây là ảnh từ cửa hàng. Hãy phân tích ảnh, xác định loại (phiếu sửa máy / bill bán hàng / hoá đơn chi tiền / biên lai thu tiền / ảnh khác), trích xuất thông tin và tự động nhập vào đúng mục. Không hỏi lại, cứ nhập những gì đọc được và báo ngắn gọn.' },
+      { type:'image_url', image_url: { url: imgData } }
+    ];
+  } else {
+    userMsgContent = text;
+  }
+
+  // Save to history
   chatHistory.push({ role:'user', content: userText });
   if (chatHistory.length > 20) chatHistory.splice(0, chatHistory.length - 20);
 
@@ -1840,42 +1852,20 @@ async function sendMsg() {
   document.getElementById('send-btn').disabled = true;
 
   try {
-    // OpenRouter dùng OpenAI-compatible format
-    const MODEL_TEXT  = 'google/gemini-2.0-flash-exp:free';
-    const MODEL_VISION = 'google/gemini-2.0-flash-exp:free';
-
-    let userMsgContent;
-    if (imgData) {
-      userMsgContent = [
-        { type: 'text', text: text || 'Đây là ảnh từ cửa hàng. Hãy phân tích ảnh, xác định loại (phiếu sửa máy / bill bán hàng / hoá đơn chi tiền / biên lai thu tiền / ảnh khác), trích xuất thông tin và tự động nhập vào đúng mục. Không hỏi lại, cứ nhập những gì đọc được và báo ngắn gọn.' },
-        { type: 'image_url', image_url: { url: imgData } }
-      ];
-    } else {
-      userMsgContent = text;
-    }
-
-    const historyMsgs = chatHistory.slice(0,-1).map(m => ({
-      role: m.role,
-      content: typeof m.content === 'string' ? m.content : '[ảnh]'
-    }));
-
+    const useModel = imgData ? 'qwen/qwen2.5-vl-72b-instruct:free' : 'qwen/qwen3-8b:free';
+    const historyMsgs = chatHistory.slice(0,-1).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : '[ảnh]' }));
     const messages = [
-      { role: 'system', content: buildContext() },
+      { role:'system', content: buildContext() },
       ...historyMsgs,
-      { role: 'user', content: userMsgContent }
+      { role:'user', content: userMsgContent }
     ];
 
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + orKey,
-        'HTTP-Referer': location.href,
-        'X-Title': 'Thuận Triều Shop'
-      },
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + groqKey, 'HTTP-Referer': location.href, 'X-Title': 'Thuận Triều' },
       body: JSON.stringify({
-        model: imgData ? MODEL_VISION : MODEL_TEXT,
-        max_tokens: 1200,
+        model: useModel,
+        max_tokens:1200,
         temperature: 0.7,
         messages
       })
@@ -1884,21 +1874,12 @@ async function sendMsg() {
     hideTyping();
     const data = await res.json();
 
-    if (!res.ok) {
-      const errMsg = data.error?.message || ('Lỗi API ' + res.status);
-      // Nếu hết quota model miễn phí, gợi ý đổi model
-      if (res.status === 429 || errMsg.includes('quota') || errMsg.includes('rate')) {
-        addMsg('bot', `⚠️ Model <strong>${imgData ? MODEL_VISION : MODEL_TEXT}</strong> đang bận/hết quota tạm thời.<br>Thử lại sau vài giây, hoặc vào <a href="https://openrouter.ai/models?q=free" target="_blank" style="color:var(--accent)">openrouter.ai/models</a> tìm model free khác.`);
-      } else {
-        throw new Error(errMsg);
-      }
-      document.getElementById('send-btn').disabled = false;
-      return;
-    }
+    if (!res.ok) throw new Error(data.error?.message || 'Lỗi API ' + res.status);
 
-    const rawReply = data.choices?.[0]?.message?.content || '';
+    const rawReply = data.choices[0].message.content || '';
     const cleanReply = handleActions(rawReply);
 
+    // Format for display
     const displayReply = cleanReply
       .replace(/</g,'&lt;')
       .replace(/\n/g,'<br>')
@@ -2024,7 +2005,7 @@ function clearImg(type, e) {
 async function scanBillImage(type) {
   const dataUrl = scanImgData[type];
   if (!dataUrl) return;
-  if (!orKey) { document.getElementById(type+'-scan-status').textContent = '⚠️ Cần nhập OpenRouter API Key trước!'; return; }
+  if (!groqKey) { document.getElementById(type+'-scan-status').textContent = '⚠️ Cần nhập OpenRouter API Key trước!'; return; }
 
   const btn = document.getElementById(type+'-scan-btn');
   const statusEl = document.getElementById(type+'-scan-status');
@@ -2044,31 +2025,23 @@ Nếu không đọc được: {"found":false,"note":"lý do"}`;
 
   try {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + orKey,
-        'HTTP-Referer': location.href,
-        'X-Title': 'Thuận Triều Shop'
-      },
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + groqKey, 'HTTP-Referer': location.href, 'X-Title': 'Thuận Triều' },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-exp:free',
-        max_tokens: 600,
+        model:'qwen/qwen2.5-vl-72b-instruct:free',
+        max_tokens:600,
         temperature: 0.1,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: dataUrl } }
-          ]
-        }]
+        messages:[{ role:'user', content:[
+          { type:'text', text: prompt },
+          { type:'image_url', image_url: { url: dataUrl } }
+        ]}]
       })
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'Lỗi API ' + res.status);
+    if (!res.ok) throw new Error(data.error?.message || 'Lỗi API');
 
-    let raw = data.choices?.[0]?.message?.content || '';
+    let raw = data.choices[0].message.content || '';
     raw = raw.replace(/```json\s*/i,'').replace(/```\s*/,'').replace(/\s*```$/,'').trim();
     const parsed = JSON.parse(raw);
 
