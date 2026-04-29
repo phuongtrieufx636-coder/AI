@@ -801,22 +801,24 @@ let chatImgData = null;
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 function migrateSalesData() {
-  // Fix data cũ: profit/price bị lưu sai đơn vị (VD: 2000 thay vì 2000000)
   let changed = false;
   SALES.forEach(s => {
-    // Nếu price lớn (>= 1tr) nhưng profit nhỏ bất thường (< 10000 và != 0)
-    // thì khả năng cao profit bị lưu nhầm đơn vị → nhân 1000
+    // Fix 1: profit bị lưu sai đơn vị (VD: 2000 thay vì 2000000) - chỉ với sale chưa hoàn trả
     if (!s.returned && s.price >= 1000000 && s.profit !== 0 && Math.abs(s.profit) < 10000) {
       s.profit = s.profit * 1000;
       changed = true;
     }
-    // Fix date undefined string
+    // Fix 2: sale đã returned theo flow CŨ (chỉ set returned=true, không set profit=0, không có _originalProfit)
+    // → profit vẫn là gốc → thống kê tính sai → phải set profit=0 và lưu _originalProfit
+    if (s.returned && s._originalProfit === undefined) {
+      s._originalProfit = s.profit;
+      s.profit = 0;
+      s.returnNote = s.returnNote || 'Hoan tra toan bo';
+      changed = true;
+    }
+    // Fix 3: date undefined string
     if (!s.date || s.date === 'undefined' || !s.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      s.date = s.createdAt
-        ? new Date(s.createdAt.split(',')[0].split('/').reverse().join('-')).toISOString().split('T')[0]
-        : todayStr();
-      // Nếu parse thất bại thì dùng today
-      if (!s.date || s.date === 'Invalid Date' || s.date === 'NaN-NaN-NaN') s.date = todayStr();
+      s.date = todayStr();
       changed = true;
     }
   });
@@ -1126,21 +1128,36 @@ function markSaleReturned(id) {
   s._originalProfit = s.profit;
   s.returned = true;
 
+  // Hoàn trả: lãi bán luôn về 0, phí % ghi vào Thu ngoài riêng
+  s.profit = 0;
   if (pct === 0) {
-    s.profit = 0;
     s.returnNote = 'Hoan tra toan bo';
   } else {
     const fee = Math.round(s.price * pct / 100);
-    s.profit = fee;
-    s.returnNote = 'Hoan tra, khach chiu ' + pct + '% (' + fmtMoney(fee) + ')';
+    s.returnNote = 'Hoan tra, khach chiu ' + pct + '% = ' + fmtMoney(fee);
+    // Tự động ghi phí vào Thu ngoài
+    const feeRecord = {
+      type: 'thu',
+      amount: fee,
+      desc: 'Phi hoan tra ' + pct + '% - ' + s.device + (s.buyer ? ' / ' + s.buyer : ''),
+      date: todayStr(),
+      cat: 'Phi hoan tra',
+      note: s.returnNote,
+      id: Date.now() + Math.random(),
+      createdAt: new Date().toLocaleString('vi-VN')
+    };
+    FINANCE.unshift(feeRecord);
+    saveFinance();
+    buildFinanceList();
   }
 
   saveSales(); buildSaleList(); updateStats();
+  // Reset chat để AI đọc lại data mới nhất, tránh nhầm lẫn từ history cũ
   chatHistory = []; localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
 
   const msg = pct === 0
-    ? 'Da danh dau hoan tra toan bo. Lai = 0d.'
-    : 'Hoan tra voi phi ' + pct + '%. Cua hang giu lai ' + fmtMoney(s.profit) + '.';
+    ? 'Da danh dau hoan tra toan bo. Lai = 0d. (Chat AI da reset de doc lai du lieu moi.)'
+    : 'Hoan tra voi phi ' + pct + '%. Cua hang giu lai ' + fmtMoney(s.profit) + '. (Chat AI da reset de doc lai du lieu moi.)';
   alert(msg);
 }
 
@@ -1166,7 +1183,7 @@ function buildSaleList() {
   list.innerHTML = filtered.map(s => {
     const pCls = s.returned ? 'badge-purple' : (s.profit >= 0 ? 'badge-green' : 'badge-red');
     const pLabel = s.returned
-      ? (s.returnNote ? `↩ ${s.returnNote} · giữ ${fmtMoney(s.profit)}` : `↩ Hoàn trả (lãi ${fmtMoney(s.profit)} không tính)`)
+      ? (s.returnNote ? `↩ ${s.returnNote}` : `↩ Hoàn trả toàn bộ`)
       : (s.profit >= 0 ? `📈 Lãi ${fmtMoney(s.profit)}` : `📉 Lỗ ${fmtMoney(Math.abs(s.profit))}`);
     const returnedStyle = s.returned ? 'opacity:0.6;border-left:3px solid var(--purple);' : '';
     const returnBtnLabel = s.returned ? '↩ Bỏ hoàn trả' : '↩ Đánh dấu hoàn trả';
@@ -1247,7 +1264,7 @@ function updateStats() {
   const recent5S = SALES.slice(0,5);
   recS.innerHTML = recent5S.length ? recent5S.map(s => {
     const pDisplay = s.returned
-      ? `<span style="color:var(--purple);">&#8629; Ho&#224;n tr&#7843;</span>`
+      ? `<span style="color:var(--purple);">&#8629; ${s.returnNote||'Ho&#224;n tr&#7843;'}</span>`
       : `<span style="color:${(s.profit||0)>=0?'var(--green)':'var(--red)'};">${(s.profit||0)>=0?'+':''}${fmtMoney(s.profit||0)}</span>`;
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;${s.returned?'opacity:0.6;':''}">
       <span>&#128241; <strong>${escHtml(s.device)}</strong>${s.returned?' <span style="color:var(--purple);font-size:10px;">[Ho&#224;n tr&#7843;]</span>':''} <span style="color:var(--text3)">${fmtDate(s.date)}</span></span>
@@ -1578,10 +1595,11 @@ ${finLines}
 ${whLines}
 Tồn kho hiện tại: ${stockSummary}
 
-─ TÀI CHÍNH THÁNG NÀY:
+─ TÀI CHÍNH THÁNG NÀY (đã tính đúng cả sale hoàn trả với phí %):
 Lãi sửa: ${fmtMoney(monthRepairNet)} | Lãi bán: ${fmtMoney(monthSaleNet)}
 Thu ngoài: ${fmtMoney(monthFinIn)} | Chi ngoài: ${fmtMoney(monthFinOut)}
 Tổng lãi sửa: ${fmtMoney(totalRepairNet)} | Tổng lãi bán: ${fmtMoney(totalSaleNet)}
+LƯU Ý: Lãi bán đã bao gồm cả phí giữ lại từ các máy hoàn trả. Đây là con số CHÍNH XÁC, không được tự điều chỉnh.
 
 NHIỆM VỤ — TỰ ĐỘNG NHẬN DẠNG VÀ NHẬP DỮ LIỆU:
 1. Câu hỏi về cửa hàng → trả lời dựa dữ liệu trên
@@ -1638,7 +1656,7 @@ FORMAT ACTIONS:
 
 QUY TẮC QUAN TRỌNG:
 - Nếu người dùng nói hàng bị "back", "hoàn trả", "khách trả lại máy" → hỏi tên máy/IMEI cụ thể rồi hướng dẫn người dùng nhấn nút "↩ Đánh dấu hoàn trả" trên thẻ máy đó trong tab Bán máy. KHÔNG tự tạo giao dịch kho hay xóa bản ghi bán. Chỉ khi đánh dấu hoàn trả thì máy mới bị loại khỏi tính lãi
-- Các máy có [ĐÃ HOÀN TRẢ] trong danh sách bán → KHÔNG tính vào lãi bán khi tổng hợp
+- Các máy có [HOÀN TRẢ] trong danh sách bán: lãi_ròng đã được cập nhật đúng (nếu khách chịu % phí thì lãi = phí đó, nếu hoàn toàn thì lãi = 0). LUÔN dùng lãi_ròng trong dữ liệu để tính, KHÔNG tự quy về 0
 - DỮ LIỆU THỰC TẾ HIỆN TẠI trong system prompt là nguồn chính xác nhất — tin vào đó, không tin lịch sử chat
 - Nếu một phiếu KHÔNG còn trong danh sách trên → nó đã bị xóa → TUYỆT ĐỐI KHÔNG tạo lại, dù người dùng yêu cầu "nhập lại" hay "thêm lại"
 - Nếu người dùng muốn nhập lại phiếu đã xóa, hãy hỏi: "Bạn có muốn tạo phiếu MỚI hoàn toàn cho [tên máy]?" và chờ xác nhận rõ ràng, không tự ý tạo
