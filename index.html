@@ -800,6 +800,29 @@ let warehouseFilter = 'all';
 let chatImgData = null;
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
+function migrateSalesData() {
+  // Fix data cũ: profit/price bị lưu sai đơn vị (VD: 2000 thay vì 2000000)
+  let changed = false;
+  SALES.forEach(s => {
+    // Nếu price lớn (>= 1tr) nhưng profit nhỏ bất thường (< 10000 và != 0)
+    // thì khả năng cao profit bị lưu nhầm đơn vị → nhân 1000
+    if (s.price >= 1000000 && s.profit !== 0 && Math.abs(s.profit) < 10000) {
+      s.profit = s.profit * 1000;
+      changed = true;
+    }
+    // Fix date undefined string
+    if (!s.date || s.date === 'undefined' || !s.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      s.date = s.createdAt
+        ? new Date(s.createdAt.split(',')[0].split('/').reverse().join('-')).toISOString().split('T')[0]
+        : todayStr();
+      // Nếu parse thất bại thì dùng today
+      if (!s.date || s.date === 'Invalid Date' || s.date === 'NaN-NaN-NaN') s.date = todayStr();
+      changed = true;
+    }
+  });
+  if (changed) saveSales();
+}
+
 function init() {
   const k = localStorage.getItem(SK_KEY) || '';
   if (k) { groqKey = k; document.getElementById('key-input').value = k; setKeyStatus(true); updateSettingsStatus(); }
@@ -826,6 +849,7 @@ function init() {
     });
   }
 
+  migrateSalesData();
   buildRepairList();
   buildSaleList();
   buildFinanceList();
@@ -1661,7 +1685,11 @@ function handleActions(reply) {
     const rawProfit = parseFloat(p[4])||0;
     // Smart scale: nếu AI trả về số nhỏ (đơn vị triệu/nghìn) thay vì VND đầy đủ → nhân 1000
     // Ngưỡng: < 100000 có thể là "32" (triệu) hoặc "32000" (nghìn đồng)
-    const scalePrice  = (rawPrice > 0 && rawPrice < 100000) ? rawPrice * 1000 : rawPrice;
+    // Scale price: < 1000 → nhân 1_000_000 (AI trả "32" = 32 triệu), < 100000 → nhân 1000 (AI trả "32000")
+    const scalePrice  = rawPrice <= 0 ? rawPrice
+      : rawPrice < 1000    ? rawPrice * 1000000
+      : rawPrice < 100000  ? rawPrice * 1000
+      :                      rawPrice;
     const effectivePrice = scalePrice; // dùng giá đã scale để kiểm tra profit
     const scaleProfit = (rawProfit !== 0 && Math.abs(rawProfit) < 100000 && effectivePrice >= 1000000)
       ? rawProfit * 1000 : rawProfit;
