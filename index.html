@@ -319,6 +319,16 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
 
 /* ── NOTIFICATION BADGE ── */
 .notif-dot{width:8px;height:8px;border-radius:50%;background:var(--red);position:absolute;top:6px;right:6px;display:none;}
+
+/* ── TOAST NOTIFICATION ── */
+#toast-container{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;min-width:260px;max-width:420px;}
+.toast{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:var(--radius);font-size:13px;font-weight:600;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.3);animation:toast-in 0.25s ease,toast-out 0.3s ease 2.5s forwards;pointer-events:auto;}
+.toast.success{background:linear-gradient(135deg,#1aab5e,#34c87a);}
+.toast.error{background:linear-gradient(135deg,#d93025,#f05252);}
+.toast.info{background:linear-gradient(135deg,#2d6dd4,#4f8ef7);}
+.toast.warn{background:linear-gradient(135deg,#c27d00,#f0a030);}
+@keyframes toast-in{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+@keyframes toast-out{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(16px);}}
 </style>
 </head>
 <body>
@@ -1033,6 +1043,16 @@ function updateSettingsStatus() {
   }
 }
 
+// ─── TOAST NOTIFICATION ──────────────────────────────────────────────────────
+function showToast(msg, type = 'success', duration = 2800) {
+  const container = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = (type==='success'?'✅ ':type==='error'?'❌ ':type==='warn'?'⚠️ ':'ℹ️ ') + msg;
+  container.appendChild(t);
+  setTimeout(() => { t.remove(); }, duration);
+}
+
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
 function switchTab(tab) {
   ['chat','repair','sales','finance','stats','settings','warehouse','customers'].forEach(t => {
@@ -1110,27 +1130,36 @@ function addRepair(data) {
   REPAIRS.unshift(d);
   saveRepairs();
   buildRepairList();
+  buildCustomerList();
   updateStats();
   if (!data) {
     ['rep-owner','rep-phone','rep-device','rep-imei','rep-pass','rep-issue','rep-profit','rep-cost','rep-note'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('rep-date').value = todayStr();
     document.getElementById('rep-status').value = 'dang_sua';
+    showToast('✅ Đã thêm phiếu sửa mới!', 'success');
   }
   return true;
 }
 
 function updateRepairStatus(id, status) {
   const r = REPAIRS.find(x => x.id === id);
-  if (r) { r.status = status; saveRepairs(); buildRepairList(); updateStats(); }
+  if (r) {
+    r.status = status;
+    saveRepairs();
+    buildRepairList();
+    updateStats();
+    const label = status === 'xong_chua_giao' ? 'Đã sửa xong, chờ giao' : 'Đã giao khách';
+    showToast(label + '!', 'success');
+  }
 }
 function deleteRepair(id) {
   if (!confirm('Xóa phiếu sửa này?')) return;
   REPAIRS = REPAIRS.filter(x => x.id !== id);
-  saveRepairs(); buildRepairList(); updateStats();
-  // Reset chat history để AI đọc lại dữ liệu mới nhất từ buildContext()
-  // KHÔNG inject note cấm vào history vì sẽ chặn việc tạo phiếu mới hợp lệ
-  chatHistory = [];
-  localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+  saveRepairs();
+  buildRepairList();
+  buildCustomerList();
+  updateStats();
+  showToast('Đã xóa phiếu sửa!', 'warn');
 }
 
 function setRepairFilter(f, btn) {
@@ -1235,12 +1264,14 @@ function addSale(data) {
   SALES.unshift(d);
   saveSales();
   buildSaleList();
+  buildCustomerList();
   updateStats();
   if (!data) {
     ['sale-device','sale-imei','sale-price','sale-profit','sale-buyer','sale-note'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('sale-date').value = todayStr();
     document.getElementById('sale-condition').value = 'moi';
     document.getElementById('sale-source').value = 'nhap_moi';
+    showToast('✅ Đã ghi nhận bán hàng!', 'success');
   }
   return true;
 }
@@ -1248,9 +1279,11 @@ function addSale(data) {
 function deleteSale(id) {
   if (!confirm('Xóa giao dịch bán hàng này?')) return;
   SALES = SALES.filter(x => x.id !== id);
-  saveSales(); buildSaleList(); updateStats();
-  chatHistory = [];
-  localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+  saveSales();
+  buildSaleList();
+  buildCustomerList();
+  updateStats();
+  showToast('Đã xóa giao dịch bán hàng!', 'warn');
 }
 
 function markSaleReturned(id) {
@@ -1266,7 +1299,7 @@ function markSaleReturned(id) {
     }
     delete s.returnNote;
     saveSales(); buildSaleList(); updateStats();
-    chatHistory = []; localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+    showToast('Đã bỏ đánh dấu hoàn trả!', 'info');
     return;
   }
 
@@ -1310,14 +1343,12 @@ function markSaleReturned(id) {
     buildFinanceList();
   }
 
-  saveSales(); buildSaleList(); updateStats();
-  // Reset chat để AI đọc lại data mới nhất, tránh nhầm lẫn từ history cũ
-  chatHistory = []; localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
-
+  saveSales(); buildSaleList(); buildCustomerList(); updateStats();
+  // Toast thay vì alert + reset chat
   const msg = pct === 0
-    ? 'Da danh dau hoan tra toan bo. Lai = 0d. (Chat AI da reset de doc lai du lieu moi.)'
-    : 'Hoan tra voi phi ' + pct + '%. Cua hang giu lai ' + fmtMoney(s.profit) + '. (Chat AI da reset de doc lai du lieu moi.)';
-  alert(msg);
+    ? '↩ Đã hoàn trả toàn bộ. Lãi = 0đ.'
+    : '↩ Hoàn trả với phí ' + pct + '%. Cửa hàng giữ lại ' + fmtMoney(s.profit) + '.';
+  showToast(msg, 'warn', 3500);
 }
 
 function setSaleFilter(f, btn) {
@@ -1482,6 +1513,7 @@ function addFinance(data) {
     document.getElementById('fin-cat').value = '';
     document.getElementById('fin-note').value = '';
     document.getElementById('fin-date').value = todayStr();
+    showToast('✅ Đã ghi nhận thu/chi!', 'success');
   }
   return true;
 }
@@ -1489,9 +1521,10 @@ function addFinance(data) {
 function deleteFinance(id) {
   if (!confirm('Xóa giao dịch này?')) return;
   FINANCE = FINANCE.filter(x => x.id !== id);
-  saveFinance(); buildFinanceList(); updateStats();
-  chatHistory = [];
-  localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+  saveFinance();
+  buildFinanceList();
+  updateStats();
+  showToast('Đã xóa giao dịch thu/chi!', 'warn');
 }
 
 function buildFinanceList() {
@@ -2004,6 +2037,7 @@ function handleActions(reply) {
     buildCustomerList();
     updateStats();
     checkOverdue();
+    showToast('Dữ liệu đã được lưu tự động!', 'success');
   }
 
   return clean.trim();
@@ -2670,5 +2704,6 @@ function cycleTheme() {
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 init();
 </script>
+<div id="toast-container"></div>
 </body>
 </html>
