@@ -1105,7 +1105,7 @@ function addRepair(data) {
     note:   document.getElementById('rep-note').value.trim()
   };
   if (!d.owner || !d.device) { alert('Vui lòng nhập tên chủ máy và tên máy!'); return false; }
-  d.id = Date.now();
+  d.id = Date.now() + Math.floor(Math.random() * 1000);
   d.createdAt = new Date().toLocaleString('vi-VN');
   REPAIRS.unshift(d);
   saveRepairs();
@@ -1146,8 +1146,8 @@ function buildRepairList() {
   const pending = REPAIRS.filter(r => r.status === 'xong_chua_giao').length;
   const repairing = REPAIRS.filter(r => r.status === 'dang_sua').length;
   const total = repairing + pending;
-  badge.style.display = total > 0 ? '' : 'none';
-  badge.textContent = total;
+  if (badge) { badge.style.display = total > 0 ? '' : 'none'; badge.textContent = total; }
+  if (!list) return;
 
   const searchQ = (document.getElementById('repair-search')?.value || '').toLowerCase().trim();
 
@@ -1230,7 +1230,7 @@ function addSale(data) {
   };
   if (!d.device || !d.price) { alert('Vui lòng nhập tên máy và giá bán!'); return false; }
   if (!d.conditionLabel) d.conditionLabel = condMap[d.condition] || d.condition;
-  d.id = Date.now();
+  d.id = Date.now() + Math.floor(Math.random() * 1000);
   d.createdAt = new Date().toLocaleString('vi-VN');
   SALES.unshift(d);
   saveSales();
@@ -2088,8 +2088,9 @@ async function sendMsg() {
 }
 
 // Auto-resize textarea
-document.addEventListener('DOMContentLoaded', () => {
+function initTextareaListeners() {
   const ta = document.getElementById('msg-input');
+  if (!ta) return;
   ta.addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 120) + 'px';
@@ -2097,7 +2098,12 @@ document.addEventListener('DOMContentLoaded', () => {
   ta.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
   });
-});
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initTextareaListeners);
+} else {
+  initTextareaListeners();
+}
 
 // ─── VOICE INPUT ──────────────────────────────────────────────────────────────
 let recognition = null;
