@@ -1774,14 +1774,19 @@ Tổng lãi sửa: ${fmtMoney(totalRepairNet)} | Tổng lãi bán: ${fmtMoney(to
 LƯU Ý: Lãi bán đã bao gồm cả phí giữ lại từ các máy hoàn trả. Đây là con số CHÍNH XÁC, không được tự điều chỉnh.
 
 NHIỆM VỤ — TỰ ĐỘNG NHẬN DẠNG VÀ NHẬP DỮ LIỆU:
-1. Câu hỏi về cửa hàng → trả lời dựa dữ liệu trên
-2. Mô tả nhận máy sửa MỚI → [ACTION:ADD_REPAIR|...]
-3. Cập nhật trạng thái / thông tin phiếu SỬA ĐÃ CÓ → [ACTION:UPDATE_REPAIR|...]
-4. Mô tả bán máy / ảnh bill bán → [ACTION:ADD_SALE|...]
-5. Thu tiền → [ACTION:ADD_INCOME|...]
-6. Chi tiền → [ACTION:ADD_EXPENSE|...]
-7. Nhập kho linh kiện / hàng → [ACTION:ADD_WAREHOUSE_IN|...]
-8. Xuất kho linh kiện / hàng → [ACTION:ADD_WAREHOUSE_OUT|...]
+⚠️ QUAN TRỌNG NHẤT: Khi người dùng mô tả việc nhập mới (nhận máy, bán máy, thu tiền, chi tiền), BẮT BUỘC phải kèm theo [ACTION:...] trong câu trả lời. KHÔNG được chỉ trả lời bằng văn bản mà KHÔNG có ACTION — như vậy dữ liệu sẽ KHÔNG được lưu.
+
+1. Câu hỏi về cửa hàng → trả lời dựa dữ liệu trên (KHÔNG cần ACTION)
+2. Mô tả nhận máy sửa MỚI → BẮT BUỘC thêm [ACTION:ADD_REPAIR|...]
+3. Cập nhật trạng thái / thông tin phiếu SỬA ĐÃ CÓ → BẮT BUỘC thêm [ACTION:UPDATE_REPAIR|...]
+4. Mô tả bán máy / ảnh bill bán → BẮT BUỘC thêm [ACTION:ADD_SALE|...]
+5. Thu tiền → BẮT BUỘC thêm [ACTION:ADD_INCOME|...]
+6. Chi tiền → BẮT BUỘC thêm [ACTION:ADD_EXPENSE|...]
+7. Nhập kho linh kiện / hàng → BẮT BUỘC thêm [ACTION:ADD_WAREHOUSE_IN|...]
+8. Xuất kho linh kiện / hàng → BẮT BUỘC thêm [ACTION:ADD_WAREHOUSE_OUT|...]
+
+Ví dụ ĐÚNG: "Đã nhận máy của anh Quang! [ACTION:ADD_REPAIR|Quang||iPhone 13|||vỡ màn|300000|0|2026-05-02|dang_sua|]"
+Ví dụ SAI (KHÔNG LÀM): "Đã nhận máy của anh Quang, iPhone 13, vỡ màn." ← THIẾU ACTION → dữ liệu KHÔNG được lưu!
 
 QUAN TRỌNG — KHI NHẬN ẢNH:
 - Phân tích ảnh, tự xác định loại (phiếu sửa / bill bán / hoá đơn chi / biên lai thu / ảnh khác)
@@ -1843,6 +1848,7 @@ QUY TẮC QUAN TRỌNG:
 // Handle AI actions
 function handleActions(reply) {
   let clean = reply;
+  let anyAction = false;
 
   // UPDATE_REPAIR_STATUS — phải xử lý TRƯỚC ADD_REPAIR để tránh tạo bản ghi mới
   const updMatches = [...clean.matchAll(/\[ACTION:UPDATE_REPAIR\|([^\]]+)\]/g)];
@@ -1851,7 +1857,6 @@ function handleActions(reply) {
     const ownerKey = (p[0]||'').toLowerCase().trim();
     const deviceKey = (p[1]||'').toLowerCase().trim();
     const newStatus = p[2]||'da_giao';
-    // Tìm phiếu phù hợp nhất
     const found = REPAIRS.find(r =>
       (ownerKey && r.owner.toLowerCase().includes(ownerKey)) ||
       (deviceKey && r.device.toLowerCase().includes(deviceKey))
@@ -1861,7 +1866,8 @@ function handleActions(reply) {
       if (p[3]) found.profit = parseFloat(p[3]) || found.profit;
       if (p[4]) found.cost   = parseFloat(p[4]) || found.cost;
       if (p[5]) found.note   = p[5];
-      saveRepairs(); buildRepairList(); updateStats();
+      saveRepairs();
+      anyAction = true;
     }
     clean = clean.replace(m[0], '');
   });
@@ -1877,7 +1883,6 @@ function handleActions(reply) {
       date: p[8]||todayStr(), status: p[9]||'dang_sua', note: p[10]||''
     };
     if (d.owner && d.device) {
-      // Kiểm tra trùng: cùng tên chủ VÀ tên máy (không phân biệt hoa thường)
       const duplicate = REPAIRS.find(r =>
         r.owner.toLowerCase().trim() === d.owner.toLowerCase().trim() &&
         r.device.toLowerCase().trim() === d.device.toLowerCase().trim()
@@ -1887,17 +1892,17 @@ function handleActions(reply) {
           `⚠️ Đã tồn tại phiếu:\n"${duplicate.owner} — ${duplicate.device}"\nTrạng thái: ${duplicate.status}\n\nBạn có muốn nhập CHỒNG lên phiếu cũ không?\n(Nhấn OK = ghi đè, Hủy = bỏ qua)`
         );
         if (overwrite) {
-          // Ghi đè phiếu cũ
           Object.assign(duplicate, d);
           duplicate.updatedAt = new Date().toLocaleString('vi-VN');
-          saveRepairs(); buildRepairList(); updateStats();
+          saveRepairs();
+          anyAction = true;
         }
-        // Nếu hủy thì bỏ qua, không thêm mới
       } else {
         d.id = Date.now() + Math.floor(Math.random() * 1000);
         d.createdAt = new Date().toLocaleString('vi-VN');
         REPAIRS.unshift(d);
-        saveRepairs(); buildRepairList(); updateStats();
+        saveRepairs();
+        anyAction = true;
       }
     }
     clean = clean.replace(m[0], '');
@@ -1910,14 +1915,11 @@ function handleActions(reply) {
     const condMap = { moi:'Mới 100%', like_new:'Like New', '99':'99%', '97':'97%', cu_dep:'Cũ đẹp', cu_thuong:'Cũ thường' };
     const rawPrice  = parseFloat(p[3])||0;
     const rawProfit = parseFloat(p[4])||0;
-    // Smart scale: nếu AI trả về số nhỏ (đơn vị triệu/nghìn) thay vì VND đầy đủ → nhân 1000
-    // Ngưỡng: < 100000 có thể là "32" (triệu) hoặc "32000" (nghìn đồng)
-    // Scale price: < 1000 → nhân 1_000_000 (AI trả "32" = 32 triệu), < 100000 → nhân 1000 (AI trả "32000")
     const scalePrice  = rawPrice <= 0 ? rawPrice
       : rawPrice < 1000    ? rawPrice * 1000000
       : rawPrice < 100000  ? rawPrice * 1000
       :                      rawPrice;
-    const effectivePrice = scalePrice; // dùng giá đã scale để kiểm tra profit
+    const effectivePrice = scalePrice;
     const scaleProfit = (rawProfit !== 0 && Math.abs(rawProfit) < 100000 && effectivePrice >= 1000000)
       ? rawProfit * 1000 : rawProfit;
     const d = {
@@ -1931,7 +1933,8 @@ function handleActions(reply) {
       d.id = Date.now() + Math.floor(Math.random() * 1000);
       d.createdAt = new Date().toLocaleString('vi-VN');
       SALES.unshift(d);
-      saveSales(); buildSaleList(); updateStats();
+      saveSales();
+      anyAction = true;
     }
     clean = clean.replace(m[0], '');
   });
@@ -1944,7 +1947,8 @@ function handleActions(reply) {
     if (d.amount && d.desc) {
       d.id = Date.now() + Math.random();
       d.createdAt = new Date().toLocaleString('vi-VN');
-      FINANCE.unshift(d); saveFinance(); buildFinanceList(); updateStats();
+      FINANCE.unshift(d); saveFinance();
+      anyAction = true;
     }
     clean = clean.replace(m[0], '');
   });
@@ -1957,7 +1961,8 @@ function handleActions(reply) {
     if (d.amount && d.desc) {
       d.id = Date.now() + Math.random();
       d.createdAt = new Date().toLocaleString('vi-VN');
-      FINANCE.unshift(d); saveFinance(); buildFinanceList(); updateStats();
+      FINANCE.unshift(d); saveFinance();
+      anyAction = true;
     }
     clean = clean.replace(m[0], '');
   });
@@ -1970,7 +1975,8 @@ function handleActions(reply) {
     if (d.name) {
       d.id = Date.now() + Math.random();
       d.createdAt = new Date().toLocaleString('vi-VN');
-      WAREHOUSE.unshift(d); saveWarehouse(); buildWarehouseList(); updateStats();
+      WAREHOUSE.unshift(d); saveWarehouse();
+      anyAction = true;
     }
     clean = clean.replace(m[0], '');
   });
@@ -1983,10 +1989,22 @@ function handleActions(reply) {
     if (d.name) {
       d.id = Date.now() + Math.random();
       d.createdAt = new Date().toLocaleString('vi-VN');
-      WAREHOUSE.unshift(d); saveWarehouse(); buildWarehouseList(); updateStats();
+      WAREHOUSE.unshift(d); saveWarehouse();
+      anyAction = true;
     }
     clean = clean.replace(m[0], '');
   });
+
+  // ── Batch rebuild tất cả UI sau khi xử lý xong mọi action ──
+  if (anyAction) {
+    buildRepairList();
+    buildSaleList();
+    buildFinanceList();
+    buildWarehouseList();
+    buildCustomerList();
+    updateStats();
+    checkOverdue();
+  }
 
   return clean.trim();
 }
