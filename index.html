@@ -1774,7 +1774,7 @@ Tổng lãi sửa: ${fmtMoney(totalRepairNet)} | Tổng lãi bán: ${fmtMoney(to
 LƯU Ý: Lãi bán đã bao gồm cả phí giữ lại từ các máy hoàn trả. Đây là con số CHÍNH XÁC, không được tự điều chỉnh.
 
 NHIỆM VỤ — TỰ ĐỘNG NHẬN DẠNG VÀ NHẬP DỮ LIỆU:
-⚠️ QUAN TRỌNG NHẤT: Khi người dùng mô tả việc nhập mới (nhận máy, bán máy, thu tiền, chi tiền), BẮT BUỘC phải kèm theo [ACTION:...] trong câu trả lời. KHÔNG được chỉ trả lời bằng văn bản mà KHÔNG có ACTION — như vậy dữ liệu sẽ KHÔNG được lưu.
+🚨 QUY TẮC SỐ 1 - TUYỆT ĐỐI KHÔNG VI PHẠM: Khi người dùng mô tả việc nhập mới (nhận máy, bán máy, thu tiền, chi tiền, nhập kho), câu trả lời BẮT BUỘC phải chứa [ACTION:...]. Nếu không có ACTION trong reply thì dữ liệu HOÀN TOÀN KHÔNG được lưu vào hệ thống. Đây là lỗi nghiêm trọng nhất.
 
 1. Câu hỏi về cửa hàng → trả lời dựa dữ liệu trên (KHÔNG cần ACTION)
 2. Mô tả nhận máy sửa MỚI → BẮT BUỘC thêm [ACTION:ADD_REPAIR|...]
@@ -1785,8 +1785,10 @@ NHIỆM VỤ — TỰ ĐỘNG NHẬN DẠNG VÀ NHẬP DỮ LIỆU:
 7. Nhập kho linh kiện / hàng → BẮT BUỘC thêm [ACTION:ADD_WAREHOUSE_IN|...]
 8. Xuất kho linh kiện / hàng → BẮT BUỘC thêm [ACTION:ADD_WAREHOUSE_OUT|...]
 
-Ví dụ ĐÚNG: "Đã nhận máy của anh Quang! [ACTION:ADD_REPAIR|Quang||iPhone 13|||vỡ màn|300000|0|2026-05-02|dang_sua|]"
-Ví dụ SAI (KHÔNG LÀM): "Đã nhận máy của anh Quang, iPhone 13, vỡ màn." ← THIẾU ACTION → dữ liệu KHÔNG được lưu!
+Ví dụ ĐÚNG — nhận máy sửa: "Đã nhận! [ACTION:ADD_REPAIR|Nhung||iPhone 13|||ép kính|500000|60000|2026-05-02|da_giao|]"
+Ví dụ ĐÚNG — bán máy: "Đã ghi! [ACTION:ADD_SALE|iPhone 14 Pro||99|18000000|1500000|2026-05-02|||]"
+Ví dụ ĐÚNG — thu tiền: "Đã ghi thu! [ACTION:ADD_INCOME|200000|Tiền sửa máy|2026-05-02||]"
+Ví dụ SAI (KHÔNG LÀM): "Đã nhận máy của chị Nhung, iPhone 13, ép kính, giá 500k, vốn 60k, đã giao!" ← THIẾU ACTION → dữ liệu KHÔNG được lưu, người dùng sẽ complain!
 
 QUAN TRỌNG — KHI NHẬN ẢNH:
 - Phân tích ảnh, tự xác định loại (phiếu sửa / bill bán / hoá đơn chi / biên lai thu / ảnh khác)
@@ -2067,6 +2069,41 @@ async function sendMsg() {
     if (!res.ok) throw new Error(data.error?.message || 'Lỗi API ' + res.status);
 
     const rawReply = data.choices[0].message.content || '';
+
+    // ── Kiểm tra: nếu người dùng đang nhập liệu mà AI quên ACTION → retry ──
+    const inputKeywords = /nhận máy|nhận đc|nhận được|sửa máy|bán máy|bán đc|bán được|thu tiền|chi tiền|nhập kho|xuất kho|ghi vào|ghi giúp|lưu giúp|thêm giúp|đã giao|đã xong|đã sửa/i;
+    const hasAction = /\[ACTION:(ADD_REPAIR|UPDATE_REPAIR|ADD_SALE|ADD_INCOME|ADD_EXPENSE|ADD_WAREHOUSE_IN|ADD_WAREHOUSE_OUT)\|/.test(rawReply);
+    const looksLikeDataEntry = inputKeywords.test(text) || inputKeywords.test(rawReply);
+
+    if (looksLikeDataEntry && !hasAction) {
+      // AI quên ACTION — thử lại với prompt nhắc thẳng
+      showTyping();
+      const retryMessages = [
+        { role:'system', content: buildContext() },
+        ...historyMsgs,
+        { role:'user', content: userMsgContent },
+        { role:'assistant', content: rawReply },
+        { role:'user', content: 'Bạn vừa quên đính kèm [ACTION:...]. Hãy gửi lại ĐÚNG FORMAT với ACTION để dữ liệu được lưu. Chỉ cần 1 dòng xác nhận + ACTION, không giải thích thêm.' }
+      ];
+      const retryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + groqKey },
+        body: JSON.stringify({ model: useModel, max_tokens:600, temperature:0.3, messages: retryMessages })
+      });
+      hideTyping();
+      if (retryRes.ok) {
+        const retryData = await retryRes.json();
+        const retryRaw = retryData.choices[0].message.content || '';
+        const cleanReply = handleActions(retryRaw);
+        const displayReply = cleanReply.replace(/</g,'&lt;').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+        addMsg('bot', displayReply || '✅ Đã lưu!');
+        chatHistory.push({ role:'assistant', content: cleanReply });
+        localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+        document.getElementById('send-btn').disabled = false;
+        return;
+      }
+    }
+
     const cleanReply = handleActions(rawReply);
 
     // Format for display
