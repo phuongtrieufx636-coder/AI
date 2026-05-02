@@ -280,6 +280,8 @@ select.field option{background:var(--bg2);}
 /* ── PRINT RECEIPT ── */
 .btn-print{padding:4px 12px;font-size:11px;font-weight:600;background:var(--purple-dim);color:var(--purple);border:1px solid rgba(155,114,245,0.2);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;}
 .btn-print:hover{background:rgba(155,114,245,0.25);}
+.btn-zalo{padding:4px 12px;font-size:11px;font-weight:600;background:rgba(0,120,255,0.1);color:#0078ff;border:1px solid rgba(0,120,255,0.25);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;}
+.btn-zalo:hover{background:rgba(0,120,255,0.2);}
 .btn-edit{padding:4px 12px;font-size:11px;font-weight:600;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(79,142,247,0.2);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;}
 .btn-edit:hover{background:rgba(79,142,247,0.25);}
 @media print{
@@ -758,6 +760,64 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
       </div>
 
       <div class="settings-section">
+        <h4>🏪 Thông tin cửa hàng</h4>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Dùng cho phiếu in & thông báo Zalo.</div>
+        <div class="form-grid col2" style="gap:8px;">
+          <div class="field-wrap" style="grid-column:1/-1;">
+            <label class="field-label">Tên cửa hàng</label>
+            <input class="field" id="set-shop-name" placeholder="VD: THUẬN TRIỀU" oninput="saveShopInfo()" />
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Số điện thoại</label>
+            <input class="field" id="set-shop-phone" placeholder="0901..." oninput="saveShopInfo()" />
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Địa chỉ</label>
+            <input class="field" id="set-shop-addr" placeholder="Nha Trang..." oninput="saveShopInfo()" />
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h4>📊 Đồng bộ Google Sheets</h4>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Xuất dữ liệu lên Google Sheets qua Apps Script Web App. Không cần Firebase hay tài khoản dịch vụ.</div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Web App URL</div>
+            <div class="settings-row-sub">Dán URL từ Google Apps Script đã deploy</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <input class="field" id="gsheet-url" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1;" />
+          <button class="btn-add" style="padding:8px 14px;white-space:nowrap;" onclick="saveGsheetUrl()">💾 Lưu</button>
+        </div>
+        <div class="export-btn-row">
+          <button class="btn-export" onclick="syncToGsheet('repairs')">📤 Xuất phiếu sửa</button>
+          <button class="btn-export" onclick="syncToGsheet('sales')">📤 Xuất bán hàng</button>
+          <button class="btn-export" onclick="syncToGsheet('all')">📤 Xuất tất cả</button>
+        </div>
+        <div id="gsheet-status" style="font-size:12px;margin-top:8px;min-height:18px;"></div>
+        <div style="margin-top:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius-sm);font-size:11.5px;color:var(--text3);">
+          <strong style="color:var(--text2);">Hướng dẫn nhanh:</strong><br>
+          1. Vào <a href="https://script.google.com" target="_blank" style="color:var(--accent);">script.google.com</a> → Tạo project mới<br>
+          2. Dán code Apps Script vào (xem mẫu bên dưới)<br>
+          3. Deploy → Web App → Anyone → Copy URL dán vào ô trên
+          <details style="margin-top:8px;">
+            <summary style="cursor:pointer;color:var(--accent);">📋 Xem code Apps Script mẫu</summary>
+            <pre style="margin-top:8px;font-size:10px;background:var(--bg);padding:10px;border-radius:6px;overflow-x:auto;white-space:pre-wrap;border:1px solid var(--border);">function doPost(e) {
+  var data = JSON.parse(e.postData.contents);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(data.sheet) || ss.insertSheet(data.sheet);
+  if (data.clear) sheet.clearContents();
+  if (data.headers && sheet.getLastRow() === 0) sheet.appendRow(data.headers);
+  data.rows.forEach(function(row) { sheet.appendRow(row); });
+  return ContentService.createTextOutput(JSON.stringify({ok:true,added:data.rows.length})).setMimeType(ContentService.MimeType.JSON);
+}</pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="settings-section">
         <h4>💾 Sao lưu / Khôi phục dữ liệu</h4>
         <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">Xuất toàn bộ dữ liệu phiếu sửa và bán hàng ra file JSON để sao lưu.</div>
         <input type="file" id="import-file" accept=".json" onchange="importData(event)" style="display:none" />
@@ -994,6 +1054,7 @@ function init() {
   buildCustomerList();
   updateStats();
   checkOverdue();
+  loadShopInfo();
   if (window.innerWidth <= 700) document.body.classList.add('has-bnav');
   window.addEventListener('resize', () => document.body.classList.toggle('has-bnav', window.innerWidth <= 700));
   applyTheme(localStorage.getItem('tt_theme') || 'auto');
@@ -1206,6 +1267,7 @@ function buildRepairList() {
         </button>` : ''}
         <button class="btn-edit" onclick="openEditRepair(${r.id})">✏️ Sửa</button>
         <button class="btn-print" onclick="printRepairTicket(${r.id})">🖨️ In phiếu</button>
+        ${r.phone ? `<button class="btn-zalo" onclick="sendZaloNotify(${r.id})" title="Zalo báo máy xong">💬 Zalo</button>` : ''}
         <button class="btn-del" onclick="deleteRepair(${r.id})">🗑 Xóa</button>
       </div>
     </div>`;
@@ -2458,34 +2520,80 @@ function saveEdit() {
 }
 
 // ─── PRINT RECEIPT ──────────────────────────────────────────────────────────
+function getShopInfo() {
+  return {
+    name:  localStorage.getItem('tt_shop_name')  || 'THUẬN TRIỀU',
+    phone: localStorage.getItem('tt_shop_phone') || '',
+    addr:  localStorage.getItem('tt_shop_addr')  || 'Nha Trang'
+  };
+}
 function printRepairTicket(id) {
   const r = REPAIRS.find(x => x.id === id);
   if (!r) return;
   const net = (r.profit||0) - (r.cost||0);
-  const statusLabel = { dang_sua:'Đang sửa', xong_chua_giao:'Sửa xong, chưa giao', da_giao:'Đã giao khách' }[r.status] || r.status;
-  const html = `<div style="font-family:Arial,sans-serif;font-size:13px;color:#000;max-width:400px;margin:0 auto;">
-    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px;">
-      <div style="font-size:20px;font-weight:800;">📱 THUẬN TRIỀU</div>
-      <div style="font-size:12px;color:#555;">Phiếu nhận máy sửa chữa</div>
-      <div style="font-size:11px;color:#888;">In lúc: ${new Date().toLocaleString('vi-VN')}</div>
+  const statusLabel = { dang_sua:'🔧 Đang sửa', xong_chua_giao:'✅ Sửa xong, chưa giao', da_giao:'📦 Đã giao khách' }[r.status] || r.status;
+  const statusColor = { dang_sua:'#c27d00', xong_chua_giao:'#1aab5e', da_giao:'#3b78e7' }[r.status] || '#555';
+  const sh = getShopInfo();
+  const ticketNo = String(id).slice(-6);
+  const html = `<div style="font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#111;max-width:420px;margin:0 auto;border:2px solid #222;border-radius:10px;overflow:hidden;">
+    <div style="background:#111;color:#fff;padding:18px 20px 14px;text-align:center;">
+      <div style="font-size:24px;font-weight:900;letter-spacing:1px;">${escHtml(sh.name)}</div>
+      <div style="font-size:12px;margin-top:4px;opacity:0.7;">Dịch vụ sửa chữa &amp; mua bán điện thoại</div>
+      ${sh.phone?`<div style="font-size:13px;margin-top:4px;opacity:0.9;">📞 ${escHtml(sh.phone)}</div>`:''}
+      ${sh.addr?`<div style="font-size:11px;margin-top:2px;opacity:0.6;">📍 ${escHtml(sh.addr)}</div>`:''}
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <tr><td style="padding:5px 0;color:#555;width:38%;">Chủ máy:</td><td style="font-weight:700;">${r.owner||'—'}</td></tr>
-      <tr><td style="padding:5px 0;color:#555;">Số điện thoại:</td><td>${r.phone||'—'}</td></tr>
-      <tr><td style="padding:5px 0;color:#555;">Thiết bị:</td><td style="font-weight:700;">${r.device||'—'}</td></tr>
-      ${r.imei?`<tr><td style="padding:5px 0;color:#555;">IMEI:</td><td style="font-family:monospace;">${r.imei}</td></tr>`:''}
-      ${r.pass?`<tr><td style="padding:5px 0;color:#555;">Mật khẩu:</td><td style="font-weight:700;color:#d93025;">${r.pass}</td></tr>`:''}
-      <tr><td style="padding:5px 0;color:#555;">Vấn đề:</td><td>${r.issue||'—'}</td></tr>
-      <tr><td style="padding:5px 0;color:#555;">Ngày nhận:</td><td>${fmtDate(r.date)}</td></tr>
-      <tr><td style="padding:5px 0;color:#555;">Trạng thái:</td><td>${statusLabel}</td></tr>
-      <tr><td style="padding:5px 0;color:#555;">Giá thu:</td><td style="font-weight:700;">${r.profit>0?fmtMoney(r.profit):'Chưa xác định'}</td></tr>
-      ${r.cost>0?`<tr><td style="padding:5px 0;color:#555;">Chi linh kiện:</td><td>${fmtMoney(r.cost)}</td></tr>`:''}
-      <tr><td style="padding:5px 0;color:#555;">Lãi ròng:</td><td style="font-weight:700;color:${net>=0?'#1aab5e':'#d93025'};">${fmtMoney(net)}</td></tr>
-      ${r.note?`<tr><td style="padding:5px 0;color:#555;">Ghi chú:</td><td>${r.note}</td></tr>`:''}
-    </table>
-    <div style="border-top:1px dashed #ccc;margin-top:14px;padding-top:10px;font-size:11px;text-align:center;color:#888;">
-      Cảm ơn quý khách! Liên hệ để biết tình trạng máy.<br>
-      <strong>Thuận Triều — Nha Trang</strong>
+    <div style="background:#f5f5f5;border-bottom:1px solid #ddd;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;">
+      <div><div style="font-size:14px;font-weight:700;color:#333;">PHIẾU NHẬN MÁY SỬA CHỮA</div>
+        <div style="font-size:11px;color:#888;margin-top:2px;">In lúc: ${new Date().toLocaleString('vi-VN')}</div></div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:#aaa;font-weight:600;text-transform:uppercase;">Số phiếu</div>
+        <div style="font-size:18px;font-weight:900;color:#333;font-family:monospace;">#${ticketNo}</div>
+      </div>
+    </div>
+    <div style="padding:14px 20px;border-bottom:1px dashed #ddd;">
+      <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Thông tin khách hàng</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#888;">Họ tên</div>
+          <div style="font-size:15px;font-weight:800;margin-top:2px;">${escHtml(r.owner||'—')}</div></div>
+        <div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#888;">Số điện thoại</div>
+          <div style="font-size:14px;font-weight:700;margin-top:2px;">${escHtml(r.phone||'—')}</div></div>
+      </div>
+    </div>
+    <div style="padding:14px 20px;border-bottom:1px dashed #ddd;">
+      <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Thông tin thiết bị</div>
+      <div style="font-size:16px;font-weight:800;margin-bottom:6px;">${escHtml(r.device||'—')}</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;">
+        ${r.imei?`<div><span style="color:#888;">IMEI: </span><span style="font-family:monospace;font-weight:600;">${escHtml(r.imei)}</span></div>`:''}
+        ${r.pass?`<div><span style="color:#888;">Mật khẩu: </span><span style="font-weight:700;color:#c00;">${escHtml(r.pass)}</span></div>`:''}
+      </div>
+      ${r.issue?`<div style="margin-top:8px;background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:8px 12px;font-size:12.5px;"><span style="color:#888;">Lỗi / Yêu cầu: </span><strong>${escHtml(r.issue)}</strong></div>`:''}
+    </div>
+    <div style="padding:12px 20px;border-bottom:1px dashed #ddd;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <div><div style="font-size:11px;color:#888;">Ngày nhận máy</div>
+        <div style="font-size:14px;font-weight:700;margin-top:2px;">📅 ${fmtDate(r.date)}</div></div>
+      <div style="background:${statusColor}18;border:1.5px solid ${statusColor}55;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;color:${statusColor};">${statusLabel}</div>
+    </div>
+    <div style="padding:14px 20px;border-bottom:1px dashed #ddd;background:#fafafa;">
+      <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Chi phí</div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+        <span style="color:#555;font-size:13px;">Giá sửa (khách trả):</span>
+        <span style="font-weight:700;font-size:14px;">${r.profit>0?fmtMoney(r.profit):'Chưa xác định'}</span>
+      </div>
+      ${r.cost>0?`<div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+        <span style="color:#555;font-size:13px;">Chi linh kiện:</span>
+        <span style="color:#d93025;font-size:13px;">- ${fmtMoney(r.cost)}</span></div>`:''}
+      <div style="border-top:1px solid #ddd;margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:700;font-size:13px;">Lãi ròng:</span>
+        <span style="font-weight:900;font-size:18px;color:${net>=0?'#1aab5e':'#d93025'};">${fmtMoney(net)}</span>
+      </div>
+    </div>
+    ${r.note?`<div style="padding:10px 20px;border-bottom:1px dashed #ddd;font-size:12.5px;"><span style="color:#888;">Ghi chú: </span>${escHtml(r.note)}</div>`:''}
+    <div style="padding:14px 20px;text-align:center;background:#f5f5f5;">
+      <div style="font-size:12px;color:#555;margin-bottom:4px;">Cảm ơn quý khách đã tin tưởng ${escHtml(sh.name)}!</div>
+      <div style="font-size:11px;color:#999;">Vui lòng giữ phiếu này để nhận máy. Liên hệ khi có thắc mắc.</div>
+      <div style="margin-top:10px;border-top:1px dashed #ccc;padding-top:8px;display:flex;justify-content:space-between;font-size:10px;color:#bbb;">
+        <span>Phiếu #${ticketNo}</span><span>${new Date().toLocaleDateString('vi-VN')}</span><span>${escHtml(sh.name)}</span>
+      </div>
     </div>
   </div>`;
   document.getElementById('print-area').innerHTML = html;
@@ -2495,28 +2603,68 @@ function printRepairTicket(id) {
 function printSaleInvoice(id) {
   const s = SALES.find(x => x.id === id);
   if (!s) return;
-  const html = `<div style="font-family:Arial,sans-serif;font-size:13px;color:#000;max-width:400px;margin:0 auto;">
-    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px;">
-      <div style="font-size:20px;font-weight:800;">📱 THUẬN TRIỀU</div>
-      <div style="font-size:12px;color:#555;">Hoá đơn bán hàng</div>
-      <div style="font-size:11px;color:#888;">In lúc: ${new Date().toLocaleString('vi-VN')}</div>
+  const sh = getShopInfo();
+  const invoiceNo = String(id).slice(-6);
+  const html = `<div style="font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#111;max-width:420px;margin:0 auto;border:2px solid #1aab5e;border-radius:10px;overflow:hidden;">
+    <div style="background:#1aab5e;color:#fff;padding:18px 20px 14px;text-align:center;">
+      <div style="font-size:24px;font-weight:900;letter-spacing:1px;">${escHtml(sh.name)}</div>
+      <div style="font-size:12px;margin-top:4px;opacity:0.85;">Dịch vụ sửa chữa &amp; mua bán điện thoại</div>
+      ${sh.phone?`<div style="font-size:13px;margin-top:4px;opacity:0.9;">📞 ${escHtml(sh.phone)}</div>`:''}
+      ${sh.addr?`<div style="font-size:11px;margin-top:2px;opacity:0.75;">📍 ${escHtml(sh.addr)}</div>`:''}
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <tr><td style="padding:5px 0;color:#555;width:38%;">Thiết bị:</td><td style="font-weight:700;">${s.device||'—'}</td></tr>
-      ${s.imei?`<tr><td style="padding:5px 0;color:#555;">IMEI:</td><td style="font-family:monospace;">${s.imei}</td></tr>`:''}
-      <tr><td style="padding:5px 0;color:#555;">Tình trạng:</td><td>${s.conditionLabel||s.condition||'—'}</td></tr>
-      <tr><td style="padding:5px 0;color:#555;">Giá bán:</td><td style="font-weight:800;font-size:16px;color:#1aab5e;">${fmtMoney(s.price)}</td></tr>
-      <tr><td style="padding:5px 0;color:#555;">Ngày bán:</td><td>${fmtDate(s.date)}</td></tr>
-      ${s.buyer?`<tr><td style="padding:5px 0;color:#555;">Khách hàng:</td><td style="font-weight:700;">${s.buyer}</td></tr>`:''}
-      ${s.note?`<tr><td style="padding:5px 0;color:#555;">Ghi chú:</td><td>${s.note}</td></tr>`:''}
-    </table>
-    <div style="border-top:1px dashed #ccc;margin-top:14px;padding-top:10px;font-size:11px;text-align:center;color:#888;">
-      Cảm ơn quý khách đã mua hàng tại Thuận Triều!<br>
-      <strong>Bảo hành theo điều khoản đã thoả thuận.</strong>
+    <div style="background:#f0faf5;border-bottom:1px solid #c3e6cb;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;">
+      <div><div style="font-size:14px;font-weight:700;color:#155724;">HOÁ ĐƠN BÁN HÀNG</div>
+        <div style="font-size:11px;color:#888;margin-top:2px;">In lúc: ${new Date().toLocaleString('vi-VN')}</div></div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:#aaa;font-weight:600;text-transform:uppercase;">Số HD</div>
+        <div style="font-size:18px;font-weight:900;color:#1aab5e;font-family:monospace;">#${invoiceNo}</div>
+      </div>
+    </div>
+    <div style="padding:16px 20px;border-bottom:1px dashed #ddd;">
+      <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Thông tin sản phẩm</div>
+      <div style="font-size:18px;font-weight:900;margin-bottom:8px;color:#111;">${escHtml(s.device||'—')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <span style="background:#e8f5e9;color:#1aab5e;border:1px solid #c8e6c9;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">✨ ${escHtml(s.conditionLabel||s.condition||'—')}</span>
+        ${s.imei?`<span style="background:#f5f5f5;color:#555;border:1px solid #e0e0e0;border-radius:20px;padding:3px 12px;font-size:12px;font-family:monospace;">IMEI: ${escHtml(s.imei)}</span>`:''}
+      </div>
+    </div>
+    <div style="padding:12px 20px;border-bottom:1px dashed #ddd;display:flex;gap:20px;flex-wrap:wrap;">
+      ${s.buyer?`<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#888;">Khách hàng</div><div style="font-size:14px;font-weight:700;margin-top:2px;">👤 ${escHtml(s.buyer)}</div></div>`:''}
+      <div style="flex:1;min-width:140px;">
+        <div style="font-size:11px;color:#888;">Ngày bán</div>
+        <div style="font-size:14px;font-weight:700;margin-top:2px;">📅 ${fmtDate(s.date)}</div>
+      </div>
+    </div>
+    <div style="padding:16px 20px;border-bottom:1px dashed #ddd;background:#f0faf5;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:14px;color:#555;font-weight:600;">Giá bán:</span>
+        <span style="font-size:26px;font-weight:900;color:#1aab5e;">${fmtMoney(s.price)}</span>
+      </div>
+    </div>
+    ${s.note?`<div style="padding:10px 20px;border-bottom:1px dashed #ddd;font-size:12.5px;background:#fffde7;"><span style="color:#888;">Ghi chú: </span><strong>${escHtml(s.note)}</strong></div>`:''}
+    <div style="padding:16px 20px;text-align:center;background:#f0faf5;">
+      <div style="font-size:13px;font-weight:700;color:#1aab5e;margin-bottom:4px;">🎉 Cảm ơn quý khách đã mua hàng!</div>
+      <div style="font-size:11px;color:#555;margin-bottom:4px;">Bảo hành theo điều khoản đã thoả thuận.</div>
+      <div style="margin-top:10px;border-top:1px dashed #c3e6cb;padding-top:8px;display:flex;justify-content:space-between;font-size:10px;color:#aaa;">
+        <span>HD #${invoiceNo}</span><span>${new Date().toLocaleDateString('vi-VN')}</span><span>${escHtml(sh.name)}</span>
+      </div>
     </div>
   </div>`;
   document.getElementById('print-area').innerHTML = html;
   window.print();
+}
+
+// ─── ZALO NOTIFY ──────────────────────────────────────────────────────────────
+function sendZaloNotify(id) {
+  const r = REPAIRS.find(x => x.id === id);
+  if (!r || !r.phone) return;
+  const sh = getShopInfo();
+  const statusLabel = { dang_sua:'đang sửa', xong_chua_giao:'đã sửa xong, chờ bạn đến lấy', da_giao:'đã giao' }[r.status] || r.status;
+  const priceNote = r.profit > 0 ? ` Phí sửa: ${fmtMoney(r.profit)}.` : '';
+  const msg = `Xin chào ${r.owner}! Máy ${r.device} của bạn ${statusLabel}.${priceNote} Vui lòng liên hệ hoặc đến ${sh.name} (${sh.addr}) để nhận máy. Cảm ơn! 🙏`;
+  const phone = r.phone.replace(/\D/g,'');
+  const url = `https://zalo.me/${phone}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
 }
 
 // ─── CHART ───────────────────────────────────────────────────────────────────
@@ -2708,6 +2856,85 @@ function applyTheme(t) {
 function cycleTheme() {
   const cur = localStorage.getItem('tt_theme') || 'auto';
   applyTheme(THEME_CYCLE[(THEME_CYCLE.indexOf(cur)+1) % THEME_CYCLE.length]);
+}
+
+// ─── SHOP INFO ────────────────────────────────────────────────────────────────
+function saveShopInfo() {
+  const name  = document.getElementById('set-shop-name')?.value.trim();
+  const phone = document.getElementById('set-shop-phone')?.value.trim();
+  const addr  = document.getElementById('set-shop-addr')?.value.trim();
+  if (name  !== undefined) localStorage.setItem('tt_shop_name', name);
+  if (phone !== undefined) localStorage.setItem('tt_shop_phone', phone);
+  if (addr  !== undefined) localStorage.setItem('tt_shop_addr', addr);
+}
+function loadShopInfo() {
+  const el = id => document.getElementById(id);
+  if (el('set-shop-name'))  el('set-shop-name').value  = localStorage.getItem('tt_shop_name')  || '';
+  if (el('set-shop-phone')) el('set-shop-phone').value = localStorage.getItem('tt_shop_phone') || '';
+  if (el('set-shop-addr'))  el('set-shop-addr').value  = localStorage.getItem('tt_shop_addr')  || '';
+  if (el('gsheet-url'))     el('gsheet-url').value     = localStorage.getItem('tt_gsheet_url') || '';
+}
+
+// ─── GOOGLE SHEETS SYNC ───────────────────────────────────────────────────────
+function saveGsheetUrl() {
+  const v = document.getElementById('gsheet-url')?.value.trim();
+  if (!v) return;
+  localStorage.setItem('tt_gsheet_url', v);
+  showGsheetStatus('✅ Đã lưu URL!', 'ok');
+}
+function showGsheetStatus(msg, type) {
+  const el = document.getElementById('gsheet-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = type === 'ok' ? 'var(--green)' : type === 'err' ? 'var(--red)' : 'var(--text3)';
+}
+async function syncToGsheet(which) {
+  const url = localStorage.getItem('tt_gsheet_url');
+  if (!url) { showGsheetStatus('⚠️ Chưa nhập Web App URL!', 'err'); return; }
+  showGsheetStatus('⏳ Đang gửi dữ liệu...', '');
+
+  const tasks = [];
+  if (which === 'repairs' || which === 'all') {
+    tasks.push({
+      sheet: 'Phiếu Sửa',
+      clear: true,
+      headers: ['ID','Chủ máy','SĐT','Thiết bị','IMEI','Mật khẩu','Lỗi','Thu(đ)','Chi(đ)','Lãi(đ)','Ngày','Trạng thái','Ghi chú'],
+      rows: REPAIRS.map(r => [r.id, r.owner, r.phone, r.device, r.imei, r.pass, r.issue, r.profit||0, r.cost||0, (r.profit||0)-(r.cost||0), r.date, r.status, r.note])
+    });
+  }
+  if (which === 'sales' || which === 'all') {
+    tasks.push({
+      sheet: 'Bán Hàng',
+      clear: true,
+      headers: ['ID','Thiết bị','IMEI','Tình trạng','Giá bán(đ)','Lãi(đ)','Ngày','Khách','Nguồn','Ghi chú','Hoàn trả'],
+      rows: SALES.map(s => [s.id, s.device, s.imei, s.conditionLabel||s.condition, s.price||0, s.profit||0, s.date, s.buyer, s.source, s.note, s.returned?'Hoàn trả':''])
+    });
+  }
+  if (which === 'all') {
+    tasks.push({
+      sheet: 'Thu Chi',
+      clear: true,
+      headers: ['ID','Loại','Mô tả','Số tiền(đ)','Ngày','Danh mục','Ghi chú'],
+      rows: FINANCE.map(f => [f.id, f.type==='thu'?'Thu':'Chi', f.desc, f.amount||0, f.date, f.cat, f.note])
+    });
+  }
+
+  let successCount = 0;
+  for (const task of tasks) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(task),
+        headers: { 'Content-Type': 'text/plain' }
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      successCount++;
+    } catch(err) {
+      showGsheetStatus(`❌ Lỗi sheet "${task.sheet}": ${err.message}`, 'err');
+      return;
+    }
+  }
+  showGsheetStatus(`✅ Đã đồng bộ ${successCount} sheet lên Google Sheets!`, 'ok');
 }
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
