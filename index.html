@@ -2037,7 +2037,30 @@ function handleActions(reply) {
     buildCustomerList();
     updateStats();
     checkOverdue();
-    showToast('Dữ liệu đã được lưu tự động!', 'success');
+
+    // Xác định tab ưu tiên để tự động chuyển sang
+    const hasRepair  = repMatches.length > 0 || updMatches.length > 0;
+    const hasSale    = saleMatches.length > 0;
+    const hasIncome  = incMatches.length > 0;
+    const hasExpense = expMatches.length > 0;
+    const hasWhIn    = whInMatches.length > 0;
+    const hasWhOut   = whOutMatches.length > 0;
+
+    let targetTab = null;
+    if (hasRepair)                    targetTab = 'repair';
+    else if (hasSale)                 targetTab = 'sales';
+    else if (hasIncome || hasExpense) targetTab = 'finance';
+    else if (hasWhIn || hasWhOut)     targetTab = 'warehouse';
+
+    if (targetTab) {
+      setTimeout(() => {
+        switchTab(targetTab);
+        const tabNames = { repair:'Nhận máy sửa', sales:'Bán máy', finance:'Thu / Chi', warehouse:'Kho hàng' };
+        showToast('Đã lưu → chuyển sang ' + tabNames[targetTab], 'success');
+      }, 800);
+    } else {
+      showToast('Dữ liệu đã được lưu tự động!', 'success');
+    }
   }
 
   return clean.trim();
