@@ -254,6 +254,71 @@ select.field option{background:var(--bg2);}
 .bnav-btn .bnav-icon{font-size:20px;line-height:1;}
 .bnav-btn .bnav-label{font-size:10px;font-weight:600;}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* ── SEARCH BAR ── */
+.search-bar-wrap{display:flex;gap:8px;align-items:center;margin-bottom:12px;}
+.search-input{flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-family:inherit;outline:none;transition:border-color 0.15s;}
+.search-input:focus{border-color:var(--accent);}
+.search-input::placeholder{color:var(--text3);}
+.search-clear{padding:7px 12px;border-radius:var(--radius-sm);background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.search-clear:hover{background:var(--accent-dim);color:var(--accent);}
+
+/* ── EDIT MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;}
+.modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.4);}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border);}
+.modal-header h3{font-size:14px;font-weight:700;color:var(--text);}
+.modal-close{width:28px;height:28px;border-radius:50%;border:none;background:var(--bg3);color:var(--text2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.modal-close:hover{background:var(--red-dim);color:var(--red);}
+.modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px;}
+.modal-footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+.btn-save{padding:8px 20px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-save:hover{background:var(--accent-dark);}
+.btn-cancel{padding:8px 16px;border-radius:var(--radius-sm);background:var(--bg3);color:var(--text2);border:1px solid var(--border2);font-size:13px;cursor:pointer;font-family:inherit;}
+.btn-cancel:hover{background:var(--bg);color:var(--text);}
+
+/* ── PRINT RECEIPT ── */
+.btn-print{padding:4px 12px;font-size:11px;font-weight:600;background:var(--purple-dim);color:var(--purple);border:1px solid rgba(155,114,245,0.2);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;}
+.btn-print:hover{background:rgba(155,114,245,0.25);}
+.btn-edit{padding:4px 12px;font-size:11px;font-weight:600;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(79,142,247,0.2);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;}
+.btn-edit:hover{background:rgba(79,142,247,0.25);}
+@media print{
+  body *{visibility:hidden!important;}
+  #print-area,#print-area *{visibility:visible!important;}
+  #print-area{position:fixed;top:0;left:0;width:100%;padding:20px;background:#fff;color:#000;}
+}
+#print-area{display:none;}
+
+/* ── CHART ── */
+.chart-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+.chart-wrap h4{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;}
+.chart-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.chart-tab-btn{font-size:11.5px;padding:4px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.chart-tab-btn.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent);}
+canvas#revenue-chart{width:100%!important;max-height:220px;}
+
+/* ── CUSTOMERS ── */
+.customer-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.customer-card:hover{border-color:var(--border2);}
+.cust-top{display:flex;align-items:center;gap:12px;}
+.cust-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:var(--purple-dim);border:1px solid rgba(155,114,245,0.2);}
+.cust-info{flex:1;min-width:0;}
+.cust-name{font-size:13.5px;font-weight:700;color:var(--text);}
+.cust-phone{font-size:11.5px;color:var(--text2);margin-top:2px;}
+.cust-stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.cust-stat{font-size:11px;padding:3px 9px;border-radius:20px;background:var(--bg3);color:var(--text2);}
+.tier-vip{color:var(--amber)!important;background:var(--amber-dim)!important;}
+.tier-loyal{color:var(--green)!important;background:var(--green-dim)!important;}
+.tier-new{color:var(--accent)!important;background:var(--accent-dim)!important;}
+
+/* ── ALERT BANNER ── */
+.alert-banner{background:var(--amber-dim);border:1px solid rgba(240,160,48,0.3);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--amber);}
+.alert-banner .ab-count{font-weight:700;font-size:15px;white-space:nowrap;}
+.alert-bell{font-size:20px;flex-shrink:0;animation:ring 2s infinite;}
+@keyframes ring{0%,90%,100%{transform:rotate(0);}93%{transform:rotate(-15deg);}96%{transform:rotate(15deg);}99%{transform:rotate(-8deg);}}
+
+/* ── NOTIFICATION BADGE ── */
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--red);position:absolute;top:6px;right:6px;display:none;}
 </style>
 </head>
 <body>
@@ -275,6 +340,7 @@ select.field option{background:var(--bg2);}
     <button class="nav-btn" onclick="switchTab('sales')" id="nav-sales"><span class="ni">💰</span> Bán máy</button>
     <button class="nav-btn" onclick="switchTab('finance')" id="nav-finance"><span class="ni">💳</span> Thu / Chi</button>
     <button class="nav-btn" onclick="switchTab('warehouse')" id="nav-warehouse"><span class="ni">📦</span> Kho hàng</button>
+    <button class="nav-btn" onclick="switchTab('customers')" id="nav-customers"><span class="ni">🏷️</span> Khách hàng</button>
     <button class="nav-btn" onclick="switchTab('stats')" id="nav-stats"><span class="ni">📊</span> Thống kê</button>
     <button class="nav-btn" onclick="switchTab('settings')" id="nav-settings"><span class="ni">⚙️</span> Cài đặt</button>
   </div>
@@ -444,6 +510,10 @@ select.field option{background:var(--bg2);}
             <button class="filter-btn" onclick="setRepairFilter('da_giao',this)">📦 Đã giao</button>
           </div>
         </div>
+        <div class="search-bar-wrap">
+          <input class="search-input" id="repair-search" placeholder="🔍 Tìm theo tên, máy, IMEI, số điện thoại..." oninput="buildRepairList()" />
+          <button class="search-clear" onclick="document.getElementById('repair-search').value='';buildRepairList()">✕ Xóa</button>
+        </div>
         <div class="card-list" id="repair-list"></div>
       </div>
     </div>
@@ -536,6 +606,10 @@ select.field option{background:var(--bg2);}
             <button class="filter-btn" onclick="setSaleFilter('lo',this)">📉 Lỗ</button>
           </div>
         </div>
+        <div class="search-bar-wrap">
+          <input class="search-input" id="sales-search" placeholder="🔍 Tìm theo tên máy, IMEI, khách hàng..." oninput="buildSaleList()" />
+          <button class="search-clear" onclick="document.getElementById('sales-search').value='';buildSaleList()">✕ Xóa</button>
+        </div>
         <div class="card-list" id="sales-list"></div>
       </div>
     </div>
@@ -594,6 +668,7 @@ select.field option{background:var(--bg2);}
   <div class="tab hidden" id="tab-stats">
     <div class="tab-body">
       <div class="section-hd">Tổng quan tài chính</div>
+      <div id="overdue-alert-wrap"></div>
       <div class="kpi-grid">
         <div class="kpi">
           <div class="kpi-label">🔧 Máy đang sửa</div>
@@ -645,6 +720,17 @@ select.field option{background:var(--bg2);}
           <div class="kpi-label">📤 Tổng chi ngoài</div>
           <div class="kpi-val" id="stat-total-expense" style="color:var(--red);font-size:18px;">0đ</div>
         </div>
+      </div>
+
+      <div class="section-hd" style="margin-top:8px;">Biểu đồ doanh thu</div>
+      <div class="chart-wrap">
+        <div class="chart-tabs">
+          <button class="chart-tab-btn active" onclick="setChartPeriod('week',this)">7 ngày</button>
+          <button class="chart-tab-btn" onclick="setChartPeriod('month',this)">30 ngày</button>
+          <button class="chart-tab-btn" onclick="setChartPeriod('6month',this)">6 tháng</button>
+          <button class="chart-tab-btn" onclick="setChartPeriod('year',this)">12 tháng</button>
+        </div>
+        <canvas id="revenue-chart"></canvas>
       </div>
 
       <div class="section-hd" style="margin-top:8px;">Phiếu sửa gần đây</div>
@@ -765,8 +851,48 @@ select.field option{background:var(--bg2);}
     </div>
   </div>
 
+  <!-- ── KHÁCH HÀNG TAB ── -->
+  <div class="tab hidden" id="tab-customers">
+    <div class="tab-body">
+      <div id="customers-alert-wrap"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div class="section-hd" style="margin:0;padding:0;border:none;" id="customers-hd">Khách hàng (0)</div>
+        <div class="filter-bar">
+          <button class="filter-btn active" onclick="setCustomerFilter('all',this)">Tất cả</button>
+          <button class="filter-btn" onclick="setCustomerFilter('vip',this)">⭐ VIP (3+ lần)</button>
+          <button class="filter-btn" onclick="setCustomerFilter('loyal',this)">💚 Thân thiết</button>
+        </div>
+      </div>
+      <div class="search-bar-wrap">
+        <input class="search-input" id="customer-search" placeholder="🔍 Tìm theo tên, số điện thoại..." oninput="buildCustomerList()" />
+        <button class="search-clear" onclick="document.getElementById('customer-search').value='';buildCustomerList()">✕ Xóa</button>
+      </div>
+      <div class="card-list" id="customers-list"></div>
+    </div>
+  </div>
+
 </div><!-- /main -->
 </div><!-- /app -->
+
+<!-- ── CUSTOMERS TAB ── (rendered outside main for simplicity, shown via switchTab) -->
+
+<!-- ── EDIT MODAL ── -->
+<div class="modal-overlay" id="edit-modal" style="display:none;" onclick="if(event.target===this)closeEditModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="edit-modal-title">✏️ Chỉnh sửa</h3>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <div class="modal-body" id="edit-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeEditModal()">Hủy</button>
+      <button class="btn-save" onclick="saveEdit()">💾 Lưu thay đổi</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PRINT AREA ── -->
+<div id="print-area"></div>
 
 <!-- MOBILE BOTTOM NAV -->
 <nav id="bottom-nav">
@@ -774,6 +900,7 @@ select.field option{background:var(--bg2);}
   <button class="bnav-btn" onclick="switchTab('repair')" id="bnav-repair"><span class="bnav-icon">🔧</span><span class="bnav-label">Sửa máy</span></button>
   <button class="bnav-btn" onclick="switchTab('sales')" id="bnav-sales"><span class="bnav-icon">💰</span><span class="bnav-label">Bán máy</span></button>
   <button class="bnav-btn" onclick="switchTab('warehouse')" id="bnav-warehouse"><span class="bnav-icon">📦</span><span class="bnav-label">Kho</span></button>
+  <button class="bnav-btn" onclick="switchTab('customers')" id="bnav-customers"><span class="bnav-icon">🏷️</span><span class="bnav-label">KH</span></button>
   <button class="bnav-btn" onclick="switchTab('finance')" id="bnav-finance"><span class="bnav-icon">💳</span><span class="bnav-label">Thu/Chi</span></button>
   <button class="bnav-btn" onclick="switchTab('stats')" id="bnav-stats"><span class="bnav-icon">📊</span><span class="bnav-label">Thống kê</span></button>
   <button class="bnav-btn" onclick="switchTab('settings')" id="bnav-settings"><span class="bnav-icon">⚙️</span><span class="bnav-label">Cài đặt</span></button>
@@ -787,36 +914,45 @@ const SK_SALES     = 'tt_sales';
 const SK_CHAT      = 'tt_chat_history';
 const SK_FINANCE   = 'tt_finance';
 const SK_WAREHOUSE = 'tt_warehouse';
+const SK_CUSTOMERS = 'tt_customers';
 
 let groqKey = '';
 let REPAIRS = [];
 let SALES = [];
-let FINANCE = []; // thu/chi tự do
-let WAREHOUSE = []; // kho hàng
+let FINANCE = [];
+let WAREHOUSE = [];
+let CUSTOMERS = []; // khách hàng thân thiết
 let chatHistory = [];
 let repairFilter = 'all';
 let saleFilter = 'all';
 let warehouseFilter = 'all';
+let customerFilter = 'all';
 let chatImgData = null;
+let editingId = null;
+let editingType = null;
+let chartPeriod = 'week';
+let revenueChart = null;
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
 function migrateSalesData() {
-  // Fix data cũ: profit/price bị lưu sai đơn vị (VD: 2000 thay vì 2000000)
   let changed = false;
   SALES.forEach(s => {
-    // Nếu price lớn (>= 1tr) nhưng profit nhỏ bất thường (< 10000 và != 0)
-    // thì khả năng cao profit bị lưu nhầm đơn vị → nhân 1000
+    // Fix 1: profit bị lưu sai đơn vị (VD: 2000 thay vì 2000000) - chỉ với sale chưa hoàn trả
     if (!s.returned && s.price >= 1000000 && s.profit !== 0 && Math.abs(s.profit) < 10000) {
       s.profit = s.profit * 1000;
       changed = true;
     }
-    // Fix date undefined string
+    // Fix 2: sale đã returned theo flow CŨ (chỉ set returned=true, không set profit=0, không có _originalProfit)
+    // → profit vẫn là gốc → thống kê tính sai → phải set profit=0 và lưu _originalProfit
+    if (s.returned && s._originalProfit === undefined) {
+      s._originalProfit = s.profit;
+      s.profit = 0;
+      s.returnNote = s.returnNote || 'Hoan tra toan bo';
+      changed = true;
+    }
+    // Fix 3: date undefined string
     if (!s.date || s.date === 'undefined' || !s.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      s.date = s.createdAt
-        ? new Date(s.createdAt.split(',')[0].split('/').reverse().join('-')).toISOString().split('T')[0]
-        : todayStr();
-      // Nếu parse thất bại thì dùng today
-      if (!s.date || s.date === 'Invalid Date' || s.date === 'NaN-NaN-NaN') s.date = todayStr();
+      s.date = todayStr();
       changed = true;
     }
   });
@@ -830,6 +966,7 @@ function init() {
   SALES   = JSON.parse(localStorage.getItem(SK_SALES)   || '[]');
   FINANCE = JSON.parse(localStorage.getItem(SK_FINANCE) || '[]');
   WAREHOUSE = JSON.parse(localStorage.getItem(SK_WAREHOUSE) || '[]');
+  CUSTOMERS = JSON.parse(localStorage.getItem(SK_CUSTOMERS) || '[]');
 
   // Set today's date on forms
   const today = new Date().toISOString().split('T')[0];
@@ -854,7 +991,9 @@ function init() {
   buildSaleList();
   buildFinanceList();
   buildWarehouseList();
+  buildCustomerList();
   updateStats();
+  checkOverdue();
   if (window.innerWidth <= 700) document.body.classList.add('has-bnav');
   window.addEventListener('resize', () => document.body.classList.toggle('has-bnav', window.innerWidth <= 700));
   applyTheme(localStorage.getItem('tt_theme') || 'auto');
@@ -896,7 +1035,7 @@ function updateSettingsStatus() {
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
 function switchTab(tab) {
-  ['chat','repair','sales','finance','stats','settings','warehouse'].forEach(t => {
+  ['chat','repair','sales','finance','stats','settings','warehouse','customers'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
     const nb = document.getElementById('nav-'+t);
     if (nb) nb.classList.toggle('active', t === tab);
@@ -910,14 +1049,16 @@ function switchTab(tab) {
     finance:'Thu / Chi',
     stats:'Thống kê & Báo cáo',
     settings:'Cài đặt',
-    warehouse:'Kho hàng'
+    warehouse:'Kho hàng',
+    customers:'Khách hàng thân thiết'
   };
   document.getElementById('tab-title').textContent = titles[tab] || tab;
-  if (tab === 'stats') updateStats();
+  if (tab === 'stats') { updateStats(); setTimeout(renderChart, 100); checkOverdue(); }
   if (tab === 'repair') buildRepairList();
   if (tab === 'sales') buildSaleList();
   if (tab === 'finance') buildFinanceList();
   if (tab === 'warehouse') buildWarehouseList();
+  if (tab === 'customers') buildCustomerList();
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -1008,22 +1149,39 @@ function buildRepairList() {
   badge.style.display = total > 0 ? '' : 'none';
   badge.textContent = total;
 
+  const searchQ = (document.getElementById('repair-search')?.value || '').toLowerCase().trim();
+
   let filtered = REPAIRS;
   if (repairFilter !== 'all') filtered = REPAIRS.filter(r => r.status === repairFilter);
+  if (searchQ) {
+    filtered = filtered.filter(r =>
+      (r.owner||'').toLowerCase().includes(searchQ) ||
+      (r.device||'').toLowerCase().includes(searchQ) ||
+      (r.imei||'').toLowerCase().includes(searchQ) ||
+      (r.phone||'').toLowerCase().includes(searchQ) ||
+      (r.issue||'').toLowerCase().includes(searchQ)
+    );
+  }
   document.getElementById('repair-hd').textContent = `Danh sách phiếu sửa (${filtered.length}/${REPAIRS.length})`;
 
   if (filtered.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🔧</div>Không có phiếu nào.<br>Thêm phiếu nhận máy ở trên!</div>';
+    list.innerHTML = searchQ
+      ? `<div class="empty-state"><div class="empty-icon">🔍</div>Không tìm thấy kết quả cho "<strong>${escHtml(searchQ)}</strong>"</div>`
+      : '<div class="empty-state"><div class="empty-icon">🔧</div>Không có phiếu nào.<br>Thêm phiếu nhận máy ở trên!</div>';
     return;
   }
 
   const statusMap = { dang_sua: { label:'🔧 Đang sửa', cls:'badge-amber' }, xong_chua_giao: { label:'✅ Xong, chưa giao', cls:'badge-accent' }, da_giao: { label:'📦 Đã giao', cls:'badge-green' } };
 
+  // Overdue check: đang sửa > 3 ngày
+  const now = new Date();
   list.innerHTML = filtered.map(r => {
     const st = statusMap[r.status] || { label: r.status, cls:'badge-amber' };
     const net = r.profit - r.cost;
     const netCls = net >= 0 ? 'badge-green' : 'badge-red';
     const netLabel = net >= 0 ? `+${fmtMoney(net)} lãi` : `${fmtMoney(net)} lỗ`;
+    const daysSince = r.date ? Math.floor((now - new Date(r.date)) / 86400000) : 0;
+    const overdueWarn = (r.status !== 'da_giao' && daysSince >= 3) ? `<span class="badge badge-red">⏰ ${daysSince} ngày</span>` : '';
     return `<div class="repair-card">
       <div class="card-top">
         <div class="card-icon repair-icon">🔧</div>
@@ -1035,6 +1193,7 @@ function buildRepairList() {
       </div>
       <div class="card-badges">
         <span class="badge ${st.cls}">${st.label}</span>
+        ${overdueWarn}
         ${r.imei ? `<span class="imei-code">IMEI: ${escHtml(r.imei)}</span>` : ''}
         ${r.pass ? `<span class="badge badge-purple">🔐 ${escHtml(r.pass)}</span>` : ''}
         ${r.profit > 0 ? `<span class="badge badge-green">Thu: ${fmtMoney(r.profit)}</span>` : ''}
@@ -1045,6 +1204,8 @@ function buildRepairList() {
         ${r.status !== 'da_giao' ? `<button class="btn-done" onclick="updateRepairStatus(${r.id}, '${r.status==='dang_sua'?'xong_chua_giao':'da_giao'}')">
           ${r.status==='dang_sua'?'✅ Đã sửa xong':'📦 Đã giao khách'}
         </button>` : ''}
+        <button class="btn-edit" onclick="openEditRepair(${r.id})">✏️ Sửa</button>
+        <button class="btn-print" onclick="printRepairTicket(${r.id})">🖨️ In phiếu</button>
         <button class="btn-del" onclick="deleteRepair(${r.id})">🗑 Xóa</button>
       </div>
     </div>`;
@@ -1126,21 +1287,36 @@ function markSaleReturned(id) {
   s._originalProfit = s.profit;
   s.returned = true;
 
+  // Hoàn trả: lãi bán luôn về 0, phí % ghi vào Thu ngoài riêng
+  s.profit = 0;
   if (pct === 0) {
-    s.profit = 0;
     s.returnNote = 'Hoan tra toan bo';
   } else {
     const fee = Math.round(s.price * pct / 100);
-    s.profit = fee;
-    s.returnNote = 'Hoan tra, khach chiu ' + pct + '% (' + fmtMoney(fee) + ')';
+    s.returnNote = 'Hoan tra, khach chiu ' + pct + '% = ' + fmtMoney(fee);
+    // Tự động ghi phí vào Thu ngoài
+    const feeRecord = {
+      type: 'thu',
+      amount: fee,
+      desc: 'Phi hoan tra ' + pct + '% - ' + s.device + (s.buyer ? ' / ' + s.buyer : ''),
+      date: todayStr(),
+      cat: 'Phi hoan tra',
+      note: s.returnNote,
+      id: Date.now() + Math.random(),
+      createdAt: new Date().toLocaleString('vi-VN')
+    };
+    FINANCE.unshift(feeRecord);
+    saveFinance();
+    buildFinanceList();
   }
 
   saveSales(); buildSaleList(); updateStats();
+  // Reset chat để AI đọc lại data mới nhất, tránh nhầm lẫn từ history cũ
   chatHistory = []; localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
 
   const msg = pct === 0
-    ? 'Da danh dau hoan tra toan bo. Lai = 0d.'
-    : 'Hoan tra voi phi ' + pct + '%. Cua hang giu lai ' + fmtMoney(s.profit) + '.';
+    ? 'Da danh dau hoan tra toan bo. Lai = 0d. (Chat AI da reset de doc lai du lieu moi.)'
+    : 'Hoan tra voi phi ' + pct + '%. Cua hang giu lai ' + fmtMoney(s.profit) + '. (Chat AI da reset de doc lai du lieu moi.)';
   alert(msg);
 }
 
@@ -1153,20 +1329,31 @@ function setSaleFilter(f, btn) {
 
 function buildSaleList() {
   const list = document.getElementById('sales-list');
+  const searchQ = (document.getElementById('sales-search')?.value || '').toLowerCase().trim();
   let filtered = SALES;
   if (saleFilter === 'lai') filtered = SALES.filter(s => s.profit >= 0);
   else if (saleFilter === 'lo') filtered = SALES.filter(s => s.profit < 0);
+  if (searchQ) {
+    filtered = filtered.filter(s =>
+      (s.device||'').toLowerCase().includes(searchQ) ||
+      (s.imei||'').toLowerCase().includes(searchQ) ||
+      (s.buyer||'').toLowerCase().includes(searchQ) ||
+      (s.note||'').toLowerCase().includes(searchQ)
+    );
+  }
   document.getElementById('sales-hd').textContent = `Danh sách máy đã bán (${filtered.length}/${SALES.length})`;
 
   if (filtered.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="empty-icon">💰</div>Chưa có giao dịch nào.<br>Thêm máy bán ở trên!</div>';
+    list.innerHTML = searchQ
+      ? `<div class="empty-state"><div class="empty-icon">🔍</div>Không tìm thấy kết quả cho "<strong>${escHtml(searchQ)}</strong>"</div>`
+      : '<div class="empty-state"><div class="empty-icon">💰</div>Chưa có giao dịch nào.<br>Thêm máy bán ở trên!</div>';
     return;
   }
 
   list.innerHTML = filtered.map(s => {
     const pCls = s.returned ? 'badge-purple' : (s.profit >= 0 ? 'badge-green' : 'badge-red');
     const pLabel = s.returned
-      ? (s.returnNote ? `↩ ${s.returnNote} · giữ ${fmtMoney(s.profit)}` : `↩ Hoàn trả (lãi ${fmtMoney(s.profit)} không tính)`)
+      ? (s.returnNote ? `↩ ${s.returnNote}` : `↩ Hoàn trả toàn bộ`)
       : (s.profit >= 0 ? `📈 Lãi ${fmtMoney(s.profit)}` : `📉 Lỗ ${fmtMoney(Math.abs(s.profit))}`);
     const returnedStyle = s.returned ? 'opacity:0.6;border-left:3px solid var(--purple);' : '';
     const returnBtnLabel = s.returned ? '↩ Bỏ hoàn trả' : '↩ Đánh dấu hoàn trả';
@@ -1187,6 +1374,8 @@ function buildSaleList() {
       </div>
       <div class="card-actions">
         <button class="btn-done" style="background:var(--purple-dim);color:var(--purple);border-color:rgba(155,114,245,0.2);" onclick="markSaleReturned(${s.id})">${returnBtnLabel}</button>
+        <button class="btn-edit" onclick="openEditSale(${s.id})">✏️ Sửa</button>
+        <button class="btn-print" onclick="printSaleInvoice(${s.id})">🖨️ In hoá đơn</button>
         <button class="btn-del" onclick="deleteSale(${s.id})">🗑 Xóa</button>
       </div>
     </div>`;
@@ -1247,7 +1436,7 @@ function updateStats() {
   const recent5S = SALES.slice(0,5);
   recS.innerHTML = recent5S.length ? recent5S.map(s => {
     const pDisplay = s.returned
-      ? `<span style="color:var(--purple);">&#8629; Ho&#224;n tr&#7843;</span>`
+      ? `<span style="color:var(--purple);">&#8629; ${s.returnNote||'Ho&#224;n tr&#7843;'}</span>`
       : `<span style="color:${(s.profit||0)>=0?'var(--green)':'var(--red)'};">${(s.profit||0)>=0?'+':''}${fmtMoney(s.profit||0)}</span>`;
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;${s.returned?'opacity:0.6;':''}">
       <span>&#128241; <strong>${escHtml(s.device)}</strong>${s.returned?' <span style="color:var(--purple);font-size:10px;">[Ho&#224;n tr&#7843;]</span>':''} <span style="color:var(--text3)">${fmtDate(s.date)}</span></span>
@@ -1578,10 +1767,11 @@ ${finLines}
 ${whLines}
 Tồn kho hiện tại: ${stockSummary}
 
-─ TÀI CHÍNH THÁNG NÀY:
+─ TÀI CHÍNH THÁNG NÀY (đã tính đúng cả sale hoàn trả với phí %):
 Lãi sửa: ${fmtMoney(monthRepairNet)} | Lãi bán: ${fmtMoney(monthSaleNet)}
 Thu ngoài: ${fmtMoney(monthFinIn)} | Chi ngoài: ${fmtMoney(monthFinOut)}
 Tổng lãi sửa: ${fmtMoney(totalRepairNet)} | Tổng lãi bán: ${fmtMoney(totalSaleNet)}
+LƯU Ý: Lãi bán đã bao gồm cả phí giữ lại từ các máy hoàn trả. Đây là con số CHÍNH XÁC, không được tự điều chỉnh.
 
 NHIỆM VỤ — TỰ ĐỘNG NHẬN DẠNG VÀ NHẬP DỮ LIỆU:
 1. Câu hỏi về cửa hàng → trả lời dựa dữ liệu trên
@@ -1638,7 +1828,7 @@ FORMAT ACTIONS:
 
 QUY TẮC QUAN TRỌNG:
 - Nếu người dùng nói hàng bị "back", "hoàn trả", "khách trả lại máy" → hỏi tên máy/IMEI cụ thể rồi hướng dẫn người dùng nhấn nút "↩ Đánh dấu hoàn trả" trên thẻ máy đó trong tab Bán máy. KHÔNG tự tạo giao dịch kho hay xóa bản ghi bán. Chỉ khi đánh dấu hoàn trả thì máy mới bị loại khỏi tính lãi
-- Các máy có [ĐÃ HOÀN TRẢ] trong danh sách bán → KHÔNG tính vào lãi bán khi tổng hợp
+- Các máy có [HOÀN TRẢ] trong danh sách bán: lãi_ròng đã được cập nhật đúng (nếu khách chịu % phí thì lãi = phí đó, nếu hoàn toàn thì lãi = 0). LUÔN dùng lãi_ròng trong dữ liệu để tính, KHÔNG tự quy về 0
 - DỮ LIỆU THỰC TẾ HIỆN TẠI trong system prompt là nguồn chính xác nhất — tin vào đó, không tin lịch sử chat
 - Nếu một phiếu KHÔNG còn trong danh sách trên → nó đã bị xóa → TUYỆT ĐỐI KHÔNG tạo lại, dù người dùng yêu cầu "nhập lại" hay "thêm lại"
 - Nếu người dùng muốn nhập lại phiếu đã xóa, hãy hỏi: "Bạn có muốn tạo phiếu MỚI hoàn toàn cho [tên máy]?" và chờ xác nhận rõ ràng, không tự ý tạo
@@ -2065,7 +2255,385 @@ Nếu không đọc được: {"found":false,"note":"lý do"}`;
   btn.innerHTML = '✨ AI đọc ảnh & tự điền vào form';
 }
 
-// ─── THEME ────────────────────────────────────────────────────────────────────
+// ─── OVERDUE ALERTS ──────────────────────────────────────────────────────────
+function checkOverdue() {
+  const now = new Date();
+  const overdue = REPAIRS.filter(r => {
+    if (r.status === 'da_giao') return false;
+    const days = r.date ? Math.floor((now - new Date(r.date)) / 86400000) : 0;
+    return days >= 3;
+  });
+  // Update stats tab alert
+  const ow = document.getElementById('overdue-alert-wrap');
+  if (ow) {
+    if (overdue.length > 0) {
+      ow.innerHTML = `<div class="alert-banner" style="margin-bottom:12px;">
+        <span class="alert-bell">🔔</span>
+        <div style="flex:1;">
+          <strong>${overdue.length} máy chưa xong / chưa giao từ 3+ ngày!</strong>
+          <div style="font-size:11.5px;margin-top:3px;opacity:0.8;">${overdue.map(r=>`${r.owner} (${r.device})`).slice(0,3).join(', ')}${overdue.length>3?' ...':''}</div>
+        </div>
+        <button onclick="switchTab('repair')" style="padding:5px 12px;border-radius:20px;border:1px solid rgba(240,160,48,0.4);background:transparent;color:var(--amber);font-size:11px;cursor:pointer;font-family:inherit;">Xem →</button>
+      </div>`;
+    } else {
+      ow.innerHTML = '';
+    }
+  }
+  // Sidebar badge
+  const badge = document.getElementById('repair-badge');
+  const pending = REPAIRS.filter(r => r.status === 'xong_chua_giao').length;
+  const repairing = REPAIRS.filter(r => r.status === 'dang_sua').length;
+  if (badge) {
+    const total = repairing + pending;
+    badge.style.display = total > 0 ? '' : 'none';
+    badge.textContent = total;
+  }
+}
+
+// ─── EDIT MODAL ──────────────────────────────────────────────────────────────
+function openEditRepair(id) {
+  const r = REPAIRS.find(x => x.id === id);
+  if (!r) return;
+  editingId = id; editingType = 'repair';
+  document.getElementById('edit-modal-title').textContent = '✏️ Chỉnh sửa phiếu sửa';
+  document.getElementById('edit-modal-body').innerHTML = `
+    <div class="form-grid col2">
+      <div class="field-wrap"><label class="field-label">Tên chủ máy *</label><input class="field" id="em-owner" value="${escHtml(r.owner||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Số điện thoại</label><input class="field" id="em-phone" value="${escHtml(r.phone||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Tên máy *</label><input class="field" id="em-device" value="${escHtml(r.device||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">IMEI</label><input class="field" id="em-imei" value="${escHtml(r.imei||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Mật khẩu</label><input class="field" id="em-pass" value="${escHtml(r.pass||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Lỗi / Vấn đề</label><input class="field" id="em-issue" value="${escHtml(r.issue||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Thu về (profit)</label><input class="field" type="number" id="em-profit" value="${r.profit||0}"/></div>
+      <div class="field-wrap"><label class="field-label">Chi ra (cost)</label><input class="field" type="number" id="em-cost" value="${r.cost||0}"/></div>
+      <div class="field-wrap"><label class="field-label">Ngày nhận</label><input class="field" type="date" id="em-date" value="${r.date||''}"/></div>
+      <div class="field-wrap"><label class="field-label">Trạng thái</label>
+        <select class="field" id="em-status">
+          <option value="dang_sua" ${r.status==='dang_sua'?'selected':''}>🔧 Đang sửa</option>
+          <option value="xong_chua_giao" ${r.status==='xong_chua_giao'?'selected':''}>✅ Xong, chưa giao</option>
+          <option value="da_giao" ${r.status==='da_giao'?'selected':''}>📦 Đã giao</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-wrap"><label class="field-label">Ghi chú</label><textarea class="field" id="em-note">${escHtml(r.note||'')}</textarea></div>`;
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+
+function openEditSale(id) {
+  const s = SALES.find(x => x.id === id);
+  if (!s) return;
+  editingId = id; editingType = 'sale';
+  document.getElementById('edit-modal-title').textContent = '✏️ Chỉnh sửa bán hàng';
+  document.getElementById('edit-modal-body').innerHTML = `
+    <div class="form-grid col2">
+      <div class="field-wrap"><label class="field-label">Tên máy *</label><input class="field" id="em-device" value="${escHtml(s.device||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">IMEI</label><input class="field" id="em-imei" value="${escHtml(s.imei||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Tình trạng</label>
+        <select class="field" id="em-condition">
+          <option value="moi" ${s.condition==='moi'?'selected':''}>✨ Mới 100%</option>
+          <option value="like_new" ${s.condition==='like_new'?'selected':''}>🌟 Like New</option>
+          <option value="99" ${s.condition==='99'?'selected':''}>📱 99%</option>
+          <option value="97" ${s.condition==='97'?'selected':''}>📱 97%</option>
+          <option value="cu_dep" ${s.condition==='cu_dep'?'selected':''}>📱 Cũ đẹp</option>
+          <option value="cu_thuong" ${s.condition==='cu_thuong'?'selected':''}>📱 Cũ thường</option>
+        </select>
+      </div>
+      <div class="field-wrap"><label class="field-label">Giá bán</label><input class="field" type="number" id="em-price" value="${s.price||0}"/></div>
+      <div class="field-wrap"><label class="field-label">Lãi/Lỗ</label><input class="field" type="number" id="em-profit" value="${s.profit||0}"/></div>
+      <div class="field-wrap"><label class="field-label">Ngày bán</label><input class="field" type="date" id="em-date" value="${s.date||''}"/></div>
+      <div class="field-wrap"><label class="field-label">Khách hàng</label><input class="field" id="em-buyer" value="${escHtml(s.buyer||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Nguồn máy</label>
+        <select class="field" id="em-source">
+          <option value="nhap_moi" ${s.source==='nhap_moi'?'selected':''}>Nhập mới</option>
+          <option value="hang_cu" ${s.source==='hang_cu'?'selected':''}>Hàng cũ</option>
+          <option value="khac" ${s.source==='khac'?'selected':''}>Khác</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-wrap"><label class="field-label">Ghi chú</label><textarea class="field" id="em-note">${escHtml(s.note||'')}</textarea></div>`;
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+  editingId = null; editingType = null;
+}
+
+function saveEdit() {
+  if (editingType === 'repair') {
+    const r = REPAIRS.find(x => x.id === editingId);
+    if (!r) return;
+    r.owner  = document.getElementById('em-owner').value.trim();
+    r.phone  = document.getElementById('em-phone').value.trim();
+    r.device = document.getElementById('em-device').value.trim();
+    r.imei   = document.getElementById('em-imei').value.trim();
+    r.pass   = document.getElementById('em-pass').value.trim();
+    r.issue  = document.getElementById('em-issue').value.trim();
+    r.profit = parseFloat(document.getElementById('em-profit').value) || 0;
+    r.cost   = parseFloat(document.getElementById('em-cost').value) || 0;
+    r.date   = document.getElementById('em-date').value;
+    r.status = document.getElementById('em-status').value;
+    r.note   = document.getElementById('em-note').value.trim();
+    r.updatedAt = new Date().toLocaleString('vi-VN');
+    saveRepairs(); buildRepairList(); updateStats(); checkOverdue();
+  } else if (editingType === 'sale') {
+    const s = SALES.find(x => x.id === editingId);
+    if (!s) return;
+    const condMap = { moi:'Mới 100%', like_new:'Like New', '99':'99%', '97':'97%', cu_dep:'Cũ đẹp', cu_thuong:'Cũ thường' };
+    s.device    = document.getElementById('em-device').value.trim();
+    s.imei      = document.getElementById('em-imei').value.trim();
+    s.condition = document.getElementById('em-condition').value;
+    s.conditionLabel = condMap[s.condition] || s.condition;
+    s.price     = parseFloat(document.getElementById('em-price').value) || 0;
+    s.profit    = parseFloat(document.getElementById('em-profit').value) || 0;
+    s.date      = document.getElementById('em-date').value;
+    s.buyer     = document.getElementById('em-buyer').value.trim();
+    s.source    = document.getElementById('em-source').value;
+    s.note      = document.getElementById('em-note').value.trim();
+    s.updatedAt = new Date().toLocaleString('vi-VN');
+    saveSales(); buildSaleList(); updateStats();
+  }
+  closeEditModal();
+}
+
+// ─── PRINT RECEIPT ──────────────────────────────────────────────────────────
+function printRepairTicket(id) {
+  const r = REPAIRS.find(x => x.id === id);
+  if (!r) return;
+  const net = (r.profit||0) - (r.cost||0);
+  const statusLabel = { dang_sua:'Đang sửa', xong_chua_giao:'Sửa xong, chưa giao', da_giao:'Đã giao khách' }[r.status] || r.status;
+  const html = `<div style="font-family:Arial,sans-serif;font-size:13px;color:#000;max-width:400px;margin:0 auto;">
+    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px;">
+      <div style="font-size:20px;font-weight:800;">📱 THUẬN TRIỀU</div>
+      <div style="font-size:12px;color:#555;">Phiếu nhận máy sửa chữa</div>
+      <div style="font-size:11px;color:#888;">In lúc: ${new Date().toLocaleString('vi-VN')}</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr><td style="padding:5px 0;color:#555;width:38%;">Chủ máy:</td><td style="font-weight:700;">${r.owner||'—'}</td></tr>
+      <tr><td style="padding:5px 0;color:#555;">Số điện thoại:</td><td>${r.phone||'—'}</td></tr>
+      <tr><td style="padding:5px 0;color:#555;">Thiết bị:</td><td style="font-weight:700;">${r.device||'—'}</td></tr>
+      ${r.imei?`<tr><td style="padding:5px 0;color:#555;">IMEI:</td><td style="font-family:monospace;">${r.imei}</td></tr>`:''}
+      ${r.pass?`<tr><td style="padding:5px 0;color:#555;">Mật khẩu:</td><td style="font-weight:700;color:#d93025;">${r.pass}</td></tr>`:''}
+      <tr><td style="padding:5px 0;color:#555;">Vấn đề:</td><td>${r.issue||'—'}</td></tr>
+      <tr><td style="padding:5px 0;color:#555;">Ngày nhận:</td><td>${fmtDate(r.date)}</td></tr>
+      <tr><td style="padding:5px 0;color:#555;">Trạng thái:</td><td>${statusLabel}</td></tr>
+      <tr><td style="padding:5px 0;color:#555;">Giá thu:</td><td style="font-weight:700;">${r.profit>0?fmtMoney(r.profit):'Chưa xác định'}</td></tr>
+      ${r.cost>0?`<tr><td style="padding:5px 0;color:#555;">Chi linh kiện:</td><td>${fmtMoney(r.cost)}</td></tr>`:''}
+      <tr><td style="padding:5px 0;color:#555;">Lãi ròng:</td><td style="font-weight:700;color:${net>=0?'#1aab5e':'#d93025'};">${fmtMoney(net)}</td></tr>
+      ${r.note?`<tr><td style="padding:5px 0;color:#555;">Ghi chú:</td><td>${r.note}</td></tr>`:''}
+    </table>
+    <div style="border-top:1px dashed #ccc;margin-top:14px;padding-top:10px;font-size:11px;text-align:center;color:#888;">
+      Cảm ơn quý khách! Liên hệ để biết tình trạng máy.<br>
+      <strong>Thuận Triều — Nha Trang</strong>
+    </div>
+  </div>`;
+  document.getElementById('print-area').innerHTML = html;
+  window.print();
+}
+
+function printSaleInvoice(id) {
+  const s = SALES.find(x => x.id === id);
+  if (!s) return;
+  const html = `<div style="font-family:Arial,sans-serif;font-size:13px;color:#000;max-width:400px;margin:0 auto;">
+    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px;">
+      <div style="font-size:20px;font-weight:800;">📱 THUẬN TRIỀU</div>
+      <div style="font-size:12px;color:#555;">Hoá đơn bán hàng</div>
+      <div style="font-size:11px;color:#888;">In lúc: ${new Date().toLocaleString('vi-VN')}</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr><td style="padding:5px 0;color:#555;width:38%;">Thiết bị:</td><td style="font-weight:700;">${s.device||'—'}</td></tr>
+      ${s.imei?`<tr><td style="padding:5px 0;color:#555;">IMEI:</td><td style="font-family:monospace;">${s.imei}</td></tr>`:''}
+      <tr><td style="padding:5px 0;color:#555;">Tình trạng:</td><td>${s.conditionLabel||s.condition||'—'}</td></tr>
+      <tr><td style="padding:5px 0;color:#555;">Giá bán:</td><td style="font-weight:800;font-size:16px;color:#1aab5e;">${fmtMoney(s.price)}</td></tr>
+      <tr><td style="padding:5px 0;color:#555;">Ngày bán:</td><td>${fmtDate(s.date)}</td></tr>
+      ${s.buyer?`<tr><td style="padding:5px 0;color:#555;">Khách hàng:</td><td style="font-weight:700;">${s.buyer}</td></tr>`:''}
+      ${s.note?`<tr><td style="padding:5px 0;color:#555;">Ghi chú:</td><td>${s.note}</td></tr>`:''}
+    </table>
+    <div style="border-top:1px dashed #ccc;margin-top:14px;padding-top:10px;font-size:11px;text-align:center;color:#888;">
+      Cảm ơn quý khách đã mua hàng tại Thuận Triều!<br>
+      <strong>Bảo hành theo điều khoản đã thoả thuận.</strong>
+    </div>
+  </div>`;
+  document.getElementById('print-area').innerHTML = html;
+  window.print();
+}
+
+// ─── CHART ───────────────────────────────────────────────────────────────────
+function setChartPeriod(p, btn) {
+  chartPeriod = p;
+  document.querySelectorAll('.chart-tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart();
+}
+
+function renderChart() {
+  const canvas = document.getElementById('revenue-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // Generate date labels
+  const labels = [], repairData = [], saleData = [], finData = [];
+  const now = new Date();
+
+  let periods = [];
+  if (chartPeriod === 'week') {
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now); d.setDate(d.getDate() - i);
+      periods.push({ label: `${d.getDate()}/${d.getMonth()+1}`, prefix: d.toISOString().split('T')[0], type: 'day' });
+    }
+  } else if (chartPeriod === 'month') {
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now); d.setDate(d.getDate() - i);
+      const ds = d.toISOString().split('T')[0];
+      periods.push({ label: i % 5 === 0 ? `${d.getDate()}/${d.getMonth()+1}` : '', prefix: ds, type: 'day' });
+    }
+  } else if (chartPeriod === '6month') {
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const prefix = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      periods.push({ label: `T${d.getMonth()+1}/${d.getFullYear().toString().slice(2)}`, prefix, type: 'month' });
+    }
+  } else {
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const prefix = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      periods.push({ label: `T${d.getMonth()+1}`, prefix, type: 'month' });
+    }
+  }
+
+  periods.forEach(p => {
+    labels.push(p.label);
+    const repNet = REPAIRS.filter(r => r.date && r.date.startsWith(p.prefix)).reduce((s,r) => s+(r.profit||0)-(r.cost||0), 0);
+    const saleNet = SALES.filter(s => s.date && s.date.startsWith(p.prefix)).reduce((s,x) => s+(x.profit||0), 0);
+    const finNet = FINANCE.filter(f => f.date && f.date.startsWith(p.prefix)).reduce((s,f) => s + (f.type==='thu' ? f.amount : -f.amount), 0);
+    repairData.push(Math.round(repNet/1000));
+    saleData.push(Math.round(saleNet/1000));
+    finData.push(Math.round(finNet/1000));
+  });
+
+  if (revenueChart) { revenueChart.destroy(); revenueChart = null; }
+
+  const isDark = !document.body.classList.contains('force-light') &&
+    (document.body.classList.contains('force-dark') || window.matchMedia('(prefers-color-scheme:dark)').matches);
+  const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+  const textColor = isDark ? '#8b90a7' : '#4a5068';
+
+  // Load Chart.js from CDN if not already loaded
+  if (typeof Chart === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+    s.onload = () => drawChart(ctx, labels, repairData, saleData, finData, gridColor, textColor);
+    document.head.appendChild(s);
+  } else {
+    drawChart(ctx, labels, repairData, saleData, finData, gridColor, textColor);
+  }
+}
+
+function drawChart(ctx, labels, repairData, saleData, finData, gridColor, textColor) {
+  revenueChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: '🔧 Lãi sửa (k)', data: repairData, backgroundColor: 'rgba(240,160,48,0.7)', borderRadius: 4 },
+        { label: '💰 Lãi bán (k)', data: saleData, backgroundColor: 'rgba(52,200,122,0.7)', borderRadius: 4 },
+        { label: '💳 Thu/Chi (k)', data: finData, backgroundColor: 'rgba(79,142,247,0.6)', borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { labels: { color: textColor, font: { size: 11 }, boxWidth: 12 } } },
+      scales: {
+        x: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } },
+        y: { ticks: { color: textColor, font: { size: 10 }, callback: v => v+'k' }, grid: { color: gridColor } }
+      }
+    }
+  });
+}
+
+// ─── CUSTOMERS ───────────────────────────────────────────────────────────────
+function saveCustomers() { localStorage.setItem(SK_CUSTOMERS, JSON.stringify(CUSTOMERS)); }
+
+function setCustomerFilter(f, btn) {
+  customerFilter = f;
+  document.querySelectorAll('#tab-customers .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildCustomerList();
+}
+
+function buildCustomerList() {
+  // Auto-extract customers from repairs + sales
+  const custMap = {};
+
+  REPAIRS.forEach(r => {
+    if (!r.owner) return;
+    const key = r.owner.toLowerCase().trim();
+    if (!custMap[key]) custMap[key] = { name: r.owner, phone: r.phone||'', repairs:[], sales:[], totalSpend:0 };
+    custMap[key].repairs.push(r);
+    if (r.phone && !custMap[key].phone) custMap[key].phone = r.phone;
+    custMap[key].totalSpend += (r.profit||0);
+  });
+  SALES.forEach(s => {
+    if (!s.buyer) return;
+    const key = s.buyer.toLowerCase().trim();
+    if (!custMap[key]) custMap[key] = { name: s.buyer, phone: '', repairs:[], sales:[], totalSpend:0 };
+    custMap[key].sales.push(s);
+    custMap[key].totalSpend += (s.price||0);
+  });
+
+  let customers = Object.values(custMap);
+
+  // Tier logic
+  customers.forEach(c => {
+    const total = c.repairs.length + c.sales.length;
+    c.tier = total >= 5 ? 'vip' : total >= 2 ? 'loyal' : 'new';
+    c.totalCount = total;
+  });
+
+  const searchQ = (document.getElementById('customer-search')?.value || '').toLowerCase().trim();
+  if (customerFilter === 'vip') customers = customers.filter(c => c.tier === 'vip');
+  else if (customerFilter === 'loyal') customers = customers.filter(c => c.tier === 'loyal');
+  if (searchQ) customers = customers.filter(c =>
+    c.name.toLowerCase().includes(searchQ) ||
+    (c.phone||'').includes(searchQ)
+  );
+
+  customers.sort((a,b) => b.totalCount - a.totalCount);
+
+  const hd = document.getElementById('customers-hd');
+  if (hd) hd.textContent = `Khách hàng (${customers.length})`;
+
+  const list = document.getElementById('customers-list');
+  if (!list) return;
+
+  if (customers.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🏷️</div>Chưa có dữ liệu khách hàng.<br>Nhập tên khách vào phiếu sửa hoặc bán máy!</div>';
+    return;
+  }
+
+  const tierLabel = { vip:'⭐ VIP', loyal:'💚 Thân thiết', new:'🆕 Mới' };
+  const tierCls = { vip:'tier-vip', loyal:'tier-loyal', new:'tier-new' };
+
+  list.innerHTML = customers.map(c => `
+    <div class="customer-card">
+      <div class="cust-top">
+        <div class="cust-avatar">👤</div>
+        <div class="cust-info">
+          <div class="cust-name">${escHtml(c.name)}</div>
+          <div class="cust-phone">${c.phone ? '📞 '+escHtml(c.phone) : '<span style="color:var(--text3)">Chưa có SĐT</span>'}</div>
+        </div>
+        <span class="badge ${tierCls[c.tier]}">${tierLabel[c.tier]}</span>
+      </div>
+      <div class="cust-stats">
+        ${c.repairs.length > 0 ? `<span class="cust-stat">🔧 ${c.repairs.length} lần sửa</span>` : ''}
+        ${c.sales.length > 0 ? `<span class="cust-stat">💰 ${c.sales.length} lần mua</span>` : ''}
+        ${c.totalSpend > 0 ? `<span class="cust-stat" style="color:var(--green);">Tổng: ${fmtMoney(c.totalSpend)}</span>` : ''}
+        ${c.repairs.length > 0 ? `<span class="cust-stat" style="font-size:10.5px;">Gần nhất: ${fmtDate(c.repairs[0]?.date)}</span>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+// ─── THEME ───────────────────────────────────────────────────────────────────
 const THEME_CYCLE = ['auto','light','dark'];
 const THEME_ICONS = { auto:'🌓', light:'☀️', dark:'🌙' };
 function applyTheme(t) {
