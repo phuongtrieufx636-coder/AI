@@ -802,15 +802,47 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
           2. Dán code Apps Script vào (xem mẫu bên dưới)<br>
           3. Deploy → Web App → Anyone → Copy URL dán vào ô trên
           <details style="margin-top:8px;">
-            <summary style="cursor:pointer;color:var(--accent);">📋 Xem code Apps Script mẫu</summary>
+            <summary style="cursor:pointer;color:var(--accent);">📋 Xem code Apps Script mẫu (đã có backup JSON)</summary>
             <pre style="margin-top:8px;font-size:10px;background:var(--bg);padding:10px;border-radius:6px;overflow-x:auto;white-space:pre-wrap;border:1px solid var(--border);">function doPost(e) {
-  var data = JSON.parse(e.postData.contents);
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(data.sheet) || ss.insertSheet(data.sheet);
-  if (data.clear) sheet.clearContents();
-  if (data.headers && sheet.getLastRow() === 0) sheet.appendRow(data.headers);
-  data.rows.forEach(function(row) { sheet.appendRow(row); });
-  return ContentService.createTextOutput(JSON.stringify({ok:true,added:data.rows.length})).setMimeType(ContentService.MimeType.JSON);
+  try {
+    var data = JSON.parse(e.postData.contents);
+    // Backup JSON lên Drive
+    if (data.type === 'backup_json') {
+      var folder = DriveApp.getRootFolder();
+      var fileName = 'ThuanTrieu-backup.json';
+      var files = folder.getFilesByName(fileName);
+      while (files.hasNext()) { files.next().setTrashed(true); }
+      folder.createFile(fileName, data.content, MimeType.PLAIN_TEXT);
+      return ContentService.createTextOutput('{"ok":true}').setMimeType(ContentService.MimeType.JSON);
+    }
+    // Ghi vào Sheet
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(data.sheet) || ss.insertSheet(data.sheet);
+    if (data.clear) sheet.clearContents();
+    if (data.headers) {
+      var hr = sheet.getRange(1,1,1,data.headers.length);
+      hr.setValues([data.headers]);
+      hr.setFontWeight('bold');
+      hr.setBackground('#1a73e8');
+      hr.setFontColor('#ffffff');
+    }
+    if (data.rows && data.rows.length > 0)
+      sheet.getRange(2,1,data.rows.length,data.rows[0].length).setValues(data.rows);
+    sheet.autoResizeColumns(1, data.headers ? data.headers.length : 10);
+    return ContentService.createTextOutput('{"ok":true}').setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput('{"error":"'+err.message+'"}').setMimeType(ContentService.MimeType.JSON);
+  }
+}
+function doGet(e) {
+  try {
+    var files = DriveApp.getFilesByName('ThuanTrieu-backup.json');
+    if (files.hasNext())
+      return ContentService.createTextOutput(files.next().getBlob().getDataAsString()).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput('{"error":"Chua co backup"}').setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput('{"error":"'+err.message+'"}').setMimeType(ContentService.MimeType.JSON);
+  }
 }</pre>
           </details>
         </div>
@@ -818,11 +850,15 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
 
       <div class="settings-section">
         <h4>💾 Sao lưu / Khôi phục dữ liệu</h4>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">Xuất toàn bộ dữ liệu phiếu sửa và bán hàng ra file JSON để sao lưu.</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">Xuất toàn bộ dữ liệu ra file JSON để sao lưu, hoặc khôi phục từ Google Drive server.</div>
         <input type="file" id="import-file" accept=".json" onchange="importData(event)" style="display:none" />
         <div class="export-btn-row">
-          <button class="btn-export" onclick="exportData()">📤 Xuất file lưu trữ (.json)</button>
-          <button class="btn-import" onclick="document.getElementById('import-file').click()">📥 Nhập file lưu trữ (.json)</button>
+          <button class="btn-export" onclick="exportData()">📤 Xuất file (.json)</button>
+          <button class="btn-import" onclick="document.getElementById('import-file').click()">📥 Nhập file (.json)</button>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">☁️ <strong>Đổi máy mới?</strong> Nhấn nút bên dưới để tải toàn bộ dữ liệu từ Google Drive về máy này. Cần đã nhập URL Apps Script ở trên.</div>
+          <button id="btn-restore-server" class="btn-import" style="width:100%;justify-content:center;" onclick="restoreFromServer()">📲 Khôi phục dữ liệu từ server (đổi máy)</button>
         </div>
       </div>
 
@@ -1147,12 +1183,11 @@ function thisMonth() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 
-// ─── AUTO SYNC TO GOOGLE SHEETS ───────────────────────────────────────────────
+// ─── AUTO SYNC TO GOOGLE SHEETS + JSON BACKUP ────────────────────────────────
 let autoSyncTimer = null;
 function autoSyncToGsheet(which) {
   const url = localStorage.getItem('tt_gsheet_url');
-  if (!url) return; // Chưa cài URL thì bỏ qua
-  // Debounce: chờ 2 giây sau lần save cuối mới gửi (tránh gửi liên tục)
+  if (!url) return;
   clearTimeout(autoSyncTimer);
   autoSyncTimer = setTimeout(async () => {
     const tasks = [];
@@ -1184,16 +1219,50 @@ function autoSyncToGsheet(which) {
         rows: WAREHOUSE.map(w => [w.id, w.type==='nhap'?'Nhập':'Xuất', w.name, w.quantity||1, w.unit||'cái', w.price||0, w.supplier, w.date, w.category, w.note])
       });
     }
-    // Hiện chấm nhỏ báo đang sync
     showAutoSyncDot('syncing');
+    // Gửi từng sheet
     for (const task of tasks) {
       try {
         await fetch(url, { method:'POST', body: JSON.stringify(task), headers:{'Content-Type':'text/plain'}, mode:'no-cors' });
         await new Promise(r => setTimeout(r, 600));
       } catch(e) { showAutoSyncDot('error'); return; }
     }
+    // Sau khi sync sheet xong → backup toàn bộ JSON lên Drive
+    try {
+      const backupData = {
+        type: 'backup_json',
+        content: JSON.stringify({ version:4, backedUpAt: new Date().toLocaleString('vi-VN'), repairs:REPAIRS, sales:SALES, finance:FINANCE, warehouse:WAREHOUSE })
+      };
+      await fetch(url, { method:'POST', body: JSON.stringify(backupData), headers:{'Content-Type':'text/plain'}, mode:'no-cors' });
+    } catch(e) { /* backup lỗi không báo */ }
     showAutoSyncDot('ok');
   }, 2000);
+}
+
+// Khôi phục dữ liệu từ server (dùng khi đổi máy)
+async function restoreFromServer() {
+  const url = localStorage.getItem('tt_gsheet_url');
+  if (!url) { alert('⚠️ Chưa nhập URL Apps Script trong Cài đặt!'); return; }
+  const btn = document.getElementById('btn-restore-server');
+  if (btn) { btn.textContent = '⏳ Đang tải...'; btn.disabled = true; }
+  try {
+    const res = await fetch(url, { method:'GET' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    if (!d.repairs && !d.sales) throw new Error('File backup không hợp lệ');
+    const info = `📦 Tìm thấy backup:\n• ${(d.repairs||[]).length} phiếu sửa\n• ${(d.sales||[]).length} bán hàng\n• ${(d.finance||[]).length} thu/chi\n• ${(d.warehouse||[]).length} kho hàng\n\nBackup lúc: ${d.backedUpAt||'không rõ'}\n\nKhôi phục sẽ GHI ĐÈ dữ liệu hiện tại. Tiếp tục?`;
+    if (!confirm(info)) { if (btn) { btn.textContent = '📲 Khôi phục từ server'; btn.disabled = false; } return; }
+    if (d.repairs)   { REPAIRS   = d.repairs;   saveRepairs();   buildRepairList(); }
+    if (d.sales)     { SALES     = d.sales;     saveSales();     buildSaleList();   }
+    if (d.finance)   { FINANCE   = d.finance;   saveFinance();   buildFinanceList(); }
+    if (d.warehouse) { WAREHOUSE = d.warehouse; saveWarehouse(); buildWarehouseList(); }
+    updateStats(); checkOverdue();
+    alert('✅ Khôi phục thành công! Toàn bộ dữ liệu đã được nạp vào máy này.');
+  } catch(err) {
+    alert('❌ Lỗi: ' + err.message + '\n\nHãy chắc Apps Script đã deploy đúng với code mới nhất.');
+  }
+  if (btn) { btn.textContent = '📲 Khôi phục từ server'; btn.disabled = false; }
 }
 function showAutoSyncDot(state) {
   let dot = document.getElementById('auto-sync-dot');
