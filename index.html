@@ -1111,12 +1111,11 @@ function addRepair(data) {
   saveRepairs();
   buildRepairList();
   updateStats();
-  // Always reset the form so the next customer can be entered without F5
-  ['rep-owner','rep-phone','rep-device','rep-imei','rep-pass','rep-issue','rep-profit','rep-cost','rep-note'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  const repDate = document.getElementById('rep-date'); if (repDate) repDate.value = todayStr();
-  const repStatus = document.getElementById('rep-status'); if (repStatus) repStatus.value = 'dang_sua';
+  if (!data) {
+    ['rep-owner','rep-phone','rep-device','rep-imei','rep-pass','rep-issue','rep-profit','rep-cost','rep-note'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('rep-date').value = todayStr();
+    document.getElementById('rep-status').value = 'dang_sua';
+  }
   return true;
 }
 
@@ -1237,13 +1236,12 @@ function addSale(data) {
   saveSales();
   buildSaleList();
   updateStats();
-  // Always reset the form so the next customer can be entered without F5
-  ['sale-device','sale-imei','sale-price','sale-profit','sale-buyer','sale-note'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-  const saleDateEl = document.getElementById('sale-date'); if (saleDateEl) saleDateEl.value = todayStr();
-  const saleCondEl = document.getElementById('sale-condition'); if (saleCondEl) saleCondEl.value = 'moi';
-  const saleSrcEl  = document.getElementById('sale-source');    if (saleSrcEl)  saleSrcEl.value  = 'nhap_moi';
+  if (!data) {
+    ['sale-device','sale-imei','sale-price','sale-profit','sale-buyer','sale-note'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('sale-date').value = todayStr();
+    document.getElementById('sale-condition').value = 'moi';
+    document.getElementById('sale-source').value = 'nhap_moi';
+  }
   return true;
 }
 
@@ -2318,36 +2316,24 @@ function openEditRepair(id) {
   document.getElementById('edit-modal-title').textContent = '✏️ Chỉnh sửa phiếu sửa';
   document.getElementById('edit-modal-body').innerHTML = `
     <div class="form-grid col2">
-      <div class="field-wrap"><label class="field-label">Tên chủ máy *</label><input class="field" id="em-owner"/></div>
-      <div class="field-wrap"><label class="field-label">Số điện thoại</label><input class="field" id="em-phone"/></div>
-      <div class="field-wrap"><label class="field-label">Tên máy *</label><input class="field" id="em-device"/></div>
-      <div class="field-wrap"><label class="field-label">IMEI</label><input class="field" id="em-imei"/></div>
-      <div class="field-wrap"><label class="field-label">Mật khẩu</label><input class="field" id="em-pass"/></div>
-      <div class="field-wrap"><label class="field-label">Lỗi / Vấn đề</label><input class="field" id="em-issue"/></div>
-      <div class="field-wrap"><label class="field-label">Thu về (profit)</label><input class="field" type="number" id="em-profit"/></div>
-      <div class="field-wrap"><label class="field-label">Chi ra (cost)</label><input class="field" type="number" id="em-cost"/></div>
-      <div class="field-wrap"><label class="field-label">Ngày nhận</label><input class="field" type="date" id="em-date"/></div>
+      <div class="field-wrap"><label class="field-label">Tên chủ máy *</label><input class="field" id="em-owner" value="${escHtml(r.owner||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Số điện thoại</label><input class="field" id="em-phone" value="${escHtml(r.phone||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Tên máy *</label><input class="field" id="em-device" value="${escHtml(r.device||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">IMEI</label><input class="field" id="em-imei" value="${escHtml(r.imei||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Mật khẩu</label><input class="field" id="em-pass" value="${escHtml(r.pass||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Lỗi / Vấn đề</label><input class="field" id="em-issue" value="${escHtml(r.issue||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Thu về (profit)</label><input class="field" type="number" id="em-profit" value="${r.profit||0}"/></div>
+      <div class="field-wrap"><label class="field-label">Chi ra (cost)</label><input class="field" type="number" id="em-cost" value="${r.cost||0}"/></div>
+      <div class="field-wrap"><label class="field-label">Ngày nhận</label><input class="field" type="date" id="em-date" value="${r.date||''}"/></div>
       <div class="field-wrap"><label class="field-label">Trạng thái</label>
         <select class="field" id="em-status">
-          <option value="dang_sua">🔧 Đang sửa</option>
-          <option value="xong_chua_giao">✅ Xong, chưa giao</option>
-          <option value="da_giao">📦 Đã giao</option>
+          <option value="dang_sua" ${r.status==='dang_sua'?'selected':''}>🔧 Đang sửa</option>
+          <option value="xong_chua_giao" ${r.status==='xong_chua_giao'?'selected':''}>✅ Xong, chưa giao</option>
+          <option value="da_giao" ${r.status==='da_giao'?'selected':''}>📦 Đã giao</option>
         </select>
       </div>
     </div>
-    <div class="field-wrap"><label class="field-label">Ghi chú</label><textarea class="field" id="em-note"></textarea></div>`;
-  // Set values via JS to avoid HTML-encoding issues
-  document.getElementById('em-owner').value  = r.owner  || '';
-  document.getElementById('em-phone').value  = r.phone  || '';
-  document.getElementById('em-device').value = r.device || '';
-  document.getElementById('em-imei').value   = r.imei   || '';
-  document.getElementById('em-pass').value   = r.pass   || '';
-  document.getElementById('em-issue').value  = r.issue  || '';
-  document.getElementById('em-profit').value = r.profit != null ? r.profit : 0;
-  document.getElementById('em-cost').value   = r.cost   != null ? r.cost   : 0;
-  document.getElementById('em-date').value   = r.date   || '';
-  document.getElementById('em-status').value = r.status || 'dang_sua';
-  document.getElementById('em-note').value   = r.note   || '';
+    <div class="field-wrap"><label class="field-label">Ghi chú</label><textarea class="field" id="em-note">${escHtml(r.note||'')}</textarea></div>`;
   document.getElementById('edit-modal').style.display = 'flex';
 }
 
@@ -2358,40 +2344,31 @@ function openEditSale(id) {
   document.getElementById('edit-modal-title').textContent = '✏️ Chỉnh sửa bán hàng';
   document.getElementById('edit-modal-body').innerHTML = `
     <div class="form-grid col2">
-      <div class="field-wrap"><label class="field-label">Tên máy *</label><input class="field" id="em-device"/></div>
-      <div class="field-wrap"><label class="field-label">IMEI</label><input class="field" id="em-imei"/></div>
+      <div class="field-wrap"><label class="field-label">Tên máy *</label><input class="field" id="em-device" value="${escHtml(s.device||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">IMEI</label><input class="field" id="em-imei" value="${escHtml(s.imei||'')}"/></div>
       <div class="field-wrap"><label class="field-label">Tình trạng</label>
         <select class="field" id="em-condition">
-          <option value="moi">✨ Mới 100%</option>
-          <option value="like_new">🌟 Like New</option>
-          <option value="99">📱 99%</option>
-          <option value="97">📱 97%</option>
-          <option value="cu_dep">📱 Cũ đẹp</option>
-          <option value="cu_thuong">📱 Cũ thường</option>
+          <option value="moi" ${s.condition==='moi'?'selected':''}>✨ Mới 100%</option>
+          <option value="like_new" ${s.condition==='like_new'?'selected':''}>🌟 Like New</option>
+          <option value="99" ${s.condition==='99'?'selected':''}>📱 99%</option>
+          <option value="97" ${s.condition==='97'?'selected':''}>📱 97%</option>
+          <option value="cu_dep" ${s.condition==='cu_dep'?'selected':''}>📱 Cũ đẹp</option>
+          <option value="cu_thuong" ${s.condition==='cu_thuong'?'selected':''}>📱 Cũ thường</option>
         </select>
       </div>
-      <div class="field-wrap"><label class="field-label">Giá bán</label><input class="field" type="number" id="em-price"/></div>
-      <div class="field-wrap"><label class="field-label">Lãi/Lỗ</label><input class="field" type="number" id="em-profit"/></div>
-      <div class="field-wrap"><label class="field-label">Ngày bán</label><input class="field" type="date" id="em-date"/></div>
-      <div class="field-wrap"><label class="field-label">Khách hàng</label><input class="field" id="em-buyer"/></div>
+      <div class="field-wrap"><label class="field-label">Giá bán</label><input class="field" type="number" id="em-price" value="${s.price||0}"/></div>
+      <div class="field-wrap"><label class="field-label">Lãi/Lỗ</label><input class="field" type="number" id="em-profit" value="${s.profit||0}"/></div>
+      <div class="field-wrap"><label class="field-label">Ngày bán</label><input class="field" type="date" id="em-date" value="${s.date||''}"/></div>
+      <div class="field-wrap"><label class="field-label">Khách hàng</label><input class="field" id="em-buyer" value="${escHtml(s.buyer||'')}"/></div>
       <div class="field-wrap"><label class="field-label">Nguồn máy</label>
         <select class="field" id="em-source">
-          <option value="nhap_moi">Nhập mới</option>
-          <option value="hang_cu">Hàng cũ</option>
-          <option value="khac">Khác</option>
+          <option value="nhap_moi" ${s.source==='nhap_moi'?'selected':''}>Nhập mới</option>
+          <option value="hang_cu" ${s.source==='hang_cu'?'selected':''}>Hàng cũ</option>
+          <option value="khac" ${s.source==='khac'?'selected':''}>Khác</option>
         </select>
       </div>
     </div>
-    <div class="field-wrap"><label class="field-label">Ghi chú</label><textarea class="field" id="em-note"></textarea></div>`;
-  document.getElementById('em-device').value    = s.device    || '';
-  document.getElementById('em-imei').value      = s.imei      || '';
-  document.getElementById('em-condition').value = s.condition || '99';
-  document.getElementById('em-price').value     = s.price     != null ? s.price  : 0;
-  document.getElementById('em-profit').value    = s.profit    != null ? s.profit : 0;
-  document.getElementById('em-date').value      = s.date      || '';
-  document.getElementById('em-buyer').value     = s.buyer     || '';
-  document.getElementById('em-source').value    = s.source    || 'nhap_moi';
-  document.getElementById('em-note').value      = s.note      || '';
+    <div class="field-wrap"><label class="field-label">Ghi chú</label><textarea class="field" id="em-note">${escHtml(s.note||'')}</textarea></div>`;
   document.getElementById('edit-modal').style.display = 'flex';
 }
 
