@@ -1923,6 +1923,9 @@ NHIỆM VỤ — TỰ ĐỘNG NHẬN DẠNG VÀ NHẬP DỮ LIỆU:
 8. Xuất kho linh kiện / hàng → BẮT BUỘC thêm [ACTION:ADD_WAREHOUSE_OUT|...]
 
 Ví dụ ĐÚNG — nhận máy sửa: "Đã nhận! [ACTION:ADD_REPAIR|Nhung||iPhone 13|||ép kính|500000|60000|2026-05-02|da_giao|]"
+Ví dụ ĐÚNG — nhận máy sửa có giá: "Đã nhận! [ACTION:ADD_REPAIR|Khai|0901234567|iPhone 13|33329|7777|ép kính|800000|100000|2026-05-02|xong_chua_giao|]"
+→ Trong đó: owner=Khai, phone=0901..., device=iPhone 13, imei=33329, pass=7777, issue=ép kính, profit=800000 (giá thu), cost=100000 (vốn chi), date, status, note
+⚠️ TUYỆT ĐỐI KHÔNG nhập số tiền vào field issue. issue CHỈ là mô tả lỗi bằng chữ (VD: "ép kính", "thay pin", "sửa cổ sạc").
 Ví dụ ĐÚNG — bán máy: "Đã ghi! [ACTION:ADD_SALE|iPhone 14 Pro||99|18000000|1500000|2026-05-02|||]"
 Ví dụ ĐÚNG — thu tiền: "Đã ghi thu! [ACTION:ADD_INCOME|200000|Tiền sửa máy|2026-05-02||]"
 Ví dụ SAI (KHÔNG LÀM): "Đã nhận máy của chị Nhung, iPhone 13, ép kính, giá 500k, vốn 60k, đã giao!" ← THIẾU ACTION → dữ liệu KHÔNG được lưu, người dùng sẽ complain!
@@ -1936,10 +1939,11 @@ QUAN TRỌNG — KHI NHẬN ẢNH:
 FORMAT ACTIONS:
 
 [ACTION:ADD_REPAIR|owner|phone|device|imei|pass|issue|profit|cost|date|status|note]
-- profit = số tiền THU VỀ từ khách (giá sửa khách trả)
-- cost = số tiền CHI RA mua linh kiện / vật tư
+- issue = MÔ TẢ LỖI BẰNG CHỮ (VD: "ép kính", "thay pin", "sửa bo mạch") — KHÔNG ĐƯỢC điền số tiền vào đây
+- profit = số tiền THU VỀ từ khách (giá sửa khách trả) — số nguyên VND
+- cost = số tiền CHI RA mua linh kiện / vật tư — số nguyên VND
 - Lãi ròng = profit - cost (hệ thống tự tính)
-- Ví dụ: khách trả 1.200.000, mua linh kiện 350.000 → profit=1200000|cost=350000 → lãi=850k
+- Ví dụ: "giá 800k vốn 100k" → issue=ép kính|profit=800000|cost=100000
 - status: dang_sua | xong_chua_giao | da_giao
 - date: yyyy-mm-dd
 
