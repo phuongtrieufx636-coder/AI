@@ -3832,14 +3832,95 @@ async function sendSimMsg(text, imgData) {
   let reply = '';
 
   // Phân tích ý định
-  const isAddRepair  = /nhận máy|nhận đc|nhận được|sửa máy|mang máy|đem máy|nhận hàng|vừa nhận|nhập sửa|nhận sửa|tiếp nhận|giá nhận/.test(t);
-  const isAddSale    = /bán máy|bán đc|bán được|xuất máy|bán cho|vừa bán/.test(t);
-  const isAddIncome  = /thu tiền|thu đc|thu được|khách trả|nhận tiền/.test(t);
-  const isAddExpense = /chi tiền|mua linh kiện|chi ra|mua đồ|tốn tiền/.test(t);
-  const isQuery      = /bao nhiêu|tổng|doanh thu|lợi nhuận|thống kê|máy nào|danh sách|hôm nay|tháng này/.test(t);
+  const isAddRepair     = /nhận máy|nhận đc|nhận được|sửa máy|mang máy|đem máy|nhận hàng|vừa nhận|nhập sửa|nhận sửa|tiếp nhận|giá nhận/.test(t);
+  const isAddSale       = /bán máy|bán đc|bán được|xuất máy|bán cho|vừa bán/.test(t);
+  const isAddIncome     = /thu tiền|thu đc|thu được|khách trả|nhận tiền/.test(t);
+  const isAddExpense    = /chi tiền|mua linh kiện|chi ra|mua đồ|tốn tiền/.test(t);
+  const isAddWarehouseIn  = /nhập kho|thêm kho|nhập hàng|thêm hàng|nhập linh kiện|thêm linh kiện|mua vào kho|nhập vào kho/.test(t);
+  const isAddWarehouseOut = /xuất kho|xuất hàng|lấy kho|dùng linh kiện|xuất linh kiện/.test(t);
+  const isQueryStock    = /kho còn|tồn kho|còn bao nhiêu|kho có|danh sách kho/.test(t);
+  const isQuery         = /bao nhiêu|tổng|doanh thu|lợi nhuận|thống kê|máy nào|danh sách|hôm nay|tháng này/.test(t);
 
   if (imgData) {
     reply = '📷 <strong>AI Giả lập</strong> chưa hỗ trợ đọc ảnh. Vui lòng nhập thông tin thủ công hoặc bật Groq API key để AI đọc ảnh tự động.';
+  } else if (isQueryStock) {
+    const stock = getStockSummary().filter(s => s.qty > 0);
+    if (stock.length === 0) {
+      reply = `📦 <strong>Kho hiện tại trống.</strong> [AI Giả lập]<br><em style="font-size:11px;color:var(--text3);">Nhập hàng bằng lệnh: "nhập kho iPhone 15, 2 cái, giá vốn 20tr"</em>`;
+    } else {
+      const rows = stock.map(s => `• ${escHtml(s.name)}: <strong>${s.qty}</strong> ${s.unit||'cái'}`).join('<br>');
+      reply = `📦 <strong>Tồn kho hiện tại:</strong> [AI Giả lập]<br>${rows}<br><em style="font-size:11px;color:var(--text3);">Xem chi tiết tại tab <strong>Kho</strong>.</em>`;
+    }
+  } else if (isAddWarehouseIn || isAddWarehouseOut) {
+    // Parse tên hàng — lấy đến dấu phẩy đầu, hoặc trước từ khoá số lượng/giá
+    const nameMatch = text.match(/(?:nhập kho|thêm kho|nhập hàng|thêm hàng|nhập linh kiện|thêm linh kiện|mua vào kho|nhập vào kho|xuất kho|xuất hàng|lấy kho|dùng linh kiện|xuất linh kiện)\s+(.+?)(?=,\s*\d|\s+\d+\s*(?:cái|chiếc|máy|cây|bộ|hộp|cặp)|,\s*(?:giá|vốn|imei|seri)|$)/i);
+    const name = nameMatch ? nameMatch[1].trim().replace(/\s+/g,' ') : '';
+
+    // Parse số lượng — ưu tiên "X cái" sau dấu phẩy
+    const qtyMatch = text.match(/,\s*(\d+(?:[.,]\d+)?)\s*(?:cái|chiếc|máy|cây|bộ|hộp|cặp)?/) || text.match(/(\d+(?:[.,]\d+)?)\s*(?:cái|chiếc|máy|cây|bộ|hộp|cặp)/i);
+    const qty = qtyMatch ? parseFloat(qtyMatch[1].replace(',','.')) : 1;
+
+    // Parse đơn vị
+    const unitMatch = text.match(/\d+\s*(cái|chiếc|máy|cây|bộ|hộp|cặp)/i);
+    const unit = unitMatch ? unitMatch[1] : 'cái';
+
+    // Parse giá vốn
+    function parseMoneyWh(str) {
+      if (!str) return 0;
+      const trk = str.match(/(\d+)tr(\d*)/i);
+      if (trk) return (parseInt(trk[1]) + (trk[2] ? parseInt(trk[2])/10 : 0)) * 1000000;
+      const trDot = str.match(/([\d.,]+)\s*(?:tr|triệu)/i);
+      if (trDot) return parseFloat(trDot[1].replace(',','.')) * 1000000;
+      const kMatch = str.match(/([\d.,]+)\s*k\b/i);
+      if (kMatch) return parseFloat(kMatch[1].replace(/[.,]/g,'')) * 1000;
+      return 0;
+    }
+    const priceMatch = text.match(/(?:giá vốn|vốn|giá nhập|giá|tiền)\s*[:\s]*([\d.,]+\s*(?:k|tr\d*|triệu)?)/i);
+    const price = parseMoneyWh(priceMatch ? priceMatch[1] : '');
+
+    // Parse IMEI
+    const imeiMatch = text.match(/(?:imei|seri|serial)[:\s]*(\w{6,20})/i);
+    const imei = imeiMatch ? imeiMatch[1] : '';
+
+    // Parse nhà cung cấp
+    const supplierMatch = text.match(/(?:nhà cung cấp|ncc|từ|của|mua từ|nhập từ)[:\s]+([^\d,\.]+?)(?=,|$)/i);
+    const supplier = supplierMatch ? supplierMatch[1].trim() : '';
+
+    // Parse tình trạng máy — "98%", "đẹp", "trầy nhẹ", "tình trạng 9/10"...
+    const conditionMatch = text.match(/(?:tình trạng|tt|máy)\s*[:\s]*(\d{1,3}%|(?:\d+\/10)|(?:đẹp|mới|zin|trầy nhẹ|trầy|cũ|xước nhẹ|xước|móp)[^\d,]*)/i);
+    const condition = conditionMatch ? conditionMatch[1].trim() : '';
+
+    // Parse % pin — "pin 87%", "pin 87", "battery 90%"
+    const batteryMatch = text.match(/(?:pin|battery)\s*[:\s]*(\d{1,3})\s*%?/i);
+    const battery = batteryMatch ? batteryMatch[1] + '%' : '';
+
+    const whType = isAddWarehouseOut ? 'xuat' : 'nhap';
+
+    if (name) {
+      // Gộp tình trạng + pin vào note
+      const noteExtra = [condition ? `Tình trạng: ${condition}` : '', battery ? `Pin: ${battery}` : ''].filter(Boolean).join(' · ');
+      const d = {
+        type: whType, name, quantity: qty, unit, price,
+        supplier, imei, date: todayStr(), category: '',
+        note: noteExtra ? `${noteExtra} [AI Giả lập]` : '[AI Giả lập]'
+      };
+      d.id = Date.now() + Math.random();
+      d.createdAt = new Date().toLocaleString('vi-VN');
+      WAREHOUSE.unshift(d);
+      saveWarehouse(); buildWarehouseList(); updateStats();
+      const typeLabel = whType === 'nhap' ? '📦 Nhập kho' : '📤 Xuất kho';
+      reply = `✅ <strong>${typeLabel} thành công!</strong> [AI Giả lập]<br>` +
+        `📱 ${escHtml(name)} · SL: ${qty} ${unit}` +
+        (price ? ` · Giá: ${fmtMoney(price)}` : '') +
+        (imei ? `<br>🔢 IMEI: ${escHtml(imei)}` : '') +
+        (condition ? `<br>✨ Tình trạng: ${escHtml(condition)}` : '') +
+        (battery ? ` · 🔋 Pin: ${escHtml(battery)}` : '') +
+        `<br><em style="font-size:11px;color:var(--text3);">Xem chi tiết tại tab <strong>Kho</strong>.</em>`;
+    } else {
+      reply = `🤖 <strong>AI Giả lập</strong> hiểu bạn muốn ${isAddWarehouseOut?'xuất':'nhập'} kho, nhưng cần biết <strong>tên hàng</strong>.<br>` +
+        `Ví dụ: "${isAddWarehouseOut?'Xuất kho màn iPhone 13, 1 cái':'Nhập kho iPhone 15 Pro, 2 cái, giá vốn 22tr'}"<br>` +
+        `<em style="font-size:11px;">Hoặc vào tab <strong>Kho</strong> để nhập trực tiếp.</em>`;
+    }
   } else if (isAddRepair) {
     // Parse tên chủ máy — ưu tiên "cho An", "của Lan", "anh Quang"...
     const ownerMatch  = text.match(/(?:khách\s+tên\s+|tên\s+(?:khách\s+)?|cho\s+|của\s+|anh\s+|chị\s+|em\s+|bé\s+|bạn\s+)([A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]*(?: [A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]+){0,2})/i);
