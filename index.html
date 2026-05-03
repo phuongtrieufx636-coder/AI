@@ -284,11 +284,36 @@ select.field option{background:var(--bg2);}
 .btn-zalo:hover{background:rgba(0,120,255,0.2);}
 .btn-edit{padding:4px 12px;font-size:11px;font-weight:600;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(79,142,247,0.2);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;}
 .btn-edit:hover{background:rgba(79,142,247,0.25);}
-@media print{
-  #app,#bottom-nav{display:none!important;}
-  #print-area{display:block!important;position:static!important;width:100%!important;padding:20px;background:#fff!important;color:#000!important;}
-}
+/* ── PRINT AREA ── */
 #print-area{display:none;}
+
+/* Modal chọn khổ giấy */
+#print-size-modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:none;align-items:center;justify-content:center;padding:16px;}
+#print-size-modal .psm-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:100%;max-width:360px;padding:20px;display:flex;flex-direction:column;gap:14px;}
+#print-size-modal h3{font-size:14px;font-weight:700;color:var(--text);margin:0;}
+.psm-options{display:flex;flex-direction:column;gap:8px;}
+.psm-btn{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);color:var(--text);cursor:pointer;font-family:inherit;font-size:13px;text-align:left;transition:all 0.15s;}
+.psm-btn:hover{border-color:var(--accent);background:var(--accent-dim);color:var(--accent);}
+.psm-btn .psm-icon{font-size:22px;flex-shrink:0;}
+.psm-btn .psm-label{font-weight:600;}
+.psm-btn .psm-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.psm-btn:hover .psm-sub{color:var(--accent);}
+.psm-cancel{padding:8px;text-align:center;color:var(--text3);font-size:12px;cursor:pointer;border:none;background:none;font-family:inherit;}
+.psm-cancel:hover{color:var(--text);}
+
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  html,body{margin:0!important;padding:0!important;}
+  #app,#bottom-nav,#print-size-modal{display:none!important;}
+  #print-area{display:block!important;position:fixed!important;top:0;left:0;width:100%!important;background:#fff!important;color:#000!important;}
+  body.print-58,body.print-58 html{width:58mm;}
+  body.print-80,body.print-80 html{width:80mm;}
+  body.print-58 #print-area .ticket-wrap{width:54mm!important;max-width:54mm!important;padding:1mm 2mm!important;border:none!important;border-radius:0!important;box-shadow:none!important;}
+  body.print-80 #print-area .ticket-wrap{width:76mm!important;max-width:76mm!important;padding:1mm 2mm!important;border:none!important;border-radius:0!important;box-shadow:none!important;}
+  body.print-58 .tk-sig{display:none!important;}
+  body.print-80 .tk-sig{display:none!important;}
+  body.print-a4 #print-area .ticket-wrap{max-width:420px!important;margin:20px auto!important;}
+}
 
 /* ── CHART ── */
 .chart-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
@@ -1015,6 +1040,28 @@ function doGet(e) {
 
 <!-- ── PRINT AREA ── -->
 <div id="print-area"></div>
+
+<!-- ── PRINT SIZE MODAL ── -->
+<div id="print-size-modal">
+  <div class="psm-box">
+    <h3>🖨️ Chọn khổ giấy in</h3>
+    <div class="psm-options">
+      <button class="psm-btn" onclick="executePrint('58')">
+        <span class="psm-icon">🧾</span>
+        <div><div class="psm-label">Khổ 58mm</div><div class="psm-sub">Máy in nhiệt mini nhỏ (58mm)</div></div>
+      </button>
+      <button class="psm-btn" onclick="executePrint('80')">
+        <span class="psm-icon">🖨️</span>
+        <div><div class="psm-label">Khổ 80mm</div><div class="psm-sub">Máy in nhiệt POS tiêu chuẩn (80mm)</div></div>
+      </button>
+      <button class="psm-btn" onclick="executePrint('a4')">
+        <span class="psm-icon">📄</span>
+        <div><div class="psm-label">Khổ A4</div><div class="psm-sub">Máy in thường, in đầy trang</div></div>
+      </button>
+    </div>
+    <button class="psm-cancel" onclick="closePrintModal()">✕ Hủy</button>
+  </div>
+</div>
 
 <!-- MOBILE BOTTOM NAV -->
 <nav id="bottom-nav">
@@ -3044,130 +3091,156 @@ function getShopInfo() {
     addr:  localStorage.getItem('tt_shop_addr')  || 'Nha Trang'
   };
 }
+
+let _pendingPrintHtml = '';
+
+function closePrintModal() {
+  document.getElementById('print-size-modal').style.display = 'none';
+  document.body.classList.remove('print-58','print-80','print-a4');
+  _pendingPrintHtml = '';
+}
+
+function executePrint(size) {
+  document.getElementById('print-size-modal').style.display = 'none';
+  document.body.classList.remove('print-58','print-80','print-a4');
+  document.body.classList.add('print-' + size);
+  document.getElementById('print-area').innerHTML = _pendingPrintHtml;
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove('print-58','print-80','print-a4');
+    }, 1000);
+  }, 120);
+}
+
+function buildRepairHtml(r) {
+  const sh = getShopInfo();
+  const ticketNo = String(r.id).slice(-6);
+  const statusLabel = { dang_sua:'Dang sua', xong_chua_giao:'Xong, chua giao', da_giao:'Da giao khach' }[r.status] || r.status;
+  const net = (r.profit||0) - (r.cost||0);
+  return `<div class="ticket-wrap" style="font-family:'Courier New',Courier,monospace;font-size:12px;color:#000;background:#fff;width:100%;max-width:420px;margin:0 auto;padding:10px 14px;box-sizing:border-box;">
+    <!-- HEADER -->
+    <div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:8px;margin-bottom:8px;">
+      <div class="tk-shopname" style="font-size:20px;font-weight:900;letter-spacing:1px;text-transform:uppercase;">${escHtml(sh.name)}</div>
+      <div style="font-size:10px;margin-top:2px;">Sua chua &amp; mua ban dien thoai</div>
+      ${sh.phone?`<div style="font-size:11px;margin-top:2px;">DTH: ${escHtml(sh.phone)}</div>`:''}
+      ${sh.addr?`<div style="font-size:10px;">${escHtml(sh.addr)}</div>`:''}
+    </div>
+    <!-- TITLE -->
+    <div style="text-align:center;margin-bottom:8px;">
+      <div class="tk-title" style="font-size:14px;font-weight:900;letter-spacing:0.5px;">PHIEU NHAN MAY SUA CHUA</div>
+      <div style="font-size:10px;margin-top:2px;">So phieu: #${ticketNo} | ${new Date().toLocaleDateString('vi-VN')}</div>
+    </div>
+    <!-- DASH -->
+    <div style="border-top:1px dashed #000;margin:6px 0;"></div>
+    <!-- KHACH HANG -->
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <tr><td style="padding:2px 0;color:#555;white-space:nowrap;width:90px;">Ho ten:</td><td style="padding:2px 0;font-weight:700;">${escHtml(r.owner||'—')}</td></tr>
+      ${r.phone?`<tr><td style="padding:2px 0;color:#555;">Dien thoai:</td><td style="padding:2px 0;font-weight:700;">${escHtml(r.phone)}</td></tr>`:''}
+      <tr><td style="padding:2px 0;color:#555;">Ngay nhan:</td><td style="padding:2px 0;">${fmtDate(r.date)}</td></tr>
+    </table>
+    <div style="border-top:1px dashed #000;margin:6px 0;"></div>
+    <!-- MAY -->
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <tr><td style="padding:2px 0;color:#555;width:90px;">Thiet bi:</td><td style="padding:2px 0;font-weight:900;" class="tk-big">${escHtml(r.device||'—')}</td></tr>
+      ${r.imei?`<tr><td style="padding:2px 0;color:#555;">IMEI:</td><td style="padding:2px 0;font-family:monospace;">${escHtml(r.imei)}</td></tr>`:''}
+      ${r.pass?`<tr><td style="padding:2px 0;color:#555;">Mat khau:</td><td style="padding:2px 0;font-weight:700;color:#c00;">${escHtml(r.pass)}</td></tr>`:''}
+      ${r.issue?`<tr><td style="padding:2px 0;color:#555;">Loi/YC:</td><td style="padding:2px 0;font-weight:700;">${escHtml(r.issue)}</td></tr>`:''}
+      <tr><td style="padding:2px 0;color:#555;">Trang thai:</td><td style="padding:2px 0;font-weight:700;">${statusLabel}</td></tr>
+    </table>
+    <div style="border-top:1px dashed #000;margin:6px 0;"></div>
+    <!-- GIA -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+      <span style="font-size:12px;">Gia sua (khach tra):</span>
+      <span class="tk-price" style="font-size:22px;font-weight:900;">${r.profit>0?fmtMoney(r.profit):'TBD'}</span>
+    </div>
+    ${r.note?`<div style="font-size:10px;color:#555;margin-top:4px;">Ghi chu: ${escHtml(r.note)}</div>`:''}
+    <div style="border-top:1px dashed #000;margin:8px 0;"></div>
+    <!-- CHU KY -->
+    <div class="tk-sig" style="display:flex;justify-content:space-between;margin-bottom:10px;">
+      <div style="text-align:center;width:45%;">
+        <div style="font-size:10px;color:#555;margin-bottom:28px;">Chu may ky ten</div>
+        <div style="border-top:1px solid #000;font-size:9px;color:#999;padding-top:2px;">(Ky, ghi ro ho ten)</div>
+      </div>
+      <div style="text-align:center;width:45%;">
+        <div style="font-size:10px;color:#555;margin-bottom:28px;">Nhan vien</div>
+        <div style="border-top:1px solid #000;font-size:9px;color:#999;padding-top:2px;">(Ky, ghi ro ho ten)</div>
+      </div>
+    </div>
+    <!-- FOOTER -->
+    <div style="text-align:center;border-top:1px dashed #000;padding-top:6px;font-size:10px;color:#555;">
+      <div>Cam on quy khach da tin tuong ${escHtml(sh.name)}!</div>
+      <div>Vui long giu phieu de nhan may.</div>
+      <div style="margin-top:4px;font-size:9px;color:#aaa;">#${ticketNo} | ${new Date().toLocaleString('vi-VN')}</div>
+    </div>
+  </div>`;
+}
+
+function buildSaleHtml(s) {
+  const sh = getShopInfo();
+  const invoiceNo = String(s.id).slice(-6);
+  return `<div class="ticket-wrap" style="font-family:'Courier New',Courier,monospace;font-size:12px;color:#000;background:#fff;width:100%;max-width:420px;margin:0 auto;padding:10px 14px;box-sizing:border-box;">
+    <!-- HEADER -->
+    <div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:8px;margin-bottom:8px;">
+      <div class="tk-shopname" style="font-size:20px;font-weight:900;letter-spacing:1px;text-transform:uppercase;">${escHtml(sh.name)}</div>
+      <div style="font-size:10px;margin-top:2px;">Sua chua &amp; mua ban dien thoai</div>
+      ${sh.phone?`<div style="font-size:11px;margin-top:2px;">DTH: ${escHtml(sh.phone)}</div>`:''}
+      ${sh.addr?`<div style="font-size:10px;">${escHtml(sh.addr)}</div>`:''}
+    </div>
+    <!-- TITLE -->
+    <div style="text-align:center;margin-bottom:8px;">
+      <div class="tk-title" style="font-size:14px;font-weight:900;letter-spacing:0.5px;">HOA DON BAN HANG</div>
+      <div style="font-size:10px;margin-top:2px;">So HD: #${invoiceNo} | ${new Date().toLocaleDateString('vi-VN')}</div>
+    </div>
+    <div style="border-top:1px dashed #000;margin:6px 0;"></div>
+    <!-- SAN PHAM -->
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <tr><td style="padding:2px 0;color:#555;width:90px;">San pham:</td><td style="padding:2px 0;font-weight:900;" class="tk-big">${escHtml(s.device||'—')}</td></tr>
+      <tr><td style="padding:2px 0;color:#555;">Tinh trang:</td><td style="padding:2px 0;font-weight:700;">${escHtml(s.conditionLabel||s.condition||'—')}</td></tr>
+      ${s.imei?`<tr><td style="padding:2px 0;color:#555;">IMEI:</td><td style="padding:2px 0;font-family:monospace;font-size:10px;">${escHtml(s.imei)}</td></tr>`:''}
+      ${s.buyer?`<tr><td style="padding:2px 0;color:#555;">Khach hang:</td><td style="padding:2px 0;font-weight:700;">${escHtml(s.buyer)}</td></tr>`:''}
+      <tr><td style="padding:2px 0;color:#555;">Ngay ban:</td><td style="padding:2px 0;">${fmtDate(s.date)}</td></tr>
+    </table>
+    <div style="border-top:1px dashed #000;margin:6px 0;"></div>
+    <!-- GIA -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+      <span style="font-size:12px;font-weight:700;">GIA BAN:</span>
+      <span class="tk-price" style="font-size:24px;font-weight:900;">${fmtMoney(s.price)}</span>
+    </div>
+    ${s.note?`<div style="font-size:10px;color:#555;margin-top:2px;">Ghi chu: ${escHtml(s.note)}</div>`:''}
+    <div style="border-top:1px dashed #000;margin:8px 0;"></div>
+    <!-- CHU KY -->
+    <div class="tk-sig" style="display:flex;justify-content:space-between;margin-bottom:10px;">
+      <div style="text-align:center;width:45%;">
+        <div style="font-size:10px;color:#555;margin-bottom:28px;">Khach hang</div>
+        <div style="border-top:1px solid #000;font-size:9px;color:#999;padding-top:2px;">(Ky, ghi ro ho ten)</div>
+      </div>
+      <div style="text-align:center;width:45%;">
+        <div style="font-size:10px;color:#555;margin-bottom:28px;">Nguoi ban</div>
+        <div style="border-top:1px solid #000;font-size:9px;color:#999;padding-top:2px;">(Ky, ghi ro ho ten)</div>
+      </div>
+    </div>
+    <!-- FOOTER -->
+    <div style="text-align:center;border-top:1px dashed #000;padding-top:6px;font-size:10px;color:#555;">
+      <div>Cam on quy khach! Bao hanh theo thoa thuan.</div>
+      <div style="margin-top:4px;font-size:9px;color:#aaa;">#${invoiceNo} | ${new Date().toLocaleString('vi-VN')}</div>
+    </div>
+  </div>`;
+}
+
 function printRepairTicket(id) {
   const r = REPAIRS.find(x => x.id === id);
   if (!r) return;
-  const net = (r.profit||0) - (r.cost||0);
-  const statusLabel = { dang_sua:'🔧 Đang sửa', xong_chua_giao:'✅ Sửa xong, chưa giao', da_giao:'📦 Đã giao khách' }[r.status] || r.status;
-  const statusColor = { dang_sua:'#c27d00', xong_chua_giao:'#1aab5e', da_giao:'#3b78e7' }[r.status] || '#555';
-  const sh = getShopInfo();
-  const ticketNo = String(id).slice(-6);
-  const html = `<div style="font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#111;max-width:420px;margin:0 auto;border:2px solid #222;border-radius:10px;overflow:hidden;">
-    <div style="background:#111;color:#fff;padding:18px 20px 14px;text-align:center;">
-      <div style="font-size:24px;font-weight:900;letter-spacing:1px;">${escHtml(sh.name)}</div>
-      <div style="font-size:12px;margin-top:4px;opacity:0.7;">Dịch vụ sửa chữa &amp; mua bán điện thoại</div>
-      ${sh.phone?`<div style="font-size:13px;margin-top:4px;opacity:0.9;">📞 ${escHtml(sh.phone)}</div>`:''}
-      ${sh.addr?`<div style="font-size:11px;margin-top:2px;opacity:0.6;">📍 ${escHtml(sh.addr)}</div>`:''}
-    </div>
-    <div style="background:#f5f5f5;border-bottom:1px solid #ddd;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;">
-      <div><div style="font-size:14px;font-weight:700;color:#333;">PHIẾU NHẬN MÁY SỬA CHỮA</div>
-        <div style="font-size:11px;color:#888;margin-top:2px;">In lúc: ${new Date().toLocaleString('vi-VN')}</div></div>
-      <div style="text-align:right;">
-        <div style="font-size:10px;color:#aaa;font-weight:600;text-transform:uppercase;">Số phiếu</div>
-        <div style="font-size:18px;font-weight:900;color:#333;font-family:monospace;">#${ticketNo}</div>
-      </div>
-    </div>
-    <div style="padding:14px 20px;border-bottom:1px dashed #ddd;">
-      <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Thông tin khách hàng</div>
-      <div style="display:flex;gap:20px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#888;">Họ tên</div>
-          <div style="font-size:15px;font-weight:800;margin-top:2px;">${escHtml(r.owner||'—')}</div></div>
-        <div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#888;">Số điện thoại</div>
-          <div style="font-size:14px;font-weight:700;margin-top:2px;">${escHtml(r.phone||'—')}</div></div>
-      </div>
-    </div>
-    <div style="padding:14px 20px;border-bottom:1px dashed #ddd;">
-      <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Thông tin thiết bị</div>
-      <div style="font-size:16px;font-weight:800;margin-bottom:6px;">${escHtml(r.device||'—')}</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;">
-        ${r.imei?`<div><span style="color:#888;">IMEI: </span><span style="font-family:monospace;font-weight:600;">${escHtml(r.imei)}</span></div>`:''}
-        ${r.pass?`<div><span style="color:#888;">Mật khẩu: </span><span style="font-weight:700;color:#c00;">${escHtml(r.pass)}</span></div>`:''}
-      </div>
-      ${r.issue?`<div style="margin-top:8px;background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:8px 12px;font-size:12.5px;"><span style="color:#888;">Lỗi / Yêu cầu: </span><strong>${escHtml(r.issue)}</strong></div>`:''}
-    </div>
-    <div style="padding:12px 20px;border-bottom:1px dashed #ddd;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-      <div><div style="font-size:11px;color:#888;">Ngày nhận máy</div>
-        <div style="font-size:14px;font-weight:700;margin-top:2px;">📅 ${fmtDate(r.date)}</div></div>
-      <div style="background:${statusColor}18;border:1.5px solid ${statusColor}55;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;color:${statusColor};">${statusLabel}</div>
-    </div>
-    <div style="padding:14px 20px;border-bottom:1px dashed #ddd;background:#fafafa;">
-      <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Chi phi</div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-        <span style="color:#555;font-size:13px;">Gia sua (khach tra):</span>
-        <span style="font-weight:700;font-size:14px;">${r.profit>0?fmtMoney(r.profit):'Chua xac dinh'}</span>
-      </div>
-    </div>
-    ${r.note?`<div style="padding:10px 20px;border-bottom:1px dashed #ddd;font-size:12.5px;"><span style="color:#888;">Ghi chu: </span>${escHtml(r.note)}</div>`:''}
-    <div style="padding:16px 20px;border-bottom:1px dashed #ddd;display:flex;justify-content:space-between;gap:20px;">
-      <div style="flex:1;text-align:center;"><div style="font-size:11px;color:#888;margin-bottom:30px;">Chu may ky ten</div><div style="border-top:1px solid #bbb;font-size:11px;color:#aaa;padding-top:4px;">(Ky va ghi ro ho ten)</div></div>
-      <div style="flex:1;text-align:center;"><div style="font-size:11px;color:#888;margin-bottom:30px;">Nhan vien nhan may</div><div style="border-top:1px solid #bbb;font-size:11px;color:#aaa;padding-top:4px;">(Ky va ghi ro ho ten)</div></div>
-    </div>
-    <div style="padding:14px 20px;text-align:center;background:#f5f5f5;">
-      <div style="font-size:12px;color:#555;margin-bottom:4px;">Cam on quy khach da tin tuong ${escHtml(sh.name)}!</div>
-      <div style="font-size:11px;color:#999;">Vui long giu phieu nay de nhan may. Lien he khi co thac mac.</div>
-      <div style="margin-top:10px;border-top:1px dashed #ccc;padding-top:8px;display:flex;justify-content:space-between;font-size:10px;color:#bbb;">
-        <span>Phieu #${ticketNo}</span><span>${new Date().toLocaleDateString('vi-VN')}</span><span>${escHtml(sh.name)}</span>
-      </div>
-    </div>
-  </div>`;
-  document.getElementById('print-area').innerHTML = html;
-  window.print();
+  _pendingPrintHtml = buildRepairHtml(r);
+  document.getElementById('print-size-modal').style.display = 'flex';
 }
 
 function printSaleInvoice(id) {
   const s = SALES.find(x => x.id === id);
   if (!s) return;
-  const sh = getShopInfo();
-  const invoiceNo = String(id).slice(-6);
-  const html = `<div style="font-family:'Segoe UI',Arial,sans-serif;font-size:13px;color:#111;max-width:420px;margin:0 auto;border:2px solid #1aab5e;border-radius:10px;overflow:hidden;">
-    <div style="background:#1aab5e;color:#fff;padding:18px 20px 14px;text-align:center;">
-      <div style="font-size:24px;font-weight:900;letter-spacing:1px;">${escHtml(sh.name)}</div>
-      <div style="font-size:12px;margin-top:4px;opacity:0.85;">Dịch vụ sửa chữa &amp; mua bán điện thoại</div>
-      ${sh.phone?`<div style="font-size:13px;margin-top:4px;opacity:0.9;">📞 ${escHtml(sh.phone)}</div>`:''}
-      ${sh.addr?`<div style="font-size:11px;margin-top:2px;opacity:0.75;">📍 ${escHtml(sh.addr)}</div>`:''}
-    </div>
-    <div style="background:#f0faf5;border-bottom:1px solid #c3e6cb;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;">
-      <div><div style="font-size:14px;font-weight:700;color:#155724;">HOÁ ĐƠN BÁN HÀNG</div>
-        <div style="font-size:11px;color:#888;margin-top:2px;">In lúc: ${new Date().toLocaleString('vi-VN')}</div></div>
-      <div style="text-align:right;">
-        <div style="font-size:10px;color:#aaa;font-weight:600;text-transform:uppercase;">Số HD</div>
-        <div style="font-size:18px;font-weight:900;color:#1aab5e;font-family:monospace;">#${invoiceNo}</div>
-      </div>
-    </div>
-    <div style="padding:16px 20px;border-bottom:1px dashed #ddd;">
-      <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Thông tin sản phẩm</div>
-      <div style="font-size:18px;font-weight:900;margin-bottom:8px;color:#111;">${escHtml(s.device||'—')}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <span style="background:#e8f5e9;color:#1aab5e;border:1px solid #c8e6c9;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700;">✨ ${escHtml(s.conditionLabel||s.condition||'—')}</span>
-        ${s.imei?`<span style="background:#f5f5f5;color:#555;border:1px solid #e0e0e0;border-radius:20px;padding:3px 12px;font-size:12px;font-family:monospace;">IMEI: ${escHtml(s.imei)}</span>`:''}
-      </div>
-    </div>
-    <div style="padding:12px 20px;border-bottom:1px dashed #ddd;display:flex;gap:20px;flex-wrap:wrap;">
-      ${s.buyer?`<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:#888;">Khách hàng</div><div style="font-size:14px;font-weight:700;margin-top:2px;">👤 ${escHtml(s.buyer)}</div></div>`:''}
-      <div style="flex:1;min-width:140px;">
-        <div style="font-size:11px;color:#888;">Ngày bán</div>
-        <div style="font-size:14px;font-weight:700;margin-top:2px;">📅 ${fmtDate(s.date)}</div>
-      </div>
-    </div>
-    <div style="padding:16px 20px;border-bottom:1px dashed #ddd;background:#f0faf5;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:14px;color:#555;font-weight:600;">Giá bán:</span>
-        <span style="font-size:26px;font-weight:900;color:#1aab5e;">${fmtMoney(s.price)}</span>
-      </div>
-    </div>
-    ${s.note?`<div style="padding:10px 20px;border-bottom:1px dashed #ddd;font-size:12.5px;background:#fffde7;"><span style="color:#888;">Ghi chú: </span><strong>${escHtml(s.note)}</strong></div>`:''}
-    <div style="padding:16px 20px;text-align:center;background:#f0faf5;">
-      <div style="font-size:13px;font-weight:700;color:#1aab5e;margin-bottom:4px;">🎉 Cảm ơn quý khách đã mua hàng!</div>
-      <div style="font-size:11px;color:#555;margin-bottom:4px;">Bảo hành theo điều khoản đã thoả thuận.</div>
-      <div style="margin-top:10px;border-top:1px dashed #c3e6cb;padding-top:8px;display:flex;justify-content:space-between;font-size:10px;color:#aaa;">
-        <span>HD #${invoiceNo}</span><span>${new Date().toLocaleDateString('vi-VN')}</span><span>${escHtml(sh.name)}</span>
-      </div>
-    </div>
-  </div>`;
-  document.getElementById('print-area').innerHTML = html;
-  window.print();
+  _pendingPrintHtml = buildSaleHtml(s);
+  document.getElementById('print-size-modal').style.display = 'flex';
 }
-
 // ─── ZALO NOTIFY ──────────────────────────────────────────────────────────────
 function sendZaloNotify(id) {
   const r = REPAIRS.find(x => x.id === id);
