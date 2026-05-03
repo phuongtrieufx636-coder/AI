@@ -3832,7 +3832,7 @@ async function sendSimMsg(text, imgData) {
   let reply = '';
 
   // Phân tích ý định
-  const isAddRepair  = /nhận máy|nhận đc|nhận được|sửa máy|mang máy|đem máy|nhận hàng|vừa nhận|nhập sửa|tiếp nhận|giá nhận/.test(t);
+  const isAddRepair  = /nhận máy|nhận đc|nhận được|sửa máy|mang máy|đem máy|nhận hàng|vừa nhận|nhập sửa|nhận sửa|tiếp nhận|giá nhận/.test(t);
   const isAddSale    = /bán máy|bán đc|bán được|xuất máy|bán cho|vừa bán/.test(t);
   const isAddIncome  = /thu tiền|thu đc|thu được|khách trả|nhận tiền/.test(t);
   const isAddExpense = /chi tiền|mua linh kiện|chi ra|mua đồ|tốn tiền/.test(t);
@@ -3842,9 +3842,9 @@ async function sendSimMsg(text, imgData) {
     reply = '📷 <strong>AI Giả lập</strong> chưa hỗ trợ đọc ảnh. Vui lòng nhập thông tin thủ công hoặc bật Groq API key để AI đọc ảnh tự động.';
   } else if (isAddRepair) {
     // Parse tên chủ máy — ưu tiên "cho An", "của Lan", "anh Quang"...
-    const ownerMatch  = text.match(/(?:cho\s+|của\s+|anh\s+|chị\s+|em\s+|bé\s+|bạn\s+|máy\s+(?:của\s+)?)([A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]+(?: [A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]+)*)/i);
+    const ownerMatch  = text.match(/(?:khách\s+tên\s+|tên\s+(?:khách\s+)?|cho\s+|của\s+|anh\s+|chị\s+|em\s+|bé\s+|bạn\s+)([A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]*(?: [A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]+){0,2})/i);
     // Parse tên máy — nhận diện rộng hơn, kể cả "Zflip 5", "Z Fold", "S24 Ultra"...
-    const deviceMatch = text.match(/(?:iphone|samsung|oppo|xiaomi|vivo|realme|nokia|sony|huawei|pixel|redmi|zflip|z flip|z fold|zfold|s\d|note\s*\d|a\d\d)\s*[\w\s]+?(?=,|\.|nhận|thu|lãi|âm|vốn|sửa|cho|$)/i);
+    const deviceMatch = text.match(/(?:iphone|samsung|oppo|xiaomi|vivo|realme|nokia|sony|huawei|pixel|redmi|zflip\d*|z flip\d*|z fold\d*|zfold\d*|s\d{1,2}(?:\s*ultra|\s*plus|\+)?|note\s*\d+|a\d{2,3}(?:\s*\w+)?|xs\s*max|xs|xr)[^,.]*/i);
 
     // Parse số tiền — hỗ trợ "1tr2", "1.2tr", "1200k", "300k", "300.000"
     function parseMoney(str) {
@@ -3871,15 +3871,15 @@ async function sendSimMsg(text, imgData) {
     const profitMatch = text.match(/(?:giá nhận|thu|lãi|giá|tiền)\s*[:\s]*([\d.,]+\s*(?:k|tr\d*|triệu)?)/i);
     const costMatch   = text.match(/(?:vốn|âm|chi|mua|linh kiện)\s*[:\s]*([\d.,]+\s*(?:k|tr\d*|triệu)?)/i);
     const phoneMatch  = text.match(/\b(0\d{9})\b/);
-    const statusMatch = /(?:đã giao|giao rồi|xong rồi)/.test(t) ? 'da_giao' : /xong|hoàn thành/.test(t) ? 'xong_chua_giao' : 'dang_sua';
+    const statusMatch = /(?:đã giao|giao rồi|xong rồi)/.test(t) ? 'da_giao' : /(?:xong|hoàn thành)(?!\s*chưa)/.test(t) ? 'xong_chua_giao' : 'dang_sua';
 
-    const owner  = ownerMatch  ? ownerMatch[1].trim()  : '';
+    const owner  = ownerMatch  ? ownerMatch[1].trim()  : (device ? 'Khách' : '');
     const device = deviceMatch ? deviceMatch[0].replace(/,$/, '').trim() : '';
 
     const profit = parseMoney(profitMatch ? profitMatch[1] : '');
     const cost   = parseMoney(costMatch   ? costMatch[1]   : '');
 
-    if (owner && device) {
+    if (device) {
       const d = {
         owner, phone: phoneMatch?phoneMatch[1]:'', device,
         imei:'', pass:'', issue: text.replace(owner,'').replace(device,'').substring(0,60).trim(),
