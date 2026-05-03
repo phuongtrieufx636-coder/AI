@@ -391,7 +391,8 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
     <button class="nav-btn" onclick="switchTab('repair')" id="nav-repair"><span class="ni">🔧</span> Nhận máy sửa <span class="nav-badge" id="repair-badge" style="display:none">0</span></button>
     <button class="nav-btn" onclick="switchTab('sales')" id="nav-sales"><span class="ni">💰</span> Bán máy</button>
     <button class="nav-btn" onclick="switchTab('finance')" id="nav-finance"><span class="ni">💳</span> Thu / Chi</button>
-    <button class="nav-btn" onclick="switchTab('warehouse')" id="nav-warehouse"><span class="ni">📦</span> Kho hàng</button>
+    <button class="nav-btn" onclick="switchTab('warehouse')" id="nav-warehouse"><span class="ni">📦</span> Kho máy</button>
+    <button class="nav-btn" onclick="switchTab('parts')" id="nav-parts"><span class="ni">🔩</span> Linh kiện</button>
     <button class="nav-btn" onclick="switchTab('customers')" id="nav-customers"><span class="ni">🏷️</span> Khách hàng</button>
     <button class="nav-btn" onclick="switchTab('stats')" id="nav-stats"><span class="ni">📊</span> Thống kê</button>
     <button class="nav-btn" onclick="switchTab('settings')" id="nav-settings"><span class="ni">⚙️</span> Cài đặt</button>
@@ -927,7 +928,8 @@ function doGet(e) {
           <button class="btn-full-danger" onclick="confirmClear('repairs')">🗑 Xóa hết phiếu sửa</button>
           <button class="btn-full-danger" onclick="confirmClear('sales')">🗑 Xóa hết bán hàng</button>
           <button class="btn-full-danger" onclick="confirmClear('finance')">🗑 Xóa hết thu/chi</button>
-          <button class="btn-full-danger" onclick="confirmClear('warehouse')">🗑 Xóa hết kho hàng</button>
+          <button class="btn-full-danger" onclick="confirmClear('warehouse')">🗑 Xóa hết kho máy</button>
+          <button class="btn-full-danger" onclick="confirmClear('parts')">🗑 Xóa hết linh kiện</button>
           <button class="btn-full-danger" onclick="confirmClear('all')" style="border-color:rgba(240,82,82,0.6);background:rgba(240,82,82,0.18);">⚠️ Xóa hết tất cả</button>
         </div>
       </div>
@@ -1008,6 +1010,96 @@ function doGet(e) {
     </div>
   </div>
 
+  <!-- ── LINH KIỆN TAB ── -->
+  <div class="tab hidden" id="tab-parts">
+    <div class="tab-body">
+      <div class="add-form">
+        <h4>🔩 Nhập / Xuất linh kiện</h4>
+        <div class="form-grid col2">
+          <div class="field-wrap">
+            <label class="field-label">Loại giao dịch</label>
+            <select class="field" id="pt-type">
+              <option value="nhap">📥 Nhập kho</option>
+              <option value="xuat">📤 Xuất / Dùng</option>
+            </select>
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Tên linh kiện *</label>
+            <input class="field" id="pt-name" placeholder="VD: Màn iPhone 13, Pin S24..." />
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Danh mục</label>
+            <select class="field" id="pt-category">
+              <option value="">-- Chọn danh mục --</option>
+              <option value="Màn hình">📱 Màn hình</option>
+              <option value="Pin">🔋 Pin</option>
+              <option value="Vỏ / Nắp lưng">🛡️ Vỏ / Nắp lưng</option>
+              <option value="Bo mạch">🔌 Bo mạch</option>
+              <option value="Camera">📷 Camera</option>
+              <option value="Loa / Mic">🔊 Loa / Mic</option>
+              <option value="Nút / Phím">🎮 Nút / Phím</option>
+              <option value="Cáp / Sạc">⚡ Cáp / Sạc</option>
+              <option value="Keo / Dụng cụ">🧰 Keo / Dụng cụ</option>
+              <option value="Khác">📦 Khác</option>
+            </select>
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Số lượng</label>
+            <input class="field" type="number" id="pt-qty" placeholder="1" min="0.01" step="any" value="1" />
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Đơn vị</label>
+            <input class="field" id="pt-unit" placeholder="cái / bộ / cuộn..." value="cái" />
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Đơn giá (VND)</label>
+            <input class="field" type="number" id="pt-price" placeholder="VD: 250000" min="0" />
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Nhà cung cấp</label>
+            <input class="field" id="pt-supplier" placeholder="Tên NCC / nguồn hàng..." />
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Dùng cho máy</label>
+            <input class="field" id="pt-usedfor" placeholder="VD: iPhone 13 của anh Quang..." />
+          </div>
+          <div class="field-wrap">
+            <label class="field-label">Ngày</label>
+            <input class="field" type="date" id="pt-date" />
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Ghi chú</label>
+          <textarea class="field" id="pt-note" placeholder="Ghi chú thêm..." style="min-height:48px;"></textarea>
+        </div>
+        <div class="btn-row">
+          <button class="btn-add" onclick="addPartItem()">➕ Lưu linh kiện</button>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+          <div class="section-hd" style="margin:0;padding:0;border:none;" id="pt-hd">Linh kiện (0)</div>
+          <div class="filter-bar" id="pt-filter-bar">
+            <button class="filter-btn active" onclick="setPartsFilter('all',this)">Tất cả</button>
+            <button class="filter-btn" onclick="setPartsFilter('nhap',this)">📥 Nhập</button>
+            <button class="filter-btn" onclick="setPartsFilter('xuat',this)">📤 Xuất</button>
+          </div>
+        </div>
+        <div style="margin-bottom:10px;font-size:12.5px;" id="pt-summary"></div>
+        <div style="margin-bottom:10px;">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">📊 Tồn kho linh kiện</div>
+          <div id="pt-stock-list" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        </div>
+        <div class="search-bar-wrap">
+          <input class="search-input" id="pt-search" placeholder="🔍 Tìm tên linh kiện, danh mục..." oninput="buildPartsList()" />
+          <button class="search-clear" onclick="document.getElementById('pt-search').value='';buildPartsList()">✕ Xóa</button>
+        </div>
+        <div class="card-list" id="parts-list"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── KHÁCH HÀNG TAB ── -->
   <div class="tab hidden" id="tab-customers">
     <div class="tab-body">
@@ -1082,7 +1174,8 @@ function doGet(e) {
   <button class="bnav-btn active" onclick="switchTab('chat')" id="bnav-chat"><span class="bnav-icon">💬</span><span class="bnav-label">AI</span></button>
   <button class="bnav-btn" onclick="switchTab('repair')" id="bnav-repair"><span class="bnav-icon">🔧</span><span class="bnav-label">Sửa máy</span></button>
   <button class="bnav-btn" onclick="switchTab('sales')" id="bnav-sales"><span class="bnav-icon">💰</span><span class="bnav-label">Bán máy</span></button>
-  <button class="bnav-btn" onclick="switchTab('warehouse')" id="bnav-warehouse"><span class="bnav-icon">📦</span><span class="bnav-label">Kho</span></button>
+  <button class="bnav-btn" onclick="switchTab('warehouse')" id="bnav-warehouse"><span class="bnav-icon">📦</span><span class="bnav-label">Kho máy</span></button>
+  <button class="bnav-btn" onclick="switchTab('parts')" id="bnav-parts"><span class="bnav-icon">🔩</span><span class="bnav-label">Linh kiện</span></button>
   <button class="bnav-btn" onclick="switchTab('customers')" id="bnav-customers"><span class="bnav-icon">🏷️</span><span class="bnav-label">KH</span></button>
   <button class="bnav-btn" onclick="switchTab('finance')" id="bnav-finance"><span class="bnav-icon">💳</span><span class="bnav-label">Thu/Chi</span></button>
   <button class="bnav-btn" onclick="switchTab('stats')" id="bnav-stats"><span class="bnav-icon">📊</span><span class="bnav-label">Thống kê</span></button>
@@ -1097,6 +1190,7 @@ const SK_SALES     = 'tt_sales';
 const SK_CHAT      = 'tt_chat_history';
 const SK_FINANCE   = 'tt_finance';
 const SK_WAREHOUSE = 'tt_warehouse';
+const SK_PARTS     = 'tt_parts';
 const SK_CUSTOMERS = 'tt_customers';
 
 let groqKey = '';
@@ -1104,11 +1198,13 @@ let REPAIRS = [];
 let SALES = [];
 let FINANCE = [];
 let WAREHOUSE = [];
+let PARTS = [];
 let CUSTOMERS = []; // khách hàng thân thiết
 let chatHistory = [];
 let repairFilter = 'all';
 let saleFilter = 'all';
 let warehouseFilter = 'all';
+let partsFilter = 'all';
 let customerFilter = 'all';
 let chatImgData = null;
 let editingId = null;
@@ -1149,6 +1245,7 @@ function init() {
   SALES   = JSON.parse(localStorage.getItem(SK_SALES)   || '[]');
   FINANCE = JSON.parse(localStorage.getItem(SK_FINANCE) || '[]');
   WAREHOUSE = JSON.parse(localStorage.getItem(SK_WAREHOUSE) || '[]');
+  PARTS     = JSON.parse(localStorage.getItem(SK_PARTS)     || '[]');
   CUSTOMERS = JSON.parse(localStorage.getItem(SK_CUSTOMERS) || '[]');
 
   // Set today's date on forms
@@ -1158,6 +1255,8 @@ function init() {
   document.getElementById('fin-date').value = today;
   const wdEl = document.getElementById('wh-date');
   if (wdEl) wdEl.value = today;
+  const pdEl = document.getElementById('pt-date');
+  if (pdEl) pdEl.value = today;
 
   // Restore chat
   const savedChat = localStorage.getItem(SK_CHAT);
@@ -1227,7 +1326,7 @@ function updateSettingsStatus() {
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
 function switchTab(tab) {
-  ['chat','repair','sales','finance','stats','settings','warehouse','customers'].forEach(t => {
+  ['chat','repair','sales','finance','stats','settings','warehouse','parts','customers'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
     const nb = document.getElementById('nav-'+t);
     if (nb) nb.classList.toggle('active', t === tab);
@@ -1241,7 +1340,8 @@ function switchTab(tab) {
     finance:'Thu / Chi',
     stats:'Thống kê & Báo cáo',
     settings:'Cài đặt',
-    warehouse:'Kho hàng',
+    warehouse:'Kho máy',
+    parts:'Linh kiện',
     customers:'Khách hàng thân thiết'
   };
   document.getElementById('tab-title').textContent = titles[tab] || tab;
@@ -1250,6 +1350,7 @@ function switchTab(tab) {
   if (tab === 'sales') buildSaleList();
   if (tab === 'finance') buildFinanceList();
   if (tab === 'warehouse') buildWarehouseList();
+  if (tab === 'parts') buildPartsList();
   if (tab === 'customers') buildCustomerList();
 }
 
@@ -1588,7 +1689,130 @@ function buildRepairList() {
   }).join('');
 }
 
-// ─── SALES CRUD ───────────────────────────────────────────────────────────────
+// ─── PARTS (LINH KIỆN) CRUD ───────────────────────────────────────────────────
+function saveParts() { localStorage.setItem(SK_PARTS, JSON.stringify(PARTS)); }
+
+function addPartItem(data) {
+  const d = data || {
+    type:     document.getElementById('pt-type').value,
+    name:     document.getElementById('pt-name').value.trim(),
+    category: document.getElementById('pt-category').value.trim(),
+    quantity: parseFloat(document.getElementById('pt-qty').value) || 1,
+    unit:     document.getElementById('pt-unit').value.trim() || 'cái',
+    price:    parseFloat(document.getElementById('pt-price').value) || 0,
+    supplier: document.getElementById('pt-supplier').value.trim(),
+    usedfor:  document.getElementById('pt-usedfor').value.trim(),
+    date:     document.getElementById('pt-date').value || todayStr(),
+    note:     document.getElementById('pt-note').value.trim()
+  };
+  if (!d.name) { alert('Vui lòng nhập tên linh kiện!'); return false; }
+  d.id = Date.now() + Math.random();
+  d.createdAt = new Date().toLocaleString('vi-VN');
+  PARTS.unshift(d);
+  saveParts(); buildPartsList(); updateStats();
+  if (!data) {
+    ['pt-name','pt-qty','pt-price','pt-supplier','pt-usedfor','pt-note'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    document.getElementById('pt-qty').value = '1';
+    document.getElementById('pt-date').value = todayStr();
+    document.getElementById('pt-type').value = 'nhap';
+    document.getElementById('pt-category').value = '';
+    document.getElementById('pt-unit').value = 'cái';
+  }
+  return true;
+}
+
+function deletePartItem(id) {
+  if (!confirm('Xóa linh kiện này?')) return;
+  PARTS = PARTS.filter(x => x.id !== id);
+  saveParts(); buildPartsList(); updateStats();
+}
+
+function setPartsFilter(f, btn) {
+  partsFilter = f;
+  document.querySelectorAll('#pt-filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildPartsList();
+}
+
+function getPartsStockSummary() {
+  const stock = {};
+  PARTS.forEach(p => {
+    const key = p.name.toLowerCase();
+    if (!stock[key]) stock[key] = { name: p.name, qty: 0, unit: p.unit, category: p.category };
+    if (p.type === 'nhap') stock[key].qty += (p.quantity || 0);
+    else stock[key].qty -= (p.quantity || 0);
+  });
+  return Object.values(stock);
+}
+
+function buildPartsList() {
+  const list = document.getElementById('parts-list');
+  if (!list) return;
+
+  const q = (document.getElementById('pt-search')?.value || '').toLowerCase();
+  let filtered = PARTS;
+  if (partsFilter === 'nhap') filtered = PARTS.filter(p => p.type === 'nhap');
+  else if (partsFilter === 'xuat') filtered = PARTS.filter(p => p.type === 'xuat');
+  if (q) filtered = filtered.filter(p => (p.name+p.category+p.supplier+p.usedfor).toLowerCase().includes(q));
+
+  const totalNhap = PARTS.filter(p=>p.type==='nhap').reduce((s,p)=>s+(p.price||0)*(p.quantity||1),0);
+  const totalXuat = PARTS.filter(p=>p.type==='xuat').reduce((s,p)=>s+(p.price||0)*(p.quantity||1),0);
+  const hdEl = document.getElementById('pt-hd');
+  if (hdEl) hdEl.textContent = `Linh kiện (${filtered.length}/${PARTS.length})`;
+  const sumEl = document.getElementById('pt-summary');
+  if (sumEl) sumEl.innerHTML = `<span style="color:var(--green)">📥 Nhập: ${fmtMoney(totalNhap)}</span> &nbsp;|&nbsp; <span style="color:var(--amber)">📤 Xuất/Dùng: ${fmtMoney(totalXuat)}</span>`;
+
+  // Tồn kho
+  const stockList = document.getElementById('pt-stock-list');
+  if (stockList) {
+    const summary = getPartsStockSummary().filter(s => s.qty > 0);
+    stockList.innerHTML = summary.length
+      ? summary.map(s => `<span class="badge badge-accent" style="font-size:12px;padding:4px 10px;">${s.category?'<span style="color:var(--text3)">'+escHtml(s.category)+'</span> · ':''}${escHtml(s.name)}: <strong>${s.qty}</strong> ${escHtml(s.unit||'cái')}</span>`).join('')
+      : '<span style="color:var(--text3);font-size:12px;">Kho linh kiện trống</span>';
+  }
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🔩</div>Chưa có linh kiện nào.</div>';
+    return;
+  }
+
+  const catColors = { 'Màn hình':'var(--accent)', 'Pin':'var(--green)', 'Vỏ / Nắp lưng':'var(--purple)', 'Bo mạch':'var(--amber)', 'Camera':'var(--red)' };
+
+  list.innerHTML = filtered.map(p => {
+    const isIn = p.type === 'nhap';
+    const total = (p.price||0) * (p.quantity||1);
+    const catColor = catColors[p.category] || 'var(--text3)';
+    return `<div class="sale-card" style="border-left:3px solid ${isIn?'var(--green)':'var(--amber)'};">
+      <div class="card-top">
+        <div class="card-icon" style="background:${isIn?'var(--green-dim)':'var(--amber-dim)'};border:1px solid ${isIn?'rgba(52,200,122,0.2)':'rgba(240,160,48,0.2)'};">${isIn?'📥':'📤'}</div>
+        <div class="card-info">
+          <div class="card-title">${isIn?'Nhập':'Xuất'}: ${escHtml(p.name)}</div>
+          <div class="card-sub">
+            ${p.category?`<span style="color:${catColor};font-size:11px;font-weight:600;">${escHtml(p.category)}</span> · `:''}
+            SL: <strong>${p.quantity||1} ${p.unit||'cái'}</strong>
+            ${p.supplier?' · NCC: '+escHtml(p.supplier):''}
+          </div>
+          <div class="card-meta">
+            📅 ${fmtDate(p.date)}
+            ${p.usedfor?' · 🔧 Dùng cho: '+escHtml(p.usedfor):''}
+            ${p.note?' · '+escHtml(p.note):''}
+          </div>
+        </div>
+        <div style="font-size:15px;font-weight:700;color:${isIn?'var(--green)':'var(--amber)'};white-space:nowrap;text-align:right;">
+          ${total>0?fmtMoney(total):''}
+          <div style="font-size:10px;font-weight:400;color:var(--text3);">${p.price>0?fmtMoney(p.price)+'/cái':''}</div>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-del" onclick="deletePartItem(${p.id})">🗑 Xóa</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+
 function saveSales() { localStorage.setItem(SK_SALES, JSON.stringify(SALES)); autoSyncToGsheet('sales'); }
 
 function addSale(data) {
@@ -1910,6 +2134,7 @@ function confirmClear(type) {
   if (type === 'sales'     || type === 'all') { SALES   = [];   localStorage.removeItem(SK_SALES);     buildSaleList();  }
   if (type === 'finance'   || type === 'all') { FINANCE = [];   localStorage.removeItem(SK_FINANCE);   buildFinanceList(); }
   if (type === 'warehouse' || type === 'all') { WAREHOUSE = []; localStorage.removeItem(SK_WAREHOUSE); buildWarehouseList(); }
+  if (type === 'parts'     || type === 'all') { PARTS = [];     localStorage.removeItem(SK_PARTS);     buildPartsList(); }
   if (type === 'all') { chatHistory = []; localStorage.removeItem(SK_CHAT); document.getElementById('messages').innerHTML = ''; }
   updateStats();
 }
@@ -2032,7 +2257,7 @@ function buildWarehouseList() {
 
 // ─── EXPORT / IMPORT ──────────────────────────────────────────────────────────
 function exportData() {
-  const blob = new Blob([JSON.stringify({ version:4, exportedAt: new Date().toLocaleString('vi-VN'), repairs:REPAIRS, sales:SALES, finance:FINANCE, warehouse:WAREHOUSE }, null, 2)], { type:'application/json' });
+  const blob = new Blob([JSON.stringify({ version:4, exportedAt: new Date().toLocaleString('vi-VN'), repairs:REPAIRS, sales:SALES, finance:FINANCE, warehouse:WAREHOUSE, parts:PARTS }, null, 2)], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `thuantieu-backup-${todayStr()}.json`;
@@ -2046,13 +2271,14 @@ function importData(ev) {
     try {
       const d = JSON.parse(e.target.result);
       if (!d.repairs && !d.sales) { alert('File không hợp lệ!'); return; }
-      if (!confirm(`Nhập dữ liệu từ "${f.name}"?\n• ${(d.repairs||[]).length} phiếu sửa\n• ${(d.sales||[]).length} bán hàng\n• ${(d.warehouse||[]).length} kho hàng\n\nDữ liệu hiện tại sẽ bị thay thế!`)) return;
+      if (!confirm(`Nhập dữ liệu từ "${f.name}"?\n• ${(d.repairs||[]).length} phiếu sửa\n• ${(d.sales||[]).length} bán hàng\n• ${(d.warehouse||[]).length} kho máy\n• ${(d.parts||[]).length} linh kiện\n\nDữ liệu hiện tại sẽ bị thay thế!`)) return;
       if (d.repairs)   { REPAIRS   = d.repairs;   saveRepairs();   buildRepairList(); }
       if (d.sales)     { SALES     = d.sales;     saveSales();     buildSaleList();   }
       if (d.finance)   { FINANCE   = d.finance;   saveFinance();   buildFinanceList(); }
       if (d.warehouse) { WAREHOUSE = d.warehouse; saveWarehouse(); buildWarehouseList(); }
+      if (d.parts)     { PARTS     = d.parts;     saveParts();     buildPartsList(); }
       updateStats();
-      addMsg('bot', `✅ Nhập thành công từ <strong>${f.name}</strong>!<br>🔧 ${REPAIRS.length} phiếu sửa · 💰 ${SALES.length} bán hàng · 📦 ${WAREHOUSE.length} kho hàng`);
+      addMsg('bot', `✅ Nhập thành công từ <strong>${f.name}</strong>!<br>🔧 ${REPAIRS.length} phiếu sửa · 💰 ${SALES.length} bán hàng · 📦 ${WAREHOUSE.length} kho máy · 🔩 ${PARTS.length} linh kiện`);
       switchTab('chat');
     } catch(err) { alert('Lỗi đọc file: '+err.message); }
     ev.target.value = '';
