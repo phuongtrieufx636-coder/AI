@@ -1564,10 +1564,10 @@ function updateStats() {
   const repairProfit = repairMonth.reduce((s,r) => s + (r.profit||0) - (r.cost||0), 0);
   const totalRepairProfit = REPAIRS.reduce((s,r) => s + (r.profit||0) - (r.cost||0), 0);
 
-  const salesMonth = SALES.filter(s => s.date && s.date !== 'undefined' && s.date.startsWith(month));
+  const salesMonth = SALES.filter(s => s.date && s.date !== 'undefined' && s.date.startsWith(month) && !s.returned);
   const saleRevenue = salesMonth.reduce((s,x) => s + (x.price||0), 0);
   const saleProfit = salesMonth.reduce((s,x) => s + (x.profit||0), 0);
-  const totalSaleProfit = SALES.reduce((s,x) => s + (x.profit||0), 0);
+  const totalSaleProfit = SALES.filter(s => !s.returned).reduce((s,x) => s + (x.profit||0), 0);
 
   document.getElementById('stat-repairing').textContent = repairing;
   document.getElementById('stat-pending').textContent   = pending;
@@ -1994,10 +1994,10 @@ function buildContext() {
   const stockSummary = getStockSummary().filter(s=>s.qty>0).map(s=>`${s.name}: ${s.qty} ${s.unit||'cái'}`).join(', ') || '(Không có tồn kho)';
 
   const totalRepairNet = REPAIRS.reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
-  const totalSaleNet   = SALES.reduce((s,x)=>s+(x.profit||0),0);
+  const totalSaleNet   = SALES.filter(s=>!s.returned).reduce((s,x)=>s+(x.profit||0),0);
   const month = thisMonth();
   const monthRepairNet = REPAIRS.filter(r=>r.date && r.date!=='undefined' && r.date.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
-  const monthSaleNet   = SALES.filter(s=>s.date && s.date!=='undefined' && s.date.startsWith(month)).reduce((s,x)=>s+(x.profit||0),0);
+  const monthSaleNet   = SALES.filter(s=>s.date && s.date!=='undefined' && s.date.startsWith(month) && !s.returned).reduce((s,x)=>s+(x.profit||0),0);
   const monthFinIn     = FINANCE.filter(f=>f.date && f.date!=='undefined' && f.date.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
   const monthFinOut    = FINANCE.filter(f=>f.date && f.date!=='undefined' && f.date.startsWith(month)&&f.type==='chi').reduce((s,f)=>s+f.amount,0);
 
