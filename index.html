@@ -71,17 +71,6 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
 .key-status.ok{background:var(--green-dim);color:var(--green);}
 .key-status.none{background:var(--red-dim);color:var(--red);}
 
-/* WEBLLM BAR */
-#webllm-bar{display:none;align-items:center;gap:10px;padding:8px 22px;background:linear-gradient(90deg,rgba(155,114,245,0.08),rgba(79,142,247,0.08));border-bottom:1px solid var(--border);}
-#webllm-bar label{font-size:12px;color:var(--text3);white-space:nowrap;}
-#webllm-progress-wrap{flex:1;display:flex;flex-direction:column;gap:3px;}
-#webllm-progress-bar-bg{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;display:none;}
-#webllm-progress-bar{height:100%;background:linear-gradient(90deg,var(--purple),var(--accent));width:0%;transition:width 0.3s;border-radius:3px;}
-#webllm-status{font-size:11px;color:var(--text3);}
-#webllm-load-btn{padding:6px 14px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--purple),var(--accent));color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;}
-#webllm-load-btn:hover{opacity:0.88;}
-#webllm-load-btn:disabled{opacity:0.5;cursor:not-allowed;}
-
 /* TABS */
 .tab{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 .tab.hidden{display:none!important;}
@@ -409,11 +398,11 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
     <button class="nav-btn" onclick="switchTab('settings')" id="nav-settings"><span class="ni">⚙️</span> Cài đặt</button>
   </div>
   <div id="sidebar-bottom">
-    <div class="model-chip" id="model-chip">
-      <div class="model-dot" id="model-dot"></div>
+    <div class="model-chip">
+      <div class="model-dot"></div>
       <div>
-        <div class="model-name" id="model-name-label">AI Giả lập</div>
-        <div class="model-sub" id="model-sub-label">Offline · Không cần key</div>
+        <div class="model-name">llama-3.3-70b (Groq)</div>
+        <div class="model-sub">Groq · Miễn phí & nhanh</div>
       </div>
     </div>
   </div>
@@ -438,19 +427,7 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
     <span class="sim-badge">✨ AI Giả lập</span>
     <label>Chế độ demo không cần Groq key</label>
     <div style="flex:1;"></div>
-    <button id="webllm-mode-toggle" onclick="toggleWebLLMMode()" style="padding:6px 12px;border-radius:var(--radius-sm);background:var(--purple-dim);color:var(--purple);border:1px solid rgba(155,114,245,0.3);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;">🧠 Dùng WebLLM</button>
     <button id="ai-sim-toggle" class="active" onclick="toggleSimMode()">🤖 Đang dùng AI Giả lập</button>
-  </div>
-
-  <!-- ── WEBLLM BAR ── -->
-  <div id="webllm-bar">
-    <span style="font-size:16px;flex-shrink:0;">🧠</span>
-    <label>WebLLM (Offline AI):</label>
-    <div id="webllm-progress-wrap">
-      <div id="webllm-status">Qwen2.5-1.5B · Nhẹ ~900MB, tiếng Việt tốt, chạy offline</div>
-      <div id="webllm-progress-bar-bg"><div id="webllm-progress-bar"></div></div>
-    </div>
-    <button id="webllm-load-btn" onclick="loadWebLLM()">⬇️ Tải model (~900MB)</button>
   </div>
 
   <!-- ── CHAT TAB ── -->
@@ -1305,8 +1282,6 @@ function init() {
   window.addEventListener('resize', () => document.body.classList.toggle('has-bnav', window.innerWidth <= 700));
   applyTheme(localStorage.getItem('tt_theme') || 'auto');
   initSimMode();
-  // Tự động khởi động lại WebLLM nếu đã từng tải (dùng cache)
-  autoResumeWebLLM();
 }
 
 // ─── KEY ─────────────────────────────────────────────────────────────────────
@@ -1318,11 +1293,8 @@ function saveKey() {
   setKeyStatus(true);
   updateSettingsStatus();
   simModeEnabled = false;
-  webLLMModeEnabled = false;
   localStorage.setItem('tt_sim_mode', 'false');
   updateSimModeUI();
-  updateWebLLMUI();
-  updateModelChipFromMode();
   addMsg('bot', '✅ API key đã lưu! AI Groq đã sẵn sàng. Bạn có thể bắt đầu dùng AI để nhập dữ liệu.');
 }
 function clearKey() {
@@ -1335,7 +1307,6 @@ function clearKey() {
   simModeEnabled = true;
   localStorage.setItem('tt_sim_mode', 'true');
   updateSimModeUI();
-  updateModelChipFromMode();
 }
 function setKeyStatus(ok) {
   const el = document.getElementById('key-status');
@@ -2940,17 +2911,7 @@ async function sendMsg() {
   const text = input.value.trim();
   if (!text && !chatImgData) return;
 
-  // AI giả lập hoặc WebLLM khi không có key hoặc mode bật
-  if (webLLMModeEnabled && webLLMLoaded) {
-    const userText = text || '(Xem ảnh đính kèm)';
-    addMsg('user', escHtml(userText));
-    input.value = ''; input.style.height = '';
-    const imgData = chatImgData; clearChatImg();
-    aiMessageCount++;
-    await sendWebLLMMsg(userText, imgData);
-    return;
-  }
-
+  // AI giả lập khi không có key hoặc sim mode bật
   if (simModeEnabled || !groqKey) {
     if (!groqKey && !simModeEnabled) {
       addMsg('bot', '⚠️ Vui lòng nhập <strong>Groq API Key</strong> ở trên hoặc bật <strong>AI Giả lập</strong> để dùng AI!');
@@ -4158,8 +4119,6 @@ function initSimMode() {
   const saved = localStorage.getItem('tt_sim_mode');
   simModeEnabled = saved === 'true';
   updateSimModeUI();
-  updateWebLLMUI();
-  updateModelChipFromMode();
 }
 
 function toggleSimMode() {
@@ -4195,273 +4154,6 @@ function updateSimModeUI() {
       btn.textContent = '🤖 Bật AI Giả lập';
     }
   }
-  updateModelChipFromMode();
-}
-
-// ─── WEBLLM ENGINE ────────────────────────────────────────────────────────────
-const WEBLLM_MODEL = 'Qwen2.5-1.5B-Instruct-q4f32_1-MLC'; // ~900MB, tiếng Việt tốt
-const WEBLLM_MODEL_LABEL = 'Qwen2.5-1.5B (WebLLM)';
-let webLLMEngine = null;
-let webLLMModeEnabled = false;
-let webLLMLoaded = false;
-let webLLMLoading = false;
-
-// Khi mở lại trang, nếu đã từng tải model → tự động khởi tạo lại (model nằm trong cache IndexedDB)
-async function autoResumeWebLLM() {
-  if (localStorage.getItem('tt_webllm_ready') !== '1') return;
-  const bar = document.getElementById('webllm-bar');
-  const btn = document.getElementById('webllm-load-btn');
-  const statusEl = document.getElementById('webllm-status');
-  if (bar) bar.style.display = 'flex';
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang khởi động...'; }
-  if (statusEl) statusEl.textContent = 'Đang khởi động lại WebLLM từ cache...';
-  try {
-    await loadWebLLMEngine(false); // false = không hiện progress bar, dùng cache
-  } catch(e) {
-    // Nếu cache bị xóa → reset flag, để người dùng tải lại
-    localStorage.removeItem('tt_webllm_ready');
-    if (btn) { btn.disabled = false; btn.textContent = '⬇️ Tải model (~700MB)'; }
-    if (statusEl) statusEl.textContent = 'Llama-3.2-1B · Cache bị xóa, cần tải lại';
-  }
-}
-
-function toggleWebLLMMode() {
-  if (webLLMLoaded) {
-    webLLMModeEnabled = !webLLMModeEnabled;
-    if (webLLMModeEnabled) {
-      simModeEnabled = false;
-      localStorage.setItem('tt_sim_mode', 'false');
-      updateSimModeUI();
-      addMsg('bot', `🧠 <strong>WebLLM đã bật!</strong> ${WEBLLM_MODEL_LABEL} đang chạy trực tiếp trong trình duyệt, hoàn toàn offline.`);
-    } else {
-      addMsg('bot', '✅ Đã tắt WebLLM. Đang dùng ' + (groqKey ? 'Groq API.' : 'AI Giả lập.'));
-      if (!groqKey) { simModeEnabled = true; updateSimModeUI(); }
-    }
-    updateWebLLMUI();
-    updateModelChipFromMode();
-  } else {
-    const bar = document.getElementById('webllm-bar');
-    if (bar) bar.style.display = 'flex';
-    addMsg('bot', '🧠 <strong>WebLLM</strong>: Nhấn <strong>⬇️ Tải model</strong> ở thanh trên để tải Llama-3.2-1B (~700MB) về máy. Sau lần đầu, model lưu vào cache — mở lại trang sẽ tự bật ngay, không tải lại.<br><em style="font-size:11px;color:var(--text3)">⚠️ Cần Chrome/Edge hỗ trợ WebGPU. Không hỗ trợ iOS Safari.</em>');
-  }
-}
-
-async function loadWebLLM() {
-  if (webLLMLoading || webLLMLoaded) return;
-  await loadWebLLMEngine(true);
-}
-
-async function loadWebLLMEngine(showProgress) {
-  if (webLLMLoading) return;
-  webLLMLoading = true;
-  const btn = document.getElementById('webllm-load-btn');
-  const statusEl = document.getElementById('webllm-status');
-  const progressBg = document.getElementById('webllm-progress-bar-bg');
-  const progressBar = document.getElementById('webllm-progress-bar');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang tải...'; }
-  if (showProgress && progressBg) progressBg.style.display = 'block';
-  if (statusEl) statusEl.textContent = 'Đang tải WebLLM runtime...';
-
-  // Giữ màn hình sáng trong khi tải (tránh GPU bị sleep → lỗi mapAsync)
-  let wakeLock = null;
-  try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {}
-
-  const attemptLoad = async (attempt) => {
-    try {
-      // Dùng version cố định tránh breaking changes
-      if (typeof webllm === 'undefined') {
-        await new Promise((resolve, reject) => {
-          const s = document.createElement('script');
-          s.type = 'module';
-          s.textContent = `
-            import * as m from 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm';
-            window.webllm = m;
-            window.dispatchEvent(new Event('webllm-ready'));
-          `;
-          document.head.appendChild(s);
-          window.addEventListener('webllm-ready', resolve, { once: true });
-          setTimeout(() => reject(new Error('Timeout tải runtime (90s) — kiểm tra mạng')), 90000);
-        });
-      }
-
-      if (statusEl) statusEl.textContent = showProgress
-        ? `Đang tải model ~900MB${attempt > 1 ? ` (lần ${attempt})` : ''}... Giữ tab mở!`
-        : 'Đang khởi động từ cache...';
-
-      let lastPct = 0;
-      const initProgressCallback = (report) => {
-        if (!showProgress) return;
-        const pct = Math.round((report.progress || 0) * 100);
-        if (pct !== lastPct) {
-          lastPct = pct;
-          if (progressBar) progressBar.style.width = pct + '%';
-          if (statusEl) statusEl.textContent = (report.text || `Đang tải: ${pct}%`) + ' — Đừng tắt tab!';
-        }
-      };
-
-      // AppConfig tối ưu cho máy yếu: giảm context window
-      const appConfig = {
-        model_list: [{
-          model: `https://huggingface.co/mlc-ai/${WEBLLM_MODEL}`,
-          model_id: WEBLLM_MODEL,
-          model_lib: `https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/web-llm-models/v0_2_48/${WEBLLM_MODEL}-webgpu.wasm`,
-          overrides: { context_window_size: 1024, sliding_window_size: -1, attention_sink_size: -1 }
-        }]
-      };
-
-      webLLMEngine = await webllm.CreateMLCEngine(WEBLLM_MODEL, {
-        initProgressCallback,
-        appConfig
-      });
-
-      return true; // thành công
-    } catch(err) {
-      const isGPUErr = /mapAsync|GPUBuffer|gpu|webgpu/i.test(err.message);
-      if (isGPUErr && attempt < 3) {
-        // GPUBuffer lỗi → đợi 2s rồi thử lại
-        if (statusEl) statusEl.textContent = `⚠️ GPU bị ngắt, thử lại (${attempt}/3)...`;
-        webLLMEngine = null;
-        await new Promise(r => setTimeout(r, 2000));
-        return false; // báo retry
-      }
-      throw err; // lỗi khác → throw luôn
-    }
-  };
-
-  try {
-    let ok = false;
-    for (let i = 1; i <= 3 && !ok; i++) {
-      ok = await attemptLoad(i);
-    }
-    if (!ok) throw new Error('Thử lại 3 lần đều bị lỗi GPU. Thử tắt tab khác, reload trang rồi tải lại.');
-
-    webLLMLoaded = true;
-    webLLMLoading = false;
-    webLLMModeEnabled = true;
-    simModeEnabled = false;
-    localStorage.setItem('tt_sim_mode', 'false');
-    localStorage.setItem('tt_webllm_ready', '1');
-
-    if (btn) { btn.textContent = '✅ Sẵn sàng'; btn.style.background = 'var(--green-dim)'; btn.style.color = 'var(--green)'; btn.style.border = '1px solid var(--green)'; }
-    if (progressBar) progressBar.style.width = '100%';
-    if (statusEl) statusEl.textContent = `${WEBLLM_MODEL_LABEL} · Đang chạy offline ✓`;
-    if (progressBg) setTimeout(() => { progressBg.style.display = 'none'; }, 800);
-
-    updateWebLLMUI();
-    updateSimModeUI();
-    updateModelChipFromMode();
-
-    if (showProgress) {
-      addMsg('bot', `🧠 <strong>WebLLM sẵn sàng!</strong> ${WEBLLM_MODEL_LABEL} đang chạy hoàn toàn offline. Lần sau mở app sẽ tự bật lại từ cache — không tải lại!`);
-    }
-  } catch (err) {
-    webLLMLoading = false;
-    webLLMLoaded = false;
-    if (btn) { btn.disabled = false; btn.textContent = '⬇️ Thử lại'; }
-    if (progressBg) progressBg.style.display = 'none';
-    const isGPUErr = /mapAsync|GPUBuffer|gpu|webgpu/i.test(err.message);
-    if (statusEl) statusEl.textContent = '❌ ' + (isGPUErr ? 'Lỗi GPU — giữ tab mở khi tải, thử lại' : err.message);
-    const hint = isGPUErr
-      ? 'Giữ tab mở trong khi tải (không chuyển tab khác). Tắt bớt tab/app khác để giải phóng GPU/RAM rồi nhấn Thử lại.'
-      : 'Cần Chrome/Edge mới nhất, WebGPU, RAM ≥2GB. Không hỗ trợ iOS Safari hay Firefox.';
-    if (showProgress) addMsg('bot', `❌ <strong>Lỗi WebLLM:</strong> ${escHtml(isGPUErr ? 'GPU bị ngắt kết nối (mapAsync)' : err.message)}<br><em style="font-size:11px;color:var(--text3)">${hint}</em>`);
-    throw err;
-  } finally {
-    try { if (wakeLock) wakeLock.release(); } catch(e) {}
-  }
-}
-
-function updateWebLLMUI() {
-  const toggleBtn = document.getElementById('webllm-mode-toggle');
-  if (!toggleBtn) return;
-  if (webLLMModeEnabled && webLLMLoaded) {
-    toggleBtn.textContent = '🧠 WebLLM: BẬT';
-    toggleBtn.style.cssText = 'padding:6px 12px;border-radius:var(--radius-sm);background:rgba(155,114,245,0.25);color:var(--purple);border:1px solid rgba(155,114,245,0.6);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;';
-  } else {
-    toggleBtn.textContent = webLLMLoaded ? '🧠 Bật WebLLM' : '🧠 Dùng WebLLM';
-    toggleBtn.style.cssText = 'padding:6px 12px;border-radius:var(--radius-sm);background:var(--bg3);color:var(--text2);border:1px solid var(--border2);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;';
-  }
-}
-
-function updateModelChipFromMode() {
-  const modelName = document.getElementById('model-name-label');
-  const modelSub = document.getElementById('model-sub-label');
-  const modelDot = document.getElementById('model-dot');
-  if (!modelName) return;
-  if (webLLMModeEnabled && webLLMLoaded) {
-    modelName.textContent = WEBLLM_MODEL_LABEL;
-    modelSub.textContent = 'Offline · Chạy trong trình duyệt';
-    modelDot.style.background = 'var(--purple)';
-    modelDot.style.boxShadow = '0 0 6px var(--purple)';
-  } else if (groqKey && !simModeEnabled) {
-    modelName.textContent = 'llama-3.3-70b (Groq)';
-    modelSub.textContent = 'Groq · Miễn phí & nhanh';
-    modelDot.style.background = 'var(--green)';
-    modelDot.style.boxShadow = '0 0 6px var(--green)';
-  } else {
-    modelName.textContent = 'AI Giả lập';
-    modelSub.textContent = 'Demo · Không cần key';
-    modelDot.style.background = 'var(--amber)';
-    modelDot.style.boxShadow = '0 0 6px var(--amber)';
-  }
-}
-
-async function sendWebLLMMsg(text, imgData) {
-  showTyping();
-  document.getElementById('send-btn').disabled = true;
-
-  if (imgData) {
-    hideTyping();
-    addMsg('bot', `🧠 <strong>${WEBLLM_MODEL_LABEL}</strong> chưa hỗ trợ đọc ảnh. Dùng Groq API (miễn phí) để đọc ảnh bill tự động.`);
-    document.getElementById('send-btn').disabled = false;
-    return;
-  }
-
-  try {
-    const today = todayStr();
-    const sh = getShopInfo();
-    const repCount = REPAIRS.filter(r => r.status === 'dang_sua').length;
-    const waitCount = REPAIRS.filter(r => r.status === 'xong_chua_giao').length;
-    const monthNet = REPAIRS.filter(r => r.date && r.date.startsWith(thisMonth())).reduce((s,r) => s+(r.profit||0)-(r.cost||0), 0);
-
-    const sysPrompt = `Bạn là AI hỗ trợ cửa hàng điện thoại "${sh.name}". Hôm nay: ${today}.
-Tình trạng: ${repCount} máy đang sửa, ${waitCount} máy chờ giao, lãi sửa tháng: ${fmtMoney(monthNet)}.
-Trả lời ngắn gọn, thân thiện bằng tiếng Việt. Không dùng markdown phức tạp.
-Nếu người dùng muốn nhập liệu tự động, gợi ý nhập Groq API key (miễn phí tại groq.com) để AI nhập liệu đầy đủ.`;
-
-    const histMsgs = chatHistory.slice(-4).map(m => ({
-      role: m.role,
-      content: (typeof m.content === 'string' ? m.content : '[ảnh]').substring(0, 200)
-    }));
-
-    const reply = await webLLMEngine.chat.completions.create({
-      messages: [
-        { role: 'system', content: sysPrompt },
-        ...histMsgs,
-        { role: 'user', content: text }
-      ],
-      temperature: 0.7,
-      max_tokens: 400,
-      stream: false
-    });
-
-    hideTyping();
-    const content = reply.choices[0]?.message?.content || '...';
-    const displayReply = '🧠 ' + content
-      .replace(/</g, '&lt;')
-      .replace(/\n/g, '<br>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-    addMsg('bot', displayReply);
-    chatHistory.push({ role: 'user', content: text });
-    chatHistory.push({ role: 'assistant', content: content });
-    if (chatHistory.length > 20) chatHistory.splice(0, chatHistory.length - 20);
-    localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
-  } catch (err) {
-    hideTyping();
-    addMsg('bot', `❌ <strong>WebLLM lỗi:</strong> ${escHtml(err.message)}`);
-  }
-  document.getElementById('send-btn').disabled = false;
 }
 
 // ── AI giả lập nội bộ (không cần key) ─────────────────────────────────────
