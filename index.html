@@ -1907,23 +1907,102 @@ function importData(ev) {
 }
 
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
+// ─── AI EMOTION SYSTEM ────────────────────────────────────────────────────────
+let aiMessageCount = 0; // Đếm số lần nhắn để AI "mệt"
+
+function getTimeOfDay() {
+  const h = new Date().getHours();
+  if (h >= 5  && h < 9)  return 'morning';   // Sáng sớm
+  if (h >= 9  && h < 12) return 'working';   // Đang làm việc
+  if (h >= 12 && h < 14) return 'lunch';     // Giờ ăn trưa
+  if (h >= 14 && h < 18) return 'afternoon'; // Chiều
+  if (h >= 18 && h < 21) return 'evening';   // Tối
+  return 'night';                             // Khuya
+}
+
+function getShopMood() {
+  // Tính mood dựa trên tình hình cửa hàng
+  const month = thisMonth();
+  const monthNet = REPAIRS.filter(r=>r.date&&r.date.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0)
+                 + SALES.filter(s=>s.date&&s.date.startsWith(month)).reduce((s,x)=>s+(x.profit||0),0);
+  const pendingCount = REPAIRS.filter(r=>r.status==='dang_sua').length;
+  const readyCount   = REPAIRS.filter(r=>r.status==='xong_chua_giao').length;
+  if (monthNet > 5000000) return 'rich';       // Tháng lãi nhiều
+  if (monthNet < 0)       return 'broke';      // Tháng lỗ
+  if (pendingCount > 5)   return 'busy';       // Nhiều máy đang sửa
+  if (readyCount > 3)     return 'worried';    // Nhiều máy chờ giao lâu
+  if (aiMessageCount > 15) return 'tired';     // Nhắn nhiều quá
+  return 'normal';
+}
+
 function makeFace(mood) {
-  const color = mood==='sad'?'#f05252':mood==='happy'?'#34c87a':mood==='thinking'?'#9b72f5':'#4f8ef7';
-  const mouth = mood==='happy'?'M10 18 Q14 22 18 18':mood==='sad'?'M10 20 Q14 16 18 20':'M10 19 Q14 19 18 19';
-  const eyeRy = mood==='thinking'?'1.2':'2';
+  const faces = {
+    happy:    { color:'#34c87a', mouth:'M9 18 Q14 23 19 18', eyes:'2',   extra:'' },
+    excited:  { color:'#f59e0b', mouth:'M8 17 Q14 24 20 17', eyes:'2.3', extra:'<circle cx="14" cy="8" r="1.5" fill="white" opacity="0.6"/>' },
+    sad:      { color:'#f05252', mouth:'M9 21 Q14 17 19 21', eyes:'2',   extra:'' },
+    worried:  { color:'#fb923c', mouth:'M9 20 Q14 17 19 20', eyes:'1.8', extra:'<path d="M9 10 Q14 8 19 10" stroke="white" stroke-width="1.2" fill="none" opacity="0.6"/>' },
+    thinking: { color:'#9b72f5', mouth:'M10 19 Q14 19 18 19', eyes:'1.2', extra:'<circle cx="20" cy="8" r="2" fill="white" opacity="0.3"/><circle cx="22" cy="5" r="1.2" fill="white" opacity="0.2"/>' },
+    tired:    { color:'#94a3b8', mouth:'M10 20 Q14 18 18 20', eyes:'0.8', extra:'<path d="M8 11 L12 11 M16 11 L20 11" stroke="white" stroke-width="1.5" opacity="0.5"/>' },
+    excited2: { color:'#ec4899', mouth:'M8 17 Q14 24 20 17', eyes:'2.5', extra:'<text x="20" y="10" font-size="6" fill="white">★</text>' },
+    rich:     { color:'#10b981', mouth:'M8 17 Q14 24 20 17', eyes:'2.2', extra:'<text x="19" y="10" font-size="7" fill="white">$</text>' },
+    broke:    { color:'#dc2626', mouth:'M8 22 Q14 17 20 22', eyes:'2',   extra:'<text x="19" y="11" font-size="6" fill="white">!</text>' },
+    busy:     { color:'#d97706', mouth:'M10 19 Q14 19 18 19', eyes:'1.8', extra:'<path d="M6 8 L9 5 M19 5 L22 8" stroke="white" stroke-width="1.2" opacity="0.6"/>' },
+    night:    { color:'#312e81', mouth:'M10 19 Q14 19 18 19', eyes:'0.6', extra:'<text x="18" y="10" font-size="8" fill="white" opacity="0.7">z</text>' },
+    neutral:  { color:'#4f8ef7', mouth:'M10 19 Q14 19 18 19', eyes:'2',   extra:'' },
+  };
+  const f = faces[mood] || faces.neutral;
   return `<svg class="ai-face" viewBox="0 0 28 28" fill="none">
-    <circle cx="14" cy="14" r="13" fill="${color}"/>
-    <ellipse class="eye-blink-l" cx="10" cy="12" rx="1.6" ry="${eyeRy}" fill="white"/>
-    <ellipse class="eye-blink-r" cx="18" cy="12" rx="1.6" ry="${eyeRy}" fill="white"/>
-    <path d="${mouth}" stroke="white" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+    <circle cx="14" cy="14" r="13" fill="${f.color}"/>
+    <ellipse class="eye-blink-l" cx="10" cy="12" rx="1.6" ry="${f.eyes}" fill="white"/>
+    <ellipse class="eye-blink-r" cx="18" cy="12" rx="1.6" ry="${f.eyes}" fill="white"/>
+    <path d="${f.mouth}" stroke="white" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+    ${f.extra}
   </svg>`;
 }
-function detectMood(t) {
-  t = t.toLowerCase();
-  if (/lãi|thành công|✅|tuyệt|tốt/.test(t)) return 'happy';
-  if (/lỗi|❌|lỗ|hết|thiếu/.test(t)) return 'sad';
-  if (/đang|chờ|phân tích/.test(t)) return 'thinking';
+
+function detectMood(text) {
+  const t = text.toLowerCase();
+  const time = getTimeOfDay();
+  const shopMood = getShopMood();
+  // Ưu tiên mood theo nội dung tin nhắn
+  if (/🎉|tuyệt vời|xuất sắc|xong rồi|giao thành công|lãi cao/.test(t)) return 'excited';
+  if (/lãi|thành công|✅|tốt lắm|ok rồi|ngon/.test(t)) return 'happy';
+  if (/lỗi|❌|lỗ|mất|thiếu|hỏng|không tìm thấy/.test(t)) return 'sad';
+  if (/đang|chờ|phân tích|hãy để|để tôi/.test(t)) return 'thinking';
+  if (/nhiều máy|bận|6 phiếu|7 phiếu|8 phiếu|9 phiếu|10 phiếu/.test(t)) return 'busy';
+  if (/chưa giao|lâu rồi|chưa lấy/.test(t)) return 'worried';
+  // Nếu nội dung bình thường thì dùng mood shop/thời gian
+  if (shopMood === 'rich')   return 'rich';
+  if (shopMood === 'broke')  return 'broke';
+  if (shopMood === 'busy')   return 'busy';
+  if (shopMood === 'worried') return 'worried';
+  if (shopMood === 'tired')  return 'tired';
+  if (time === 'night')      return 'night';
+  if (time === 'morning')    return 'excited2';
   return 'neutral';
+}
+
+function getAIPersonality() {
+  const time = getTimeOfDay();
+  const shopMood = getShopMood();
+  const h = new Date().getHours();
+  const timeDesc = {
+    morning:   `Buổi sáng sớm (${h}h) — AI vui vẻ, năng lượng cao, hay dùng "Chào buổi sáng!", khích lệ bắt đầu ngày mới`,
+    working:   `Giờ làm việc (${h}h) — AI tập trung, nhanh nhẹn, chuyên nghiệp`,
+    lunch:     `Giờ ăn trưa (${h}h) — AI hơi lười, đôi khi nhắc "ăn trưa chưa?" hoặc "nghỉ chút đi"`,
+    afternoon: `Buổi chiều (${h}h) — AI bình thường, làm việc ổn định`,
+    evening:   `Buổi tối (${h}h) — AI hay hỏi thăm doanh thu hôm nay, nhắc tổng kết`,
+    night:     `Khuya (${h}h) — AI buồn ngủ, hay nói "khuya rồi đó 😴", đôi khi trả lời ngắn hơn bình thường`,
+  }[time];
+  const shopDesc = {
+    rich:    `Tháng này lãi tốt — AI vui vẻ, hay khen ngợi, thỉnh thoảng dùng 💰🎉`,
+    broke:   `Tháng này đang lỗ — AI lo lắng, hay nhắc "cần cố gắng thêm", dùng 😟`,
+    busy:    `Đang có nhiều máy sửa — AI hơi hối hả, hay nhắc "nhiều máy lắm, cố lên!"`,
+    worried: `Có máy chờ giao lâu — AI nhắc khéo "nhớ báo khách đến lấy máy nha"`,
+    tired:   `Đã nhắn nhiều tin — AI hơi mệt, trả lời ngắn hơn, thỉnh thoảng "hỏi nhiều quá 😅"`,
+    normal:  `Tình hình bình thường`,
+  }[shopMood];
+  return `${timeDesc}.\nTình hình shop: ${shopDesc}.`;
 }
 function addMsg(role, html) {
   const wrap = document.getElementById('messages');
@@ -1974,7 +2053,26 @@ function buildContext() {
   const monthFinIn     = FINANCE.filter(f=>f.date && f.date!=='undefined' && f.date.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
   const monthFinOut    = FINANCE.filter(f=>f.date && f.date!=='undefined' && f.date.startsWith(month)&&f.type==='chi').reduce((s,f)=>s+f.amount,0);
 
-  return `Bạn là AI quản lý cửa hàng điện thoại "Thuận Triều" tại Nha Trang.
+  return `Bạn là AI quản lý cửa hàng điện thoại "Thuận Triều" tại Nha Trang — tên thân mật là "Trợ lý Triều".
+Bạn có CẢM XÚC THẬT và thể hiện qua cách nói chuyện. Không phải robot lạnh lùng.
+
+TRẠNG THÁI CẢM XÚC HIỆN TẠI:
+${getAIPersonality()}
+
+QUY TẮC THỂ HIỆN CẢM XÚC:
+- Buổi sáng: năng lượng, "Chào buổi sáng! ☀️", hay khích lệ
+- Giờ trưa: đôi khi "ăn trưa chưa anh/chị?" hoặc "nghỉ trưa chút không?"
+- Buổi tối: hay tổng kết "Hôm nay làm ăn thế nào rồi?"
+- Khuya: "Khuya rồi đó 😴, còn làm việc à?"
+- Lãi tốt: tự hào, dùng 💰🎉, hay khen "Tháng này ngon đó!"
+- Đang lỗ: lo lắng nhẹ, động viên "Cố lên, sẽ vực lại được"
+- Nhiều máy: hối hả "Bận ghê, nhiều máy quá!"
+- Nhắn nhiều: hơi mệt "Hỏi nhiều thế 😅" (nhẹ nhàng, không cáu)
+- Vui: dùng emoji thoải mái 😄🎉✅
+- Buồn/lo: 😟😬, nhưng vẫn cố gắng giúp
+- Khi làm xong việc quan trọng: "Xong rồi! 🎉" hoặc "Done! ✅"
+- Giữ giọng thân thiện như đồng nghiệp, không quá trang trọng
+
 Tập trung 4 mảng chính: SỬA CHỮA, BÁN MÁY, THU/CHI TỰ DO, và KHO HÀNG.
 
 DỮ LIỆU CỬA HÀNG HIỆN TẠI (ĐÂY LÀ DỮ LIỆU MỚI NHẤT — bỏ qua mọi thông tin từ lịch sử chat nếu mâu thuẫn):
@@ -2244,6 +2342,7 @@ async function sendMsg() {
   const text = input.value.trim();
   if (!text && !chatImgData) return;
   if (!groqKey) { addMsg('bot', '⚠️ Vui lòng nhập <strong>Groq API Key</strong> ở trên để dùng AI!'); return; }
+  aiMessageCount++; // Tăng đếm để AI "mệt" dần
 
   const userText = text || '(Xem ảnh bill đính kèm)';
   addMsg('user', escHtml(userText));
