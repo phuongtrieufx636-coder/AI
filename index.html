@@ -447,10 +447,10 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
     <span style="font-size:16px;flex-shrink:0;">🧠</span>
     <label>WebLLM (Offline AI):</label>
     <div id="webllm-progress-wrap">
-      <div id="webllm-status">Llama-3.2-1B · Nhẹ ~700MB, chạy offline trong trình duyệt</div>
+      <div id="webllm-status">Qwen2.5-1.5B · Nhẹ ~900MB, tiếng Việt tốt, chạy offline</div>
       <div id="webllm-progress-bar-bg"><div id="webllm-progress-bar"></div></div>
     </div>
-    <button id="webllm-load-btn" onclick="loadWebLLM()">⬇️ Tải model (~700MB)</button>
+    <button id="webllm-load-btn" onclick="loadWebLLM()">⬇️ Tải model (~900MB)</button>
   </div>
 
   <!-- ── CHAT TAB ── -->
@@ -4199,8 +4199,8 @@ function updateSimModeUI() {
 }
 
 // ─── WEBLLM ENGINE ────────────────────────────────────────────────────────────
-const WEBLLM_MODEL = 'Llama-3.2-1B-Instruct-q4f16_1-MLC'; // ~700MB, nhẹ cho Android
-const WEBLLM_MODEL_LABEL = 'Llama-3.2-1B (WebLLM)';
+const WEBLLM_MODEL = 'Qwen2.5-1.5B-Instruct-q4f32_1-MLC'; // ~900MB, tiếng Việt tốt
+const WEBLLM_MODEL_LABEL = 'Qwen2.5-1.5B (WebLLM)';
 let webLLMEngine = null;
 let webLLMModeEnabled = false;
 let webLLMLoaded = false;
@@ -4262,40 +4262,85 @@ async function loadWebLLMEngine(showProgress) {
   if (showProgress && progressBg) progressBg.style.display = 'block';
   if (statusEl) statusEl.textContent = 'Đang tải WebLLM runtime...';
 
-  try {
-    // Load WebLLM ESM library
-    if (typeof webllm === 'undefined') {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.type = 'module';
-        s.textContent = `
-          import * as webllmMod from 'https://esm.run/@mlc-ai/web-llm';
-          window.webllm = webllmMod;
-          window.dispatchEvent(new Event('webllm-ready'));
-        `;
-        document.head.appendChild(s);
-        window.addEventListener('webllm-ready', resolve, { once: true });
-        setTimeout(() => reject(new Error('Timeout tải WebLLM runtime (60s)')), 60000);
+  // Giữ màn hình sáng trong khi tải (tránh GPU bị sleep → lỗi mapAsync)
+  let wakeLock = null;
+  try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e) {}
+
+  const attemptLoad = async (attempt) => {
+    try {
+      // Dùng version cố định tránh breaking changes
+      if (typeof webllm === 'undefined') {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.type = 'module';
+          s.textContent = `
+            import * as m from 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm';
+            window.webllm = m;
+            window.dispatchEvent(new Event('webllm-ready'));
+          `;
+          document.head.appendChild(s);
+          window.addEventListener('webllm-ready', resolve, { once: true });
+          setTimeout(() => reject(new Error('Timeout tải runtime (90s) — kiểm tra mạng')), 90000);
+        });
+      }
+
+      if (statusEl) statusEl.textContent = showProgress
+        ? `Đang tải model ~900MB${attempt > 1 ? ` (lần ${attempt})` : ''}... Giữ tab mở!`
+        : 'Đang khởi động từ cache...';
+
+      let lastPct = 0;
+      const initProgressCallback = (report) => {
+        if (!showProgress) return;
+        const pct = Math.round((report.progress || 0) * 100);
+        if (pct !== lastPct) {
+          lastPct = pct;
+          if (progressBar) progressBar.style.width = pct + '%';
+          if (statusEl) statusEl.textContent = (report.text || `Đang tải: ${pct}%`) + ' — Đừng tắt tab!';
+        }
+      };
+
+      // AppConfig tối ưu cho máy yếu: giảm context window
+      const appConfig = {
+        model_list: [{
+          model: `https://huggingface.co/mlc-ai/${WEBLLM_MODEL}`,
+          model_id: WEBLLM_MODEL,
+          model_lib: `https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/web-llm-models/v0_2_48/${WEBLLM_MODEL}-webgpu.wasm`,
+          overrides: { context_window_size: 1024, sliding_window_size: -1, attention_sink_size: -1 }
+        }]
+      };
+
+      webLLMEngine = await webllm.CreateMLCEngine(WEBLLM_MODEL, {
+        initProgressCallback,
+        appConfig
       });
+
+      return true; // thành công
+    } catch(err) {
+      const isGPUErr = /mapAsync|GPUBuffer|gpu|webgpu/i.test(err.message);
+      if (isGPUErr && attempt < 3) {
+        // GPUBuffer lỗi → đợi 2s rồi thử lại
+        if (statusEl) statusEl.textContent = `⚠️ GPU bị ngắt, thử lại (${attempt}/3)...`;
+        webLLMEngine = null;
+        await new Promise(r => setTimeout(r, 2000));
+        return false; // báo retry
+      }
+      throw err; // lỗi khác → throw luôn
     }
+  };
 
-    if (statusEl) statusEl.textContent = showProgress ? 'Đang tải model (~700MB)...' : 'Đang khởi động từ cache...';
-
-    const initProgressCallback = (report) => {
-      if (!showProgress) return; // Khi dùng cache, không cần hiện progress
-      const pct = Math.round((report.progress || 0) * 100);
-      if (progressBar) progressBar.style.width = pct + '%';
-      if (statusEl) statusEl.textContent = report.text || `Đang tải: ${pct}%`;
-    };
-
-    webLLMEngine = await webllm.CreateMLCEngine(WEBLLM_MODEL, { initProgressCallback });
+  try {
+    let ok = false;
+    for (let i = 1; i <= 3 && !ok; i++) {
+      ok = await attemptLoad(i);
+    }
+    if (!ok) throw new Error('Thử lại 3 lần đều bị lỗi GPU. Thử tắt tab khác, reload trang rồi tải lại.');
 
     webLLMLoaded = true;
     webLLMLoading = false;
     webLLMModeEnabled = true;
     simModeEnabled = false;
     localStorage.setItem('tt_sim_mode', 'false');
-    localStorage.setItem('tt_webllm_ready', '1'); // Lưu flag để tự resume lần sau
+    localStorage.setItem('tt_webllm_ready', '1');
 
     if (btn) { btn.textContent = '✅ Sẵn sàng'; btn.style.background = 'var(--green-dim)'; btn.style.color = 'var(--green)'; btn.style.border = '1px solid var(--green)'; }
     if (progressBar) progressBar.style.width = '100%';
@@ -4307,16 +4352,22 @@ async function loadWebLLMEngine(showProgress) {
     updateModelChipFromMode();
 
     if (showProgress) {
-      addMsg('bot', `🧠 <strong>WebLLM sẵn sàng!</strong> ${WEBLLM_MODEL_LABEL} đang chạy hoàn toàn offline trong trình duyệt. Lần sau mở app sẽ tự bật lại từ cache, không cần tải lại!`);
+      addMsg('bot', `🧠 <strong>WebLLM sẵn sàng!</strong> ${WEBLLM_MODEL_LABEL} đang chạy hoàn toàn offline. Lần sau mở app sẽ tự bật lại từ cache — không tải lại!`);
     }
   } catch (err) {
     webLLMLoading = false;
     webLLMLoaded = false;
     if (btn) { btn.disabled = false; btn.textContent = '⬇️ Thử lại'; }
     if (progressBg) progressBg.style.display = 'none';
-    if (statusEl) statusEl.textContent = '❌ ' + err.message;
-    if (showProgress) addMsg('bot', `❌ <strong>Lỗi WebLLM:</strong> ${escHtml(err.message)}<br><em style="font-size:11px;color:var(--text3)">Yêu cầu: Chrome/Edge mới nhất, hỗ trợ WebGPU, RAM ≥2GB. Không hỗ trợ iOS Safari hay Firefox.</em>`);
+    const isGPUErr = /mapAsync|GPUBuffer|gpu|webgpu/i.test(err.message);
+    if (statusEl) statusEl.textContent = '❌ ' + (isGPUErr ? 'Lỗi GPU — giữ tab mở khi tải, thử lại' : err.message);
+    const hint = isGPUErr
+      ? 'Giữ tab mở trong khi tải (không chuyển tab khác). Tắt bớt tab/app khác để giải phóng GPU/RAM rồi nhấn Thử lại.'
+      : 'Cần Chrome/Edge mới nhất, WebGPU, RAM ≥2GB. Không hỗ trợ iOS Safari hay Firefox.';
+    if (showProgress) addMsg('bot', `❌ <strong>Lỗi WebLLM:</strong> ${escHtml(isGPUErr ? 'GPU bị ngắt kết nối (mapAsync)' : err.message)}<br><em style="font-size:11px;color:var(--text3)">${hint}</em>`);
     throw err;
+  } finally {
+    try { if (wakeLock) wakeLock.release(); } catch(e) {}
   }
 }
 
