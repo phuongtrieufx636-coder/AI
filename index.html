@@ -311,6 +311,16 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
 .tier-vip{color:var(--amber)!important;background:var(--amber-dim)!important;}
 .tier-loyal{color:var(--green)!important;background:var(--green-dim)!important;}
 .tier-new{color:var(--accent)!important;background:var(--accent-dim)!important;}
+.cust-actions{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+
+/* ── AI SIMULATION ── */
+#ai-sim-bar{display:none;align-items:center;gap:10px;padding:8px 22px;background:linear-gradient(90deg,rgba(155,114,245,0.08),rgba(79,142,247,0.08));border-bottom:1px solid rgba(155,114,245,0.25);}
+#ai-sim-bar label{font-size:12px;color:var(--purple);white-space:nowrap;font-weight:600;}
+#ai-sim-bar .sim-badge{font-size:10px;padding:2px 8px;border-radius:20px;background:var(--purple-dim);color:var(--purple);border:1px solid rgba(155,114,245,0.3);white-space:nowrap;}
+#ai-sim-toggle{padding:5px 12px;border-radius:var(--radius-sm);border:1px solid rgba(155,114,245,0.35);background:transparent;color:var(--purple);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
+#ai-sim-toggle:hover{background:var(--purple-dim);}
+#ai-sim-toggle.active{background:var(--purple);color:#fff;}
+.sim-mode-indicator{display:none;font-size:10px;padding:2px 8px;border-radius:20px;background:var(--purple-dim);color:var(--purple);border:1px solid rgba(155,114,245,0.3);margin-left:4px;}
 
 /* ── ALERT BANNER ── */
 .alert-banner{background:var(--amber-dim);border:1px solid rgba(240,160,48,0.3);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--amber);}
@@ -384,6 +394,14 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
     <input type="password" id="key-input" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx" />
     <button onclick="saveKey()">Lưu key</button>
     <span class="key-status none" id="key-status">Chưa có key</span>
+  </div>
+
+  <!-- ── AI SIMULATION BAR ── -->
+  <div id="ai-sim-bar">
+    <span class="sim-badge">✨ AI Giả lập</span>
+    <label>Chế độ demo không cần Groq key</label>
+    <div style="flex:1;"></div>
+    <button id="ai-sim-toggle" class="active" onclick="toggleSimMode()">🤖 Đang dùng AI Giả lập</button>
   </div>
 
   <!-- ── CHAT TAB ── -->
@@ -1103,6 +1121,7 @@ function init() {
   if (window.innerWidth <= 700) document.body.classList.add('has-bnav');
   window.addEventListener('resize', () => document.body.classList.toggle('has-bnav', window.innerWidth <= 700));
   applyTheme(localStorage.getItem('tt_theme') || 'auto');
+  initSimMode();
 }
 
 // ─── KEY ─────────────────────────────────────────────────────────────────────
@@ -1113,7 +1132,10 @@ function saveKey() {
   localStorage.setItem(SK_KEY, v);
   setKeyStatus(true);
   updateSettingsStatus();
-  addMsg('bot', '✅ API key đã lưu! Bạn có thể bắt đầu dùng AI để nhập dữ liệu.');
+  simModeEnabled = false;
+  localStorage.setItem('tt_sim_mode', 'false');
+  updateSimModeUI();
+  addMsg('bot', '✅ API key đã lưu! AI Groq đã sẵn sàng. Bạn có thể bắt đầu dùng AI để nhập dữ liệu.');
 }
 function clearKey() {
   if (!confirm('Xóa API key?')) return;
@@ -1122,6 +1144,9 @@ function clearKey() {
   document.getElementById('key-input').value = '';
   setKeyStatus(false);
   updateSettingsStatus();
+  simModeEnabled = true;
+  localStorage.setItem('tt_sim_mode', 'true');
+  updateSimModeUI();
 }
 function setKeyStatus(ok) {
   const el = document.getElementById('key-status');
@@ -2507,6 +2532,22 @@ async function sendMsg() {
   const input = document.getElementById('msg-input');
   const text = input.value.trim();
   if (!text && !chatImgData) return;
+
+  // AI giả lập khi không có key hoặc sim mode bật
+  if (simModeEnabled || !groqKey) {
+    if (!groqKey && !simModeEnabled) {
+      addMsg('bot', '⚠️ Vui lòng nhập <strong>Groq API Key</strong> ở trên hoặc bật <strong>AI Giả lập</strong> để dùng AI!');
+      return;
+    }
+    const userText = text || '(Xem ảnh đính kèm)';
+    addMsg('user', escHtml(userText));
+    input.value = ''; input.style.height = '';
+    const imgData = chatImgData; clearChatImg();
+    aiMessageCount++;
+    await sendSimMsg(userText, imgData);
+    return;
+  }
+
   if (!groqKey) { addMsg('bot', '⚠️ Vui lòng nhập <strong>Groq API Key</strong> ở trên để dùng AI!'); return; }
   aiMessageCount++; // Tăng đếm để AI "mệt" dần
 
@@ -2940,6 +2981,10 @@ function closeEditModal() {
 }
 
 function saveEdit() {
+  if (editingType === 'customer') {
+    saveEditCustomer();
+    return;
+  }
   if (editingType === 'repair') {
     const r = REPAIRS.find(x => x.id === editingId);
     if (!r) return;
@@ -3262,6 +3307,84 @@ function drawChart(ctx, labels, repairData, saleData, finData, gridColor, textCo
 // ─── CUSTOMERS ───────────────────────────────────────────────────────────────
 function saveCustomers() { localStorage.setItem(SK_CUSTOMERS, JSON.stringify(CUSTOMERS)); }
 
+// ─── EDIT CUSTOMER ───────────────────────────────────────────────────────────
+function openEditCustomer(name) {
+  // Tìm tất cả phiếu sửa liên quan
+  const repairsOfCust = REPAIRS.filter(r => r.owner && r.owner.toLowerCase().trim() === name.toLowerCase().trim());
+  const salesOfCust   = SALES.filter(s => s.buyer && s.buyer.toLowerCase().trim() === name.toLowerCase().trim());
+  // Lấy SĐT hiện tại
+  const currentPhone = repairsOfCust.find(r=>r.phone)?.phone || salesOfCust.find(s=>s.phone)?.phone || '';
+
+  editingId   = name; // dùng tên làm key
+  editingType = 'customer';
+  document.getElementById('edit-modal-title').textContent = '✏️ Sửa thông tin khách hàng';
+  document.getElementById('edit-modal-body').innerHTML = `
+    <div style="background:var(--accent-dim);border:1px solid rgba(79,142,247,0.2);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--text2);margin-bottom:4px;">
+      ℹ️ Thay đổi tên / SĐT sẽ cập nhật <strong>tất cả phiếu sửa và bán hàng</strong> liên quan đến khách này.
+    </div>
+    <div class="form-grid col2">
+      <div class="field-wrap" style="grid-column:1/-1;">
+        <label class="field-label">Tên khách hàng *</label>
+        <input class="field" id="em-cust-name" value="${escHtml(name)}" placeholder="Tên khách hàng"/>
+      </div>
+      <div class="field-wrap" style="grid-column:1/-1;">
+        <label class="field-label">Số điện thoại</label>
+        <input class="field" id="em-cust-phone" value="${escHtml(currentPhone)}" placeholder="0901..."/>
+      </div>
+    </div>
+    <div style="font-size:11.5px;color:var(--text3);margin-top:4px;">
+      📋 Khách này có: ${repairsOfCust.length} phiếu sửa · ${salesOfCust.length} lần mua hàng
+    </div>`;
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+
+function callCustomer(phone) {
+  if (!phone) { alert('Khách hàng này chưa có số điện thoại!'); return; }
+  window.location.href = 'tel:' + phone;
+}
+
+function saveEditCustomer() {
+  const oldName    = editingId; // tên cũ
+  const newName    = document.getElementById('em-cust-name').value.trim();
+  const newPhone   = document.getElementById('em-cust-phone').value.trim();
+  if (!newName) { alert('Vui lòng nhập tên khách hàng!'); return; }
+
+  let changed = false;
+
+  // Cập nhật tất cả phiếu sửa
+  REPAIRS.forEach(r => {
+    if (r.owner && r.owner.toLowerCase().trim() === oldName.toLowerCase().trim()) {
+      r.owner = newName;
+      if (newPhone) r.phone = newPhone;
+      r.updatedAt = new Date().toLocaleString('vi-VN');
+      changed = true;
+    }
+  });
+
+  // Cập nhật tất cả phiếu bán
+  SALES.forEach(s => {
+    if (s.buyer && s.buyer.toLowerCase().trim() === oldName.toLowerCase().trim()) {
+      s.buyer = newName;
+      if (newPhone) s.phone = newPhone;
+      s.updatedAt = new Date().toLocaleString('vi-VN');
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    saveRepairs();
+    saveSales();
+    buildRepairList();
+    buildSaleList();
+    buildCustomerList();
+    updateStats();
+  }
+  closeEditModal();
+  if (changed) {
+    addMsg('bot', `✅ Đã cập nhật thông tin khách <strong>${escHtml(newName)}</strong>!${newPhone?' SĐT: '+escHtml(newPhone):''}`);
+  }
+}
+
 function setCustomerFilter(f, btn) {
   customerFilter = f;
   document.querySelectorAll('#tab-customers .filter-btn').forEach(b => b.classList.remove('active'));
@@ -3337,6 +3460,10 @@ function buildCustomerList() {
         ${c.sales.length > 0 ? `<span class="cust-stat">💰 ${c.sales.length} lần mua</span>` : ''}
         ${c.totalSpend > 0 ? `<span class="cust-stat" style="color:var(--green);">Tổng: ${fmtMoney(c.totalSpend)}</span>` : ''}
         ${c.repairs.length > 0 ? `<span class="cust-stat" style="font-size:10.5px;">Gần nhất: ${fmtDate(c.repairs[0]?.date)}</span>` : ''}
+      </div>
+      <div class="cust-actions">
+        <button class="btn-edit" onclick="openEditCustomer(${JSON.stringify(escHtml(c.name))})">✏️ Sửa thông tin</button>
+        <button class="btn-zalo" onclick="callCustomer(${JSON.stringify(escHtml(c.phone))})">📞 Gọi điện</button>
       </div>
     </div>`).join('');
 }
@@ -3510,6 +3637,168 @@ self.addEventListener('fetch', e => {
     if (link) link.href = URL.createObjectURL(blob);
   } catch(e) {}
 })();
+
+// ─── AI SIMULATION MODE ───────────────────────────────────────────────────────
+let simModeEnabled = false;
+
+function initSimMode() {
+  // Hiện thanh AI sim khi chưa có key
+  const saved = localStorage.getItem('tt_sim_mode');
+  simModeEnabled = saved === 'true';
+  updateSimModeUI();
+}
+
+function toggleSimMode() {
+  simModeEnabled = !simModeEnabled;
+  localStorage.setItem('tt_sim_mode', simModeEnabled ? 'true' : 'false');
+  updateSimModeUI();
+  if (simModeEnabled) {
+    addMsg('bot', `🤖 <strong>AI Giả lập đã bật!</strong><br>Bạn có thể trò chuyện mà không cần Groq API key. AI giả lập hiểu tiếng Việt và có thể nhập liệu cơ bản.<br><em style="font-size:11px;color:var(--text3)">Để trải nghiệm đầy đủ hơn, hãy thêm Groq API key miễn phí ở trên.</em>`);
+  } else {
+    addMsg('bot', '✅ Đã tắt AI Giả lập. Đang dùng Groq API.');
+  }
+}
+
+function updateSimModeUI() {
+  const bar  = document.getElementById('ai-sim-bar');
+  const btn  = document.getElementById('ai-sim-toggle');
+  if (!bar || !btn) return;
+
+  if (!groqKey) {
+    // Không có key → luôn hiện thanh, sim mode auto bật
+    bar.style.display = 'flex';
+    simModeEnabled = true;
+    btn.className = 'active';
+    btn.textContent = '🤖 Đang dùng AI Giả lập';
+  } else {
+    // Có key → cho phép toggle
+    bar.style.display = 'flex';
+    if (simModeEnabled) {
+      btn.className = 'active';
+      btn.textContent = '🤖 Đang dùng AI Giả lập';
+    } else {
+      btn.className = '';
+      btn.textContent = '🤖 Bật AI Giả lập';
+    }
+  }
+}
+
+// ── AI giả lập nội bộ (không cần key) ─────────────────────────────────────
+async function sendSimMsg(text, imgData) {
+  showTyping();
+  document.getElementById('send-btn').disabled = true;
+
+  await new Promise(r => setTimeout(r, 600 + Math.random() * 800));
+
+  const t = text.toLowerCase();
+  let reply = '';
+
+  // Phân tích ý định
+  const isAddRepair  = /nhận máy|nhận đc|nhận được|sửa máy|mang máy|đem máy|nhận hàng|vừa nhận/.test(t);
+  const isAddSale    = /bán máy|bán đc|bán được|xuất máy|bán cho|vừa bán/.test(t);
+  const isAddIncome  = /thu tiền|thu đc|thu được|khách trả|nhận tiền/.test(t);
+  const isAddExpense = /chi tiền|mua linh kiện|chi ra|mua đồ|tốn tiền/.test(t);
+  const isQuery      = /bao nhiêu|tổng|doanh thu|lợi nhuận|thống kê|máy nào|danh sách|hôm nay|tháng này/.test(t);
+
+  if (imgData) {
+    reply = '📷 <strong>AI Giả lập</strong> chưa hỗ trợ đọc ảnh. Vui lòng nhập thông tin thủ công hoặc bật Groq API key để AI đọc ảnh tự động.';
+  } else if (isAddRepair) {
+    // Cố gắng parse thông tin từ text
+    const ownerMatch  = text.match(/(?:máy\s+(?:của\s+)?|anh\s+|chị\s+|em\s+|bé\s+|bạn\s+)([A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]+(?: [A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]+)*)/i);
+    const deviceMatch = text.match(/(?:iphone|samsung|oppo|xiaomi|vivo|realme|nokia|sony|huawei|pixel|redmi)\s*[\w\s]+(?=,|\.|nhận|thu|lãi|âm|vốn|sửa|$)/i);
+    const profitMatch = text.match(/(?:thu|lãi|giá|tiền)\s*[:\s]*(\d[\d.,]*)\s*(?:k|tr|triệu|đồng|đ|000)?/i);
+    const costMatch   = text.match(/(?:vốn|âm|chi|mua)\s*[:\s]*(\d[\d.,]*)\s*(?:k|tr|triệu|đồng|đ|000)?/i);
+    const phoneMatch  = text.match(/\b(0\d{9})\b/);
+    const statusMatch = /(?:đã giao|giao rồi|xong rồi)/.test(t) ? 'da_giao' : /xong|hoàn thành/.test(t) ? 'xong_chua_giao' : 'dang_sua';
+
+    const owner  = ownerMatch  ? ownerMatch[1].trim()  : '';
+    const device = deviceMatch ? deviceMatch[0].trim() : '';
+
+    let profit = 0;
+    if (profitMatch) {
+      profit = parseFloat(profitMatch[1].replace(/[.,]/g,''));
+      if (/k|000/.test(profitMatch[0]) && profit < 10000) profit *= 1000;
+      if (/tr|triệu/.test(profitMatch[0])) profit *= 1000000;
+    }
+    let cost = 0;
+    if (costMatch) {
+      cost = parseFloat(costMatch[1].replace(/[.,]/g,''));
+      if (/k|000/.test(costMatch[0]) && cost < 10000) cost *= 1000;
+      if (/tr|triệu/.test(costMatch[0])) cost *= 1000000;
+    }
+
+    if (owner && device) {
+      const d = {
+        owner, phone: phoneMatch?phoneMatch[1]:'', device,
+        imei:'', pass:'', issue: text.replace(owner,'').replace(device,'').substring(0,60).trim(),
+        profit, cost, date: todayStr(), status: statusMatch, note:''
+      };
+      d.id = Date.now() + Math.floor(Math.random() * 1000);
+      d.createdAt = new Date().toLocaleString('vi-VN');
+      REPAIRS.unshift(d);
+      saveRepairs(); buildRepairList(); updateStats();
+      const net = profit - cost;
+      reply = `✅ <strong>Đã nhận máy!</strong> [AI Giả lập]<br>👤 ${escHtml(owner)} · 📱 ${escHtml(device)}<br>💰 Thu: ${fmtMoney(profit)} · Chi: ${fmtMoney(cost)} · Lãi: ${fmtMoney(net)}<br><em style="font-size:11px;color:var(--text3);">Thiếu thông tin? Vào tab Nhận máy sửa để bổ sung thêm.</em>`;
+    } else {
+      reply = `🤖 <strong>AI Giả lập</strong> hiểu bạn muốn nhận máy sửa, nhưng cần thêm thông tin:<br>• Tên chủ máy (VD: anh Quang)<br>• Tên máy (VD: iPhone 13)<br><em style="font-size:11px;">Hoặc vào tab <strong>Nhận máy sửa</strong> để nhập trực tiếp.</em>`;
+    }
+  } else if (isAddSale) {
+    reply = `💰 <strong>AI Giả lập</strong>: Để ghi nhận máy bán, vui lòng vào tab <strong>Bán máy</strong> để nhập đầy đủ thông tin (tên máy, IMEI, giá bán, lãi/lỗ).<br><em style="font-size:11px;color:var(--text3);">Bật Groq API key để AI tự nhập từ mô tả tự nhiên của bạn.</em>`;
+  } else if (isAddIncome) {
+    const amtMatch = text.match(/(\d[\d.,]*)\s*(?:k|tr|triệu|đồng|đ)?/);
+    let amount = 0;
+    if (amtMatch) {
+      amount = parseFloat(amtMatch[1].replace(/[.,]/g,''));
+      if (/k/.test(amtMatch[0]) && amount < 10000) amount *= 1000;
+      if (/tr|triệu/.test(amtMatch[0])) amount *= 1000000;
+    }
+    if (amount > 0) {
+      const d = { type:'thu', amount, desc: text.substring(0,60), date: todayStr(), cat:'Sửa chữa', note:'[AI Giả lập]', id: Date.now()+Math.random(), createdAt: new Date().toLocaleString('vi-VN') };
+      FINANCE.unshift(d); saveFinance(); buildFinanceList(); updateStats();
+      reply = `✅ <strong>Đã ghi thu ${fmtMoney(amount)}!</strong> [AI Giả lập]`;
+    } else {
+      reply = `🤖 <strong>AI Giả lập</strong>: Vui lòng nêu rõ số tiền thu. VD: "thu 300k tiền sửa iPhone"`;
+    }
+  } else if (isAddExpense) {
+    const amtMatch = text.match(/(\d[\d.,]*)\s*(?:k|tr|triệu|đồng|đ)?/);
+    let amount = 0;
+    if (amtMatch) {
+      amount = parseFloat(amtMatch[1].replace(/[.,]/g,''));
+      if (/k/.test(amtMatch[0]) && amount < 10000) amount *= 1000;
+      if (/tr|triệu/.test(amtMatch[0])) amount *= 1000000;
+    }
+    if (amount > 0) {
+      const d = { type:'chi', amount, desc: text.substring(0,60), date: todayStr(), cat:'Linh kiện', note:'[AI Giả lập]', id: Date.now()+Math.random(), createdAt: new Date().toLocaleString('vi-VN') };
+      FINANCE.unshift(d); saveFinance(); buildFinanceList(); updateStats();
+      reply = `✅ <strong>Đã ghi chi ${fmtMoney(amount)}!</strong> [AI Giả lập]`;
+    } else {
+      reply = `🤖 <strong>AI Giả lập</strong>: Vui lòng nêu rõ số tiền chi. VD: "chi 150k mua màn iPhone"`;
+    }
+  } else if (isQuery) {
+    // Trả lời câu hỏi từ dữ liệu thực
+    const month = thisMonth();
+    const repairing  = REPAIRS.filter(r => r.status === 'dang_sua').length;
+    const pending    = REPAIRS.filter(r => r.status === 'xong_chua_giao').length;
+    const monthRNet  = REPAIRS.filter(r=>r.date&&r.date.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
+    const monthSNet  = SALES.filter(s=>s.date&&s.date.startsWith(month)&&!s.returned).reduce((s,x)=>s+(x.profit||0),0);
+    reply = `📊 <strong>Báo cáo nhanh</strong> [AI Giả lập]<br>
+🔧 Đang sửa: <strong>${repairing}</strong> máy · Chờ giao: <strong>${pending}</strong> máy<br>
+💰 Lãi sửa tháng này: <strong style="color:var(--${monthRNet>=0?'green':'red'})">${fmtMoney(monthRNet)}</strong><br>
+📱 Lãi bán tháng này: <strong style="color:var(--${monthSNet>=0?'green':'red'})">${fmtMoney(monthSNet)}</strong><br>
+<em style="font-size:11px;color:var(--text3);">Xem chi tiết tại tab <strong>Thống kê</strong>.</em>`;
+  } else {
+    const tips = [
+      '🤖 AI Giả lập đang hoạt động. Tôi hiểu các lệnh như:<br>• "nhận máy anh X, iPhone 13, thu 500k"<br>• "thu 300k tiền sửa"<br>• "doanh thu hôm nay bao nhiêu?"',
+      `🤖 Chào! Cửa hàng hiện có <strong>${REPAIRS.filter(r=>r.status==='dang_sua').length}</strong> máy đang sửa và <strong>${REPAIRS.filter(r=>r.status==='xong_chua_giao').length}</strong> máy chờ giao. Bạn cần gì?`,
+      '🤖 Để dùng AI thông minh hơn (đọc ảnh, nhận lệnh phức tạp), bạn có thể thêm <strong>Groq API key miễn phí</strong> tại <a href="https://console.groq.com" target="_blank" style="color:var(--accent)">console.groq.com</a>!'
+    ];
+    reply = tips[Math.floor(Math.random() * tips.length)];
+  }
+
+  hideTyping();
+  addMsg('bot', reply);
+  document.getElementById('send-btn').disabled = false;
+}
 
 init();
 </script>
