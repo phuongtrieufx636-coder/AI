@@ -2911,12 +2911,8 @@ async function sendMsg() {
   const text = input.value.trim();
   if (!text && !chatImgData) return;
 
-  // AI giả lập khi không có key hoặc sim mode bật
+  // AI giả lập khi không có key hoặc sim mode bật (mặc định offline)
   if (simModeEnabled || !groqKey) {
-    if (!groqKey && !simModeEnabled) {
-      addMsg('bot', '⚠️ Vui lòng nhập <strong>Groq API Key</strong> ở trên hoặc bật <strong>AI Giả lập</strong> để dùng AI!');
-      return;
-    }
     const userText = text || '(Xem ảnh đính kèm)';
     addMsg('user', escHtml(userText));
     input.value = ''; input.style.height = '';
@@ -2925,8 +2921,6 @@ async function sendMsg() {
     await sendSimMsg(userText, imgData);
     return;
   }
-
-  if (!groqKey) { addMsg('bot', '⚠️ Vui lòng nhập <strong>Groq API Key</strong> ở trên để dùng AI!'); return; }
   aiMessageCount++; // Tăng đếm để AI "mệt" dần
 
   const userText = text || '(Xem ảnh bill đính kèm)';
@@ -4063,9 +4057,8 @@ async function installPWA() {
 // Đăng ký Service Worker (cache offline)
 if ('serviceWorker' in navigator) {
   const swCode = `
-const CACHE = 'thuantrieuv1';
+const CACHE = 'shopapp-offline-v1';
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/'])));
   self.skipWaiting();
 });
 self.addEventListener('activate', e => {
@@ -4076,7 +4069,17 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    caches.open(CACHE).then(cache =>
+      cache.match(e.request).then(cached => {
+        const fetchPromise = fetch(e.request).then(response => {
+          if (response && response.status === 200) {
+            cache.put(e.request, response.clone());
+          }
+          return response;
+        }).catch(() => cached);
+        return cached || fetchPromise;
+      })
+    )
   );
 });`;
   const blob = new Blob([swCode], { type: 'application/javascript' });
@@ -4115,9 +4118,9 @@ self.addEventListener('fetch', e => {
 let simModeEnabled = false;
 
 function initSimMode() {
-  // Hiện thanh AI sim khi chưa có key
+  // AI giả lập mặc định bật, hoạt động hoàn toàn offline
   const saved = localStorage.getItem('tt_sim_mode');
-  simModeEnabled = saved === 'true';
+  simModeEnabled = saved !== 'false'; // mặc định true, trừ khi người dùng tắt
   updateSimModeUI();
 }
 
@@ -4137,22 +4140,14 @@ function updateSimModeUI() {
   const btn  = document.getElementById('ai-sim-toggle');
   if (!bar || !btn) return;
 
-  if (!groqKey) {
-    // Không có key → luôn hiện thanh, sim mode auto bật
-    bar.style.display = 'flex';
+  bar.style.display = 'flex';
+  if (!groqKey || simModeEnabled) {
     simModeEnabled = true;
     btn.className = 'active';
-    btn.textContent = '🤖 Đang dùng AI Giả lập';
+    btn.textContent = '🤖 Chế độ Offline (AI Giả lập)';
   } else {
-    // Có key → cho phép toggle
-    bar.style.display = 'flex';
-    if (simModeEnabled) {
-      btn.className = 'active';
-      btn.textContent = '🤖 Đang dùng AI Giả lập';
-    } else {
-      btn.className = '';
-      btn.textContent = '🤖 Bật AI Giả lập';
-    }
+    btn.className = '';
+    btn.textContent = '🤖 Bật AI Giả lập (Offline)';
   }
 }
 
