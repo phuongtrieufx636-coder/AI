@@ -1357,19 +1357,33 @@ function buildRepairList() {
     const netLabel = net >= 0 ? `+${fmtMoney(net)} lãi` : `${fmtMoney(net)} lỗ`;
     const daysSince = r.date ? Math.floor((now - new Date(r.date)) / 86400000) : 0;
     const overdueWarn = (r.status !== 'da_giao' && daysSince >= 3) ? `<span class="badge badge-red">⏰ ${daysSince} ngày</span>` : '';
+    // Phát hiện issue bị nhập sai (là số thuần) để hiển thị cảnh báo
+    const issueIsNumber = r.issue && /^\d[\d.,\s]*$/.test(r.issue.trim());
+    const issueDisplay = !r.issue
+      ? '<span style="color:var(--text3);font-style:italic;">Chưa ghi mô tả lỗi</span>'
+      : issueIsNumber
+        ? `<span style="color:var(--red);font-size:11px;">⚠️ Lỗi nhập liệu — nhấn <strong>Sửa</strong> để điền mô tả lỗi</span>`
+        : '⚙️ ' + escHtml(r.issue);
+    // Phát hiện IMEI bị nhập sai (chứa chữ)
+    const imeiIsText = r.imei && !/^\d{5,15}$/.test(r.imei.replace(/\s/g,'')) && (r.imei.match(/[a-zA-ZÀ-ỹ]/g)||[]).length >= 2;
+    const imeiBadge = r.imei && !imeiIsText
+      ? `<span class="imei-code">IMEI: ${escHtml(r.imei)}</span>`
+      : r.imei && imeiIsText
+        ? `<span class="badge badge-red" title="IMEI bị nhập sai — nhấn Sửa để điều chỉnh">⚠️ IMEI: ${escHtml(r.imei)}</span>`
+        : '';
     return `<div class="repair-card">
       <div class="card-top">
         <div class="card-icon repair-icon">🔧</div>
         <div class="card-info">
           <div class="card-title">${escHtml(r.owner)} — ${escHtml(r.device)}</div>
-          <div class="card-sub">${r.phone ? '📞 '+escHtml(r.phone)+' · ' : ''}${r.issue ? (isNaN(r.issue.toString().replace(/[.,\s]/g,'')) ? '⚠️ '+escHtml(r.issue) : '⚠️ <span style="color:var(--red);font-size:11px;">[Lỗi nhập: issue='+escHtml(r.issue)+' — nhấn Sửa để điền đúng mô tả lỗi]</span>') : 'Không có ghi chú lỗi'}</div>
+          <div class="card-sub">${r.phone ? '📞 '+escHtml(r.phone)+' · ' : ''}${issueDisplay}</div>
           <div class="card-meta">📅 Nhận: ${fmtDate(r.date)}${r.note ? ' · '+escHtml(r.note) : ''}</div>
         </div>
       </div>
       <div class="card-badges">
         <span class="badge ${st.cls}">${st.label}</span>
         ${overdueWarn}
-        ${r.imei ? `<span class="imei-code">IMEI: ${escHtml(r.imei)}</span>` : ''}
+        ${imeiBadge}
         ${r.pass ? `<span class="badge badge-purple">🔐 ${escHtml(r.pass)}</span>` : ''}
         ${r.profit > 0 ? `<span class="badge badge-green">Thu: ${fmtMoney(r.profit)}</span>` : ''}
         ${r.cost > 0 ? `<span class="badge badge-red">Chi: ${fmtMoney(r.cost)}</span>` : ''}
@@ -2072,15 +2086,22 @@ NHIỆM VỤ — TỰ ĐỘNG NHẬN DẠNG VÀ NHẬP DỮ LIỆU:
 - Báo rõ: "Tìm thấy IMEI xxx trong kho, giá nhập Xtr → lãi = Ytr"
 - Nếu KHÔNG tìm thấy IMEI trong kho → hỏi giá nhập để tính lãi, hoặc để profit = 0 và ghi chú "chưa rõ giá nhập"
 
-Ví dụ ĐÚNG — nhận máy sửa: "Đã nhận! [ACTION:ADD_REPAIR|Nhung||iPhone 13|||ép kính|500000|60000|2026-05-02|da_giao|]"
-Ví dụ ĐÚNG — nhận máy sửa có giá: "Đã nhận! [ACTION:ADD_REPAIR|Khai|0901234567|iPhone 13|33329|7777|ép kính|800000|100000|2026-05-02|xong_chua_giao|]"
-→ Trong đó: owner=Khai, phone=0901..., device=iPhone 13, imei=33329, pass=7777, issue=ép kính, profit=800000 (giá thu), cost=100000 (vốn chi), date, status, note
-⚠️ TUYỆT ĐỐI KHÔNG nhập số tiền vào field issue. issue CHỈ là mô tả lỗi bằng chữ (VD: "ép kính", "thay pin", "sửa cổ sạc").
+Ví dụ ĐÚNG — "nhận máy Toán iPhone 11 Pro IMEI 101184, ép cảm ứng, thu 500k vốn 120k, đã giao":
+→ [ACTION:ADD_REPAIR|Toán||iPhone 11 Pro|101184||ép cảm ứng|500000|120000|2026-05-02|da_giao|]
+  Giải thích: owner=Toán, phone=trống, device=iPhone 11 Pro, imei=101184, pass=TRỐNG, issue=ép cảm ứng, profit=500000, cost=120000
+
+Ví dụ ĐÚNG — "nhận máy Thiện iPhone 13 Pro Max, ic kính, thu 800k":
+→ [ACTION:ADD_REPAIR|Thiện||iPhone 13 Pro Max|||ic kính|800000|0|2026-05-02|dang_sua|]
+  Giải thích: imei=TRỐNG (ic kính KHÔNG phải IMEI), pass=TRỐNG, issue=ic kính
+
+Ví dụ ĐÚNG — "nhận máy Việt 0901234 iPhone 14 Pro Max IMEI 22630, sửa cổ sạc, 500k, đã giao":
+→ [ACTION:ADD_REPAIR|Việt|0901234|iPhone 14 Pro Max|22630||sửa cổ sạc|500000|0|2026-05-02|da_giao|]
+
 Ví dụ ĐÚNG — bán máy: "Đã ghi! [ACTION:ADD_SALE|iPhone 14 Pro||99|18000000|1500000|2026-05-02|||]"
 Ví dụ ĐÚNG — sửa phiếu bán: "Đã cập nhật! [ACTION:UPDATE_SALE|IMEI_hoặc_trống|tên máy|99|18500000|2000000|2026-05-02|||]"
 Ví dụ ĐÚNG — sửa kho: "Đã cập nhật kho! [ACTION:UPDATE_WAREHOUSE|tên hàng|ngày|nhap|2|cái|250000|||2026-05-02||]"
 Ví dụ ĐÚNG — thu tiền: "Đã ghi thu! [ACTION:ADD_INCOME|200000|Tiền sửa máy|2026-05-02||]"
-Ví dụ SAI (KHÔNG LÀM): "Đã nhận máy của chị Nhung, iPhone 13, ép kính, giá 500k, vốn 60k, đã giao!" ← THIẾU ACTION → dữ liệu KHÔNG được lưu, người dùng sẽ complain!
+Ví dụ SAI (KHÔNG LÀM): "Đã nhận máy của chị Nhung, iPhone 13, ép kính, giá 500k, vốn 60k, đã giao!" ← THIẾU ACTION → dữ liệu KHÔNG được lưu!
 
 QUAN TRỌNG — KHI NHẬN ẢNH:
 - Phân tích ảnh, tự xác định loại (phiếu sửa / bill bán / hoá đơn chi / biên lai thu / ảnh khác)
@@ -2091,13 +2112,42 @@ QUAN TRỌNG — KHI NHẬN ẢNH:
 FORMAT ACTIONS:
 
 [ACTION:ADD_REPAIR|owner|phone|device|imei|pass|issue|profit|cost|date|status|note]
-- issue = MÔ TẢ LỖI BẰNG CHỮ (VD: "ép kính", "thay pin", "sửa bo mạch") — KHÔNG ĐƯỢC điền số tiền vào đây
-- profit = số tiền THU VỀ từ khách (giá sửa khách trả) — số nguyên VND
-- cost = số tiền CHI RA mua linh kiện / vật tư — số nguyên VND
-- Lãi ròng = profit - cost (hệ thống tự tính)
-- Ví dụ: "giá 800k vốn 100k" → issue=ép kính|profit=800000|cost=100000
+
+THỨ TỰ CÁC FIELD — GHI NHỚ KỸ:
+  [1] owner   = Tên chủ máy (VD: Toán, Việt, chị Mai)
+  [2] phone   = Số điện thoại (VD: 0901234567) — để trống nếu không có
+  [3] device  = Tên máy (VD: iPhone 13, Samsung S24)
+  [4] imei    = Dãy SỐ IMEI thuần số 5-15 chữ số (VD: 101184, 354678901234567) — để trống nếu không có
+  [5] pass    = Mật khẩu/PIN mở máy (VD: 1234, 0000) — để trống nếu không có
+  [6] issue   = MÔ TẢ LỖI BẰNG CHỮ TIẾNG VIỆT (VD: ép cảm ứng, thay pin, sửa cổ sạc, ic kính)
+  [7] profit  = Tiền THU từ khách — số nguyên VND (VD: 500000, 800000)
+  [8] cost    = Tiền CHI mua linh kiện — số nguyên VND (VD: 120000)
+  [9] date    = yyyy-mm-dd
+  [10] status = dang_sua | xong_chua_giao | da_giao
+  [11] note   = Ghi chú thêm
+
+⛔ CÁC LỖI THƯỜNG GẶP — TUYỆT ĐỐI KHÔNG LÀM:
+  SAI: [ACTION:ADD_REPAIR|Toán||iPhone 11 Pro|101184|ép cảm ứng|500000|120000|...]
+    → "ép cảm ứng" ở vị trí [5] là pass, KHÔNG phải issue!
+  ĐÚNG: [ACTION:ADD_REPAIR|Toán||iPhone 11 Pro|101184||ép cảm ứng|500000|120000|...]
+    → pass=[5] để trống, issue=[6]=ép cảm ứng ✅
+
+  SAI: [ACTION:ADD_REPAIR|Thiện||iPhone 13 Pro Max|ic kính|800000|...|...]
+    → "ic kính" ở vị trí [4] là IMEI — SAI! IMEI phải là số
+  ĐÚNG: [ACTION:ADD_REPAIR|Thiện||iPhone 13 Pro Max|||ic kính|800000|...|...]
+    → imei=[4] để trống, pass=[5] để trống, issue=[6]=ic kính ✅
+
+  SAI: [ACTION:ADD_REPAIR|Việt||iPhone 14 Pro Max|22630|sửa cổ cáp|500000|...|...]
+    → "sửa cổ cáp" ở vị trí [5] là pass — SAI!
+  ĐÚNG: [ACTION:ADD_REPAIR|Việt||iPhone 14 Pro Max|22630||sửa cổ cáp|500000|0|...|da_giao|]
+    → pass=[5] để trống, issue=[6]=sửa cổ cáp ✅
+
+  SAI: [ACTION:ADD_REPAIR|...|...|...|...|...|500000|...|...] — số tiền vào issue
+  ĐÚNG: [ACTION:ADD_REPAIR|...|...|...|...|...|ép kính|500000|120000|...] — issue là chữ
+
+- profit = số tiền THU về (giá khách trả), cost = số tiền CHI ra (linh kiện). Lãi = profit - cost (hệ thống tự tính)
+- Đơn vị PHẢI là VND đầy đủ: 500k = 500000, 1.2tr = 1200000
 - status: dang_sua | xong_chua_giao | da_giao
-- date: yyyy-mm-dd
 
 [ACTION:UPDATE_REPAIR|owner_or_device|device_hint|new_status|profit|cost|note]
 - Dùng khi người dùng nói "đã giao", "đã xong", "cập nhật" phiếu CŨ đã có trong danh sách
@@ -2185,17 +2235,64 @@ function handleActions(reply) {
   const repMatches = [...clean.matchAll(/\[ACTION:ADD_REPAIR\|([^\]]+)\]/g)];
   repMatches.forEach(m => {
     const p = m[1].split('|');
-    let issueVal = p[5]||'';
+    let ownerVal  = p[0]||'';
+    let phoneVal  = p[1]||'';
+    let deviceVal = p[2]||'';
+    let imeiVal   = p[3]||'';
+    let passVal   = p[4]||'';
+    let issueVal  = p[5]||'';
     let profitVal = parseFloat(p[6])||0;
-    let costVal = parseFloat(p[7])||0;
-    // Auto-fix: nếu issue là số thuần → AI nhập nhầm, chuyển sang profit
-    if (issueVal && !isNaN(issueVal.replace(/[.,\s]/g,''))) {
-      if (!profitVal) profitVal = parseFloat(issueVal.replace(/[.,\s]/g,''))||0;
-      issueVal = ''; // Xóa issue sai
+    let costVal   = parseFloat(p[7])||0;
+
+    // ── SMART AUTO-FIX: phát hiện AI nhầm field ──────────────────────────────
+
+    // Fix 1: IMEI chứa chữ (VD: "ic kính", "ép kính") → thực ra là issue
+    // IMEI hợp lệ chỉ gồm chữ số, tối đa 15 ký tự
+    if (imeiVal && !/^\d{5,15}$/.test(imeiVal.replace(/\s/g,''))) {
+      // Kiểm tra xem đây có phải mô tả lỗi không (chứa chữ cái >= 2)
+      const letterCount = (imeiVal.match(/[a-zA-ZÀ-ỹ]/g)||[]).length;
+      if (letterCount >= 2) {
+        // imeiVal là mô tả lỗi nhầm vào IMEI
+        if (!issueVal) issueVal = imeiVal; // chuyển sang issue nếu issue trống
+        imeiVal = ''; // xóa imei sai
+      }
     }
+
+    // Fix 2: pass chứa mô tả lỗi (VD: "800000", "ép kính") → pass thường là số pin 4-6 chữ số
+    // Nếu pass có chữ cái nhiều → thực ra là issue
+    if (passVal && !issueVal) {
+      const passLetters = (passVal.match(/[a-zA-ZÀ-ỹ]/g)||[]).length;
+      if (passLetters >= 3) {
+        issueVal = passVal;
+        passVal = '';
+      }
+    }
+
+    // Fix 3: issue là số thuần → AI nhầm, chuyển sang profit
+    if (issueVal && /^\d[\d.,\s]*$/.test(issueVal.trim())) {
+      const numVal = parseFloat(issueVal.replace(/[.,\s]/g,''))||0;
+      if (!profitVal && numVal > 0) profitVal = numVal;
+      issueVal = '';
+    }
+
+    // Fix 4: profit trông như giá nhưng quá nhỏ (AI dùng đơn vị k thay vì đồng)
+    // VD: profit=500 khi thực tế là 500000
+    if (profitVal > 0 && profitVal < 1000 && profitVal === Math.floor(profitVal)) {
+      profitVal = profitVal * 1000;
+    }
+    if (costVal > 0 && costVal < 1000 && costVal === Math.floor(costVal)) {
+      costVal = costVal * 1000;
+    }
+
+    // Fix 5: note chứa số tiền mà profit=0 → note bị nhầm là tiền
+    const noteVal = p[10]||'';
+    if (!profitVal && noteVal && /^\d[\d.,\s]*$/.test(noteVal.trim())) {
+      profitVal = parseFloat(noteVal.replace(/[.,\s]/g,''))||0;
+    }
+
     const d = {
-      owner: p[0]||'', phone: p[1]||'', device: p[2]||'', imei: p[3]||'',
-      pass: p[4]||'', issue: issueVal,
+      owner: ownerVal, phone: phoneVal, device: deviceVal, imei: imeiVal,
+      pass: passVal, issue: issueVal,
       profit: profitVal, cost: costVal,
       date: p[8]||todayStr(), status: p[9]||'dang_sua', note: p[10]||''
     };
