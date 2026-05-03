@@ -1,6 +1,6 @@
 {
-  "name": "Thuận Triều — Quản lý cửa hàng",
-  "short_name": "Thuận Triều",
+  "name": "Quản lý cửa hàng",
+  "short_name": "Quản lý Shop",
   "description": "Quản lý cửa hàng sửa chữa và mua bán điện thoại",
   "start_url": "./index.html",
   "display": "standalone",
