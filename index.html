@@ -3878,8 +3878,8 @@ async function sendSimMsg(text, imgData) {
     const priceMatch = text.match(/(?:giá vốn|vốn|giá nhập|giá|tiền)\s*[:\s]*([\d.,]+\s*(?:k|tr\d*|triệu)?)/i);
     const price = parseMoneyWh(priceMatch ? priceMatch[1] : '');
 
-    // Parse IMEI
-    const imeiMatch = text.match(/(?:imei|seri|serial)[:\s]*(\w{6,20})/i);
+    // Parse IMEI — chấp nhận mọi độ dài sau từ khoá IMEI/seri
+    const imeiMatch = text.match(/(?:imei|seri|serial)[:\s]*(\w+)/i);
     const imei = imeiMatch ? imeiMatch[1] : '';
 
     // Parse nhà cung cấp
