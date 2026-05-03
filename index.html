@@ -1358,7 +1358,7 @@ function buildRepairList() {
         <div class="card-icon repair-icon">🔧</div>
         <div class="card-info">
           <div class="card-title">${escHtml(r.owner)} — ${escHtml(r.device)}</div>
-          <div class="card-sub">${r.phone ? '📞 '+escHtml(r.phone)+' · ' : ''}${r.issue ? '⚠️ '+escHtml(r.issue) : 'Không có ghi chú lỗi'}</div>
+          <div class="card-sub">${r.phone ? '📞 '+escHtml(r.phone)+' · ' : ''}${r.issue ? (isNaN(r.issue.toString().replace(/[.,\s]/g,'')) ? '⚠️ '+escHtml(r.issue) : '⚠️ <span style="color:var(--red);font-size:11px;">[Lỗi nhập: issue='+escHtml(r.issue)+' — nhấn Sửa để điền đúng mô tả lỗi]</span>') : 'Không có ghi chú lỗi'}</div>
           <div class="card-meta">📅 Nhận: ${fmtDate(r.date)}${r.note ? ' · '+escHtml(r.note) : ''}</div>
         </div>
       </div>
@@ -2155,10 +2155,18 @@ function handleActions(reply) {
   const repMatches = [...clean.matchAll(/\[ACTION:ADD_REPAIR\|([^\]]+)\]/g)];
   repMatches.forEach(m => {
     const p = m[1].split('|');
+    let issueVal = p[5]||'';
+    let profitVal = parseFloat(p[6])||0;
+    let costVal = parseFloat(p[7])||0;
+    // Auto-fix: nếu issue là số thuần → AI nhập nhầm, chuyển sang profit
+    if (issueVal && !isNaN(issueVal.replace(/[.,\s]/g,''))) {
+      if (!profitVal) profitVal = parseFloat(issueVal.replace(/[.,\s]/g,''))||0;
+      issueVal = ''; // Xóa issue sai
+    }
     const d = {
       owner: p[0]||'', phone: p[1]||'', device: p[2]||'', imei: p[3]||'',
-      pass: p[4]||'', issue: p[5]||'',
-      profit: parseFloat(p[6])||0, cost: parseFloat(p[7])||0,
+      pass: p[4]||'', issue: issueVal,
+      profit: profitVal, cost: costVal,
       date: p[8]||todayStr(), status: p[9]||'dang_sua', note: p[10]||''
     };
     if (d.owner && d.device) {
@@ -2209,6 +2217,14 @@ function handleActions(reply) {
     };
     d.conditionLabel = condMap[d.condition] || d.condition;
     if (d.device && d.price) {
+      // Kiểm tra trùng IMEI
+      if (d.imei) {
+        const dupImei = SALES.find(s => s.imei && s.imei === d.imei && !s.returned);
+        if (dupImei) {
+          const ok = confirm(`⚠️ IMEI ${d.imei} đã có trong danh sách bán (${dupImei.device} - ${dupImei.date})!\n\nVẫn tiếp tục thêm?`);
+          if (!ok) { clean = clean.replace(m[0], ''); return; }
+        }
+      }
       d.id = Date.now() + Math.floor(Math.random() * 1000);
       d.createdAt = new Date().toLocaleString('vi-VN');
       SALES.unshift(d);
