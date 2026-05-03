@@ -1058,6 +1058,10 @@ function doGet(e) {
         <span class="psm-icon">📄</span>
         <div><div class="psm-label">Khổ A4</div><div class="psm-sub">Máy in thường, in đầy trang</div></div>
       </button>
+      <button class="psm-btn" onclick="downloadPrintAsImage()">
+        <span class="psm-icon">🖼️</span>
+        <div><div class="psm-label">Tải ảnh PNG</div><div class="psm-sub">Lưu phiếu dạng ảnh để gửi Zalo</div></div>
+      </button>
     </div>
     <button class="psm-cancel" onclick="closePrintModal()">✕ Hủy</button>
   </div>
@@ -3228,6 +3232,48 @@ function buildSaleHtml(s) {
   </div>`;
 }
 
+function downloadPrintAsImage() {
+  document.getElementById('print-size-modal').style.display = 'none';
+  const printArea = document.getElementById('print-area');
+  printArea.innerHTML = _pendingPrintHtml;
+  printArea.style.display = 'block';
+  printArea.style.position = 'fixed';
+  printArea.style.top = '-9999px';
+  printArea.style.left = '0';
+  printArea.style.background = '#fff';
+  printArea.style.padding = '10px';
+  printArea.style.width = '320px';
+
+  // Load html2canvas if needed
+  function doCapture() {
+    html2canvas(printArea, { backgroundColor: '#fff', scale: 2, useCORS: true }).then(canvas => {
+      printArea.style.display = '';
+      printArea.style.position = '';
+      printArea.style.top = '';
+      printArea.style.left = '';
+      printArea.style.width = '';
+      const link = document.createElement('a');
+      link.download = 'phieu-' + Date.now() + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      _pendingPrintHtml = '';
+    }).catch(() => {
+      printArea.style.display = '';
+      alert('Không tạo được ảnh. Vui lòng dùng chức năng In thông thường.');
+    });
+  }
+
+  if (typeof html2canvas === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload = doCapture;
+    s.onerror = () => { alert('Không tải được thư viện tạo ảnh. Kiểm tra kết nối mạng.'); };
+    document.head.appendChild(s);
+  } else {
+    doCapture();
+  }
+}
+
 function printRepairTicket(id) {
   const r = REPAIRS.find(x => x.id === id);
   if (!r) return;
@@ -3416,6 +3462,18 @@ function callCustomer(phone) {
   window.location.href = 'tel:' + phone;
 }
 
+function openEditCustomerByCard(btn) {
+  const card = btn.closest('[data-cust-name]');
+  const name = card ? card.getAttribute('data-cust-name') : '';
+  openEditCustomer(name);
+}
+
+function callCustomerByCard(btn) {
+  const card = btn.closest('[data-cust-name]');
+  const phone = card ? card.getAttribute('data-cust-phone') : '';
+  callCustomer(phone);
+}
+
 function saveEditCustomer() {
   const oldName    = editingId; // tên cũ
   const newName    = document.getElementById('em-cust-name').value.trim();
@@ -3518,8 +3576,14 @@ function buildCustomerList() {
   const tierLabel = { vip:'⭐ VIP', loyal:'💚 Thân thiết', new:'🆕 Mới' };
   const tierCls = { vip:'tier-vip', loyal:'tier-loyal', new:'tier-new' };
 
-  list.innerHTML = customers.map(c => `
-    <div class="customer-card">
+  // Store customer data indexed by name for onclick lookup
+  window._custDataMap = {};
+  customers.forEach(c => { window._custDataMap[c.name] = c; });
+
+  list.innerHTML = customers.map((c, idx) => {
+    const safeIdx = idx;
+    return `
+    <div class="customer-card" data-cust-name="${escHtml(c.name)}" data-cust-phone="${escHtml(c.phone||'')}">
       <div class="cust-top">
         <div class="cust-avatar">👤</div>
         <div class="cust-info">
@@ -3535,10 +3599,11 @@ function buildCustomerList() {
         ${c.repairs.length > 0 ? `<span class="cust-stat" style="font-size:10.5px;">Gần nhất: ${fmtDate(c.repairs[0]?.date)}</span>` : ''}
       </div>
       <div class="cust-actions">
-        <button class="btn-edit" onclick="openEditCustomer(${JSON.stringify(escHtml(c.name))})">✏️ Sửa thông tin</button>
-        <button class="btn-zalo" onclick="callCustomer(${JSON.stringify(escHtml(c.phone))})">📞 Gọi điện</button>
+        <button class="btn-edit" onclick="openEditCustomerByCard(this)">✏️ Sửa thông tin</button>
+        <button class="btn-zalo" onclick="callCustomerByCard(this)">📞 Gọi điện</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -3767,7 +3832,7 @@ async function sendSimMsg(text, imgData) {
   let reply = '';
 
   // Phân tích ý định
-  const isAddRepair  = /nhận máy|nhận đc|nhận được|sửa máy|mang máy|đem máy|nhận hàng|vừa nhận/.test(t);
+  const isAddRepair  = /nhận máy|nhận đc|nhận được|sửa máy|mang máy|đem máy|nhận hàng|vừa nhận|nhập sửa|tiếp nhận|giá nhận/.test(t);
   const isAddSale    = /bán máy|bán đc|bán được|xuất máy|bán cho|vừa bán/.test(t);
   const isAddIncome  = /thu tiền|thu đc|thu được|khách trả|nhận tiền/.test(t);
   const isAddExpense = /chi tiền|mua linh kiện|chi ra|mua đồ|tốn tiền/.test(t);
@@ -3776,29 +3841,43 @@ async function sendSimMsg(text, imgData) {
   if (imgData) {
     reply = '📷 <strong>AI Giả lập</strong> chưa hỗ trợ đọc ảnh. Vui lòng nhập thông tin thủ công hoặc bật Groq API key để AI đọc ảnh tự động.';
   } else if (isAddRepair) {
-    // Cố gắng parse thông tin từ text
-    const ownerMatch  = text.match(/(?:máy\s+(?:của\s+)?|anh\s+|chị\s+|em\s+|bé\s+|bạn\s+)([A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]+(?: [A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]+)*)/i);
-    const deviceMatch = text.match(/(?:iphone|samsung|oppo|xiaomi|vivo|realme|nokia|sony|huawei|pixel|redmi)\s*[\w\s]+(?=,|\.|nhận|thu|lãi|âm|vốn|sửa|$)/i);
-    const profitMatch = text.match(/(?:thu|lãi|giá|tiền)\s*[:\s]*(\d[\d.,]*)\s*(?:k|tr|triệu|đồng|đ|000)?/i);
-    const costMatch   = text.match(/(?:vốn|âm|chi|mua)\s*[:\s]*(\d[\d.,]*)\s*(?:k|tr|triệu|đồng|đ|000)?/i);
+    // Parse tên chủ máy — ưu tiên "cho An", "của Lan", "anh Quang"...
+    const ownerMatch  = text.match(/(?:cho\s+|của\s+|anh\s+|chị\s+|em\s+|bé\s+|bạn\s+|máy\s+(?:của\s+)?)([A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]+(?: [A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]+)*)/i);
+    // Parse tên máy — nhận diện rộng hơn, kể cả "Zflip 5", "Z Fold", "S24 Ultra"...
+    const deviceMatch = text.match(/(?:iphone|samsung|oppo|xiaomi|vivo|realme|nokia|sony|huawei|pixel|redmi|zflip|z flip|z fold|zfold|s\d|note\s*\d|a\d\d)\s*[\w\s]+?(?=,|\.|nhận|thu|lãi|âm|vốn|sửa|cho|$)/i);
+
+    // Parse số tiền — hỗ trợ "1tr2", "1.2tr", "1200k", "300k", "300.000"
+    function parseMoney(str) {
+      if (!str) return 0;
+      // "1tr2" → 1.2 triệu
+      const trk = str.match(/(\d+)tr(\d*)/i);
+      if (trk) return (parseInt(trk[1]) + (trk[2] ? parseInt(trk[2])/10 : 0)) * 1000000;
+      // "1.2tr" hoặc "1,2tr"
+      const trDot = str.match(/([\d.,]+)\s*(?:tr|triệu)/i);
+      if (trDot) return parseFloat(trDot[1].replace(',','.')) * 1000000;
+      // "300k"
+      const kMatch = str.match(/([\d.,]+)\s*k\b/i);
+      if (kMatch) return parseFloat(kMatch[1].replace(/[.,]/g,'')) * 1000;
+      // số thường
+      const num = str.match(/[\d.,]+/);
+      if (num) {
+        let v = parseFloat(num[0].replace(/[.,]/g,''));
+        if (v < 1000 && v > 0) v *= 1000; // heuristic: 300 → 300k
+        return v;
+      }
+      return 0;
+    }
+
+    const profitMatch = text.match(/(?:giá nhận|thu|lãi|giá|tiền)\s*[:\s]*([\d.,]+\s*(?:k|tr\d*|triệu)?)/i);
+    const costMatch   = text.match(/(?:vốn|âm|chi|mua|linh kiện)\s*[:\s]*([\d.,]+\s*(?:k|tr\d*|triệu)?)/i);
     const phoneMatch  = text.match(/\b(0\d{9})\b/);
     const statusMatch = /(?:đã giao|giao rồi|xong rồi)/.test(t) ? 'da_giao' : /xong|hoàn thành/.test(t) ? 'xong_chua_giao' : 'dang_sua';
 
     const owner  = ownerMatch  ? ownerMatch[1].trim()  : '';
-    const device = deviceMatch ? deviceMatch[0].trim() : '';
+    const device = deviceMatch ? deviceMatch[0].replace(/,$/, '').trim() : '';
 
-    let profit = 0;
-    if (profitMatch) {
-      profit = parseFloat(profitMatch[1].replace(/[.,]/g,''));
-      if (/k|000/.test(profitMatch[0]) && profit < 10000) profit *= 1000;
-      if (/tr|triệu/.test(profitMatch[0])) profit *= 1000000;
-    }
-    let cost = 0;
-    if (costMatch) {
-      cost = parseFloat(costMatch[1].replace(/[.,]/g,''));
-      if (/k|000/.test(costMatch[0]) && cost < 10000) cost *= 1000;
-      if (/tr|triệu/.test(costMatch[0])) cost *= 1000000;
-    }
+    const profit = parseMoney(profitMatch ? profitMatch[1] : '');
+    const cost   = parseMoney(costMatch   ? costMatch[1]   : '');
 
     if (owner && device) {
       const d = {
