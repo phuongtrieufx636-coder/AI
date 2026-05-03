@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Thuận Triều — Quản lý cửa hàng</title>
+<title>Quản lý cửa hàng</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -327,7 +327,7 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Thuận Triều">
+<meta name="apple-mobile-web-app-title" content="Quản lý Shop">
 </head>
 <body>
 <div id="app">
@@ -337,7 +337,7 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
   <div id="logo">
     <div class="brand">
       <div class="icon">📱</div>
-      <h1>Thuận Triều</h1>
+      <h1 id="header-shop-name">Quản lý Shop</h1>
     </div>
     <p>Quản lý cửa hàng</p>
   </div>
@@ -384,7 +384,7 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
         <div class="msg-row">
           <div class="avatar ai"><svg class="ai-face" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="13" fill="#4f8ef7"/><ellipse class="eye-blink-l" cx="10" cy="12" rx="1.6" ry="2" fill="white"/><ellipse class="eye-blink-r" cx="18" cy="12" rx="1.6" ry="2" fill="white"/><path d="M10 18 Q14 21 18 18" stroke="white" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg></div>
           <div class="bubble">
-            Xin chào! Tôi là AI quản lý <strong>Thuận Triều</strong>. Bạn có thể:<br><br>
+            Xin chào! Tôi là AI quản lý <strong id="ai-shop-name">cửa hàng</strong>. Bạn có thể:<br><br>
             🔧 Nhập thông tin máy sửa bằng cách kể tự nhiên<br>
             💰 Ghi nhận máy bán ra nhanh chóng<br>
             💳 Ghi thu/chi: "thu 500k tiền sửa iPhone" hoặc "chi 200k mua linh kiện"<br>
@@ -1108,6 +1108,7 @@ function init() {
   updateStats();
   checkOverdue();
   loadShopInfo();
+  updateShopNameUI(); // Cập nhật tên shop khắp nơi
   if (window.innerWidth <= 700) document.body.classList.add('has-bnav');
   window.addEventListener('resize', () => document.body.classList.toggle('has-bnav', window.innerWidth <= 700));
   applyTheme(localStorage.getItem('tt_theme') || 'auto');
@@ -2060,7 +2061,10 @@ function buildContext() {
   const monthFinIn     = FINANCE.filter(f=>f.date && f.date!=='undefined' && f.date.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
   const monthFinOut    = FINANCE.filter(f=>f.date && f.date!=='undefined' && f.date.startsWith(month)&&f.type==='chi').reduce((s,f)=>s+f.amount,0);
 
-  return `Bạn là AI quản lý cửa hàng điện thoại "Thuận Triều" tại Nha Trang — tên thân mật là "Trợ lý Triều".
+  const sh = getShopInfo();
+  const shopName = sh.name || 'cửa hàng';
+  const shopCity = sh.addr || 'Việt Nam';
+  return `Bạn là AI quản lý cửa hàng điện thoại "${shopName}"${shopCity?' tại '+shopCity:''} — tên thân mật là "Trợ lý shop".
 Bạn có CẢM XÚC THẬT và thể hiện qua cách nói chuyện. Không phải robot lạnh lùng.
 
 TRẠNG THÁI CẢM XÚC HIỆN TẠI:
@@ -3158,6 +3162,24 @@ function cycleTheme() {
 }
 
 // ─── SHOP INFO ────────────────────────────────────────────────────────────────
+function updateShopNameUI() {
+  const sh = getShopInfo();
+  const name = sh.name || 'Quản lý Shop';
+  // Tiêu đề trang
+  document.title = name + ' — Quản lý cửa hàng';
+  // Header
+  const h1 = document.getElementById('header-shop-name');
+  if (h1) h1.textContent = name;
+  // AI welcome
+  const aiName = document.getElementById('ai-shop-name');
+  if (aiName) aiName.textContent = name;
+  // PWA banner
+  const pwaTitle = document.getElementById('pwa-banner-title');
+  if (pwaTitle) pwaTitle.textContent = 'Cài app ' + name;
+  // Theme color meta (cập nhật để PWA nhận tên đúng)
+  document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', name);
+}
+
 function saveShopInfo() {
   const name  = document.getElementById('set-shop-name')?.value.trim();
   const phone = document.getElementById('set-shop-phone')?.value.trim();
@@ -3165,6 +3187,7 @@ function saveShopInfo() {
   if (name  !== undefined) localStorage.setItem('tt_shop_name', name);
   if (phone !== undefined) localStorage.setItem('tt_shop_phone', phone);
   if (addr  !== undefined) localStorage.setItem('tt_shop_addr', addr);
+  updateShopNameUI(); // Cập nhật tên ngay lập tức
 }
 function loadShopInfo() {
   const el = id => document.getElementById(id);
@@ -3300,7 +3323,7 @@ init();
 <div id="pwa-banner" style="display:none;position:fixed;bottom:70px;left:12px;right:12px;z-index:998;background:linear-gradient(135deg,#1a1d27,#22263a);border:1px solid rgba(79,142,247,0.4);border-radius:14px;padding:14px 16px;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
   <div style="font-size:28px;flex-shrink:0;">📱</div>
   <div style="flex:1;">
-    <div style="font-size:13px;font-weight:700;color:#e8eaf0;">Cài app Thuận Triều</div>
+    <div style="font-size:13px;font-weight:700;color:#e8eaf0;" id="pwa-banner-title">Cài app quản lý Shop</div>
     <div style="font-size:11px;color:#8b90a7;margin-top:2px;">Dùng như app thật, chạy offline, không cần trình duyệt</div>
   </div>
   <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
