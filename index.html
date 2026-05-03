@@ -910,6 +910,10 @@ function doGet(e) {
             <input class="field" id="wh-category" placeholder="Màn hình / Pin / Vỏ..." />
           </div>
           <div class="field-wrap">
+            <label class="field-label">IMEI (nếu là điện thoại)</label>
+            <input class="field" id="wh-imei" placeholder="IMEI máy (để trống nếu linh kiện)" />
+          </div>
+          <div class="field-wrap">
             <label class="field-label">Ngày</label>
             <input class="field" type="date" id="wh-date" />
           </div>
@@ -1723,7 +1727,8 @@ function addWarehouseItem(data) {
     supplier: document.getElementById('wh-supplier').value.trim(),
     date:     document.getElementById('wh-date').value || todayStr(),
     note:     document.getElementById('wh-note').value.trim(),
-    category: document.getElementById('wh-category').value.trim()
+    category: document.getElementById('wh-category').value.trim(),
+    imei:     (document.getElementById('wh-imei')?.value||'').trim()
   };
   if (!d.name) { alert('Vui lòng nhập tên linh kiện / hàng!'); return false; }
   d.id = Date.now() + Math.random();
@@ -1733,7 +1738,7 @@ function addWarehouseItem(data) {
   buildWarehouseList();
   updateStats();
   if (!data) {
-    ['wh-name','wh-qty','wh-price','wh-supplier','wh-note','wh-category'].forEach(id => {
+    ['wh-name','wh-qty','wh-price','wh-supplier','wh-note','wh-category','wh-imei'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
     document.getElementById('wh-qty').value = '';
@@ -1817,6 +1822,7 @@ function buildWarehouseList() {
         </div>
       </div>
       <div class="card-actions">
+        <button class="btn-edit" onclick="openEditWarehouse(${w.id})">✏️ Sửa</button>
         <button class="btn-del" onclick="deleteWarehouseItem(${w.id})">🗑 Xóa</button>
       </div>
     </div>`;
@@ -1989,7 +1995,7 @@ function buildContext() {
     ? FINANCE.slice(0,15).map(f => `- [${f.type==='thu'?'THU':'CHI'}] ${f.desc} / ${fmtMoney(f.amount)} / ngày:${f.date}${f.cat?' / '+f.cat:''}`).join('\n')
     : '(Chưa có thu/chi nào)';
   const whLines = WAREHOUSE.length
-    ? WAREHOUSE.slice(0,15).map(w => `- [${w.type==='nhap'?'NHẬP':'XUẤT'}] ${w.name} / SL:${w.quantity||1} ${w.unit||'cái'} / giá:${fmtMoney(w.price||0)} / ngày:${w.date}`).join('\n')
+    ? WAREHOUSE.slice(0,15).map(w => `- [${w.type==='nhap'?'NHẬP':'XUẤT'}] ${w.name}${w.imei?' IMEI:'+w.imei:''} / SL:${w.quantity||1} ${w.unit||'cái'} / giá:${fmtMoney(w.price||0)} / ngày:${w.date}`).join('\n')
     : '(Kho trống)';
   const stockSummary = getStockSummary().filter(s=>s.qty>0).map(s=>`${s.name}: ${s.qty} ${s.unit||'cái'}`).join(', ') || '(Không có tồn kho)';
 
@@ -2053,16 +2059,26 @@ NHIỆM VỤ — TỰ ĐỘNG NHẬN DẠNG VÀ NHẬP DỮ LIỆU:
 2. Mô tả nhận máy sửa MỚI → BẮT BUỘC thêm [ACTION:ADD_REPAIR|...]
 3. Cập nhật trạng thái / thông tin phiếu SỬA ĐÃ CÓ → BẮT BUỘC thêm [ACTION:UPDATE_REPAIR|...]
 4. Mô tả bán máy / ảnh bill bán → BẮT BUỘC thêm [ACTION:ADD_SALE|...]
-5. Thu tiền → BẮT BUỘC thêm [ACTION:ADD_INCOME|...]
-6. Chi tiền → BẮT BUỘC thêm [ACTION:ADD_EXPENSE|...]
-7. Nhập kho linh kiện / hàng → BẮT BUỘC thêm [ACTION:ADD_WAREHOUSE_IN|...]
-8. Xuất kho linh kiện / hàng → BẮT BUỘC thêm [ACTION:ADD_WAREHOUSE_OUT|...]
+5. Sửa thông tin phiếu BÁN ĐÃ CÓ → BẮT BUỘC thêm [ACTION:UPDATE_SALE|...]
+6. Thu tiền → BẮT BUỘC thêm [ACTION:ADD_INCOME|...]
+7. Chi tiền → BẮT BUỘC thêm [ACTION:ADD_EXPENSE|...]
+8. Nhập kho linh kiện / hàng → BẮT BUỘC thêm [ACTION:ADD_WAREHOUSE_IN|...]
+9. Xuất kho linh kiện / hàng → BẮT BUỘC thêm [ACTION:ADD_WAREHOUSE_OUT|...]
+10. Sửa giao dịch KHO ĐÃ CÓ → BẮT BUỘC thêm [ACTION:UPDATE_WAREHOUSE|...]
+
+🔑 QUY TẮC TRA IMEI KHI BÁN MÁY:
+- Khi người dùng nói "bán máy IMEI xxx" hoặc nhập IMEI → TRƯỚC TIÊN tra trong danh sách kho (phần KHO HÀNG ở trên)
+- Nếu tìm thấy IMEI trong kho với giá nhập → profit = giá_bán - giá_nhập (tự tính lãi)
+- Báo rõ: "Tìm thấy IMEI xxx trong kho, giá nhập Xtr → lãi = Ytr"
+- Nếu KHÔNG tìm thấy IMEI trong kho → hỏi giá nhập để tính lãi, hoặc để profit = 0 và ghi chú "chưa rõ giá nhập"
 
 Ví dụ ĐÚNG — nhận máy sửa: "Đã nhận! [ACTION:ADD_REPAIR|Nhung||iPhone 13|||ép kính|500000|60000|2026-05-02|da_giao|]"
 Ví dụ ĐÚNG — nhận máy sửa có giá: "Đã nhận! [ACTION:ADD_REPAIR|Khai|0901234567|iPhone 13|33329|7777|ép kính|800000|100000|2026-05-02|xong_chua_giao|]"
 → Trong đó: owner=Khai, phone=0901..., device=iPhone 13, imei=33329, pass=7777, issue=ép kính, profit=800000 (giá thu), cost=100000 (vốn chi), date, status, note
 ⚠️ TUYỆT ĐỐI KHÔNG nhập số tiền vào field issue. issue CHỈ là mô tả lỗi bằng chữ (VD: "ép kính", "thay pin", "sửa cổ sạc").
 Ví dụ ĐÚNG — bán máy: "Đã ghi! [ACTION:ADD_SALE|iPhone 14 Pro||99|18000000|1500000|2026-05-02|||]"
+Ví dụ ĐÚNG — sửa phiếu bán: "Đã cập nhật! [ACTION:UPDATE_SALE|IMEI_hoặc_trống|tên máy|99|18500000|2000000|2026-05-02|||]"
+Ví dụ ĐÚNG — sửa kho: "Đã cập nhật kho! [ACTION:UPDATE_WAREHOUSE|tên hàng|ngày|nhap|2|cái|250000|||2026-05-02||]"
 Ví dụ ĐÚNG — thu tiền: "Đã ghi thu! [ACTION:ADD_INCOME|200000|Tiền sửa máy|2026-05-02||]"
 Ví dụ SAI (KHÔNG LÀM): "Đã nhận máy của chị Nhung, iPhone 13, ép kính, giá 500k, vốn 60k, đã giao!" ← THIẾU ACTION → dữ liệu KHÔNG được lưu, người dùng sẽ complain!
 
@@ -2095,7 +2111,13 @@ FORMAT ACTIONS:
 - condition: moi | like_new | 99 | 97 | cu_dep | cu_thuong
 - source: nhap_moi | hang_cu | khac
 - price và profit: PHẢI là số nguyên VND đầy đủ (ví dụ: 32 triệu → 32000000, lãi 2 triệu → 2000000, lỗ 500k → -500000)
-- profit: lãi ròng (âm nếu lỗ)
+- profit: lãi ròng (âm nếu lỗ). Nếu bán theo IMEI và tìm thấy giá nhập trong kho → profit = price - giá_nhập_kho
+
+[ACTION:UPDATE_SALE|imei|device_hint|condition|price|profit|date|buyer|source|note]
+- Dùng khi người dùng muốn SỬA phiếu bán đã có (không tạo mới)
+- imei: để tìm đúng phiếu (hoặc để trống nếu tìm theo tên máy)
+- device_hint: tên máy gợi ý (để trống nếu tìm theo IMEI)
+- Các trường khác: để trống nếu không thay đổi
 
 [ACTION:ADD_INCOME|amount|desc|date|cat|note]
 - amount: số nguyên VND dương
@@ -2103,12 +2125,20 @@ FORMAT ACTIONS:
 [ACTION:ADD_EXPENSE|amount|desc|date|cat|note]
 - amount: số nguyên VND dương
 
-[ACTION:ADD_WAREHOUSE_IN|name|quantity|unit|price|supplier|date|category|note]
+[ACTION:ADD_WAREHOUSE_IN|name|quantity|unit|price|supplier|date|category|note|imei]
 - Dùng khi nhập hàng/linh kiện vào kho
 - quantity: số lượng, unit: đơn vị (cái/bộ/hộp...), price: đơn giá
+- imei: điền IMEI nếu nhập điện thoại (quan trọng để tra khi bán)
 
-[ACTION:ADD_WAREHOUSE_OUT|name|quantity|unit|price|supplier|date|category|note]
+[ACTION:ADD_WAREHOUSE_OUT|name|quantity|unit|price|supplier|date|category|note|imei]
 - Dùng khi xuất hàng/linh kiện ra khỏi kho (dùng cho sửa chữa, bán, v.v.)
+- imei: điền IMEI nếu xuất điện thoại
+
+[ACTION:UPDATE_WAREHOUSE|name_hint|date_hint|type|quantity|unit|price|supplier|date_new|category|note]
+- Dùng khi người dùng muốn SỬA giao dịch kho đã có (không tạo mới)
+- name_hint: tên hàng để tìm (khớp một phần)
+- date_hint: ngày giao dịch gốc để xác định đúng bản ghi (để trống nếu chỉ có 1 bản ghi trùng tên)
+- Các trường còn lại: để trống nếu không thay đổi
 
 QUY TẮC QUAN TRỌNG:
 - Nếu người dùng nói hàng bị "back", "hoàn trả", "khách trả lại máy" → hỏi tên máy/IMEI cụ thể rồi hướng dẫn người dùng nhấn nút "↩ Đánh dấu hoàn trả" trên thẻ máy đó trong tab Bán máy. KHÔNG tự tạo giao dịch kho hay xóa bản ghi bán. Chỉ khi đánh dấu hoàn trả thì máy mới bị loại khỏi tính lãi
@@ -2195,6 +2225,58 @@ function handleActions(reply) {
     clean = clean.replace(m[0], '');
   });
 
+  // UPDATE_SALE — sửa phiếu bán đã có
+  const updSaleMatches = [...clean.matchAll(/\[ACTION:UPDATE_SALE\|([^\]]+)\]/g)];
+  updSaleMatches.forEach(m => {
+    const p = m[1].split('|');
+    const imeiKey   = (p[0]||'').trim();
+    const deviceKey = (p[1]||'').toLowerCase().trim();
+    const found = SALES.find(s =>
+      (imeiKey   && s.imei && s.imei === imeiKey) ||
+      (deviceKey && s.device.toLowerCase().includes(deviceKey))
+    );
+    if (found) {
+      const condMap = { moi:'Mới 100%', like_new:'Like New', '99':'99%', '97':'97%', cu_dep:'Cũ đẹp', cu_thuong:'Cũ thường' };
+      if (p[2]) found.condition = p[2], found.conditionLabel = condMap[p[2]] || p[2];
+      if (p[3]) found.price  = parseFloat(p[3]) || found.price;
+      if (p[4]) found.profit = parseFloat(p[4]) || found.profit;
+      if (p[5]) found.date   = p[5];
+      if (p[6]) found.buyer  = p[6];
+      if (p[7]) found.source = p[7];
+      if (p[8]) found.note   = p[8];
+      found.updatedAt = new Date().toLocaleString('vi-VN');
+      saveSales();
+      anyAction = true;
+    }
+    clean = clean.replace(m[0], '');
+  });
+
+  // UPDATE_WAREHOUSE — sửa giao dịch kho đã có
+  const updWhMatches = [...clean.matchAll(/\[ACTION:UPDATE_WAREHOUSE\|([^\]]+)\]/g)];
+  updWhMatches.forEach(m => {
+    const p = m[1].split('|');
+    const nameKey = (p[0]||'').toLowerCase().trim();
+    const dateKey = (p[1]||'').trim();
+    const found = WAREHOUSE.find(w =>
+      w.name.toLowerCase().includes(nameKey) &&
+      (!dateKey || w.date === dateKey)
+    );
+    if (found) {
+      if (p[2]) found.type     = p[2];
+      if (p[3]) found.quantity = parseFloat(p[3]) || found.quantity;
+      if (p[4]) found.unit     = p[4];
+      if (p[5]) found.price    = parseFloat(p[5]) || found.price;
+      if (p[6]) found.supplier = p[6];
+      if (p[7]) found.date     = p[7];
+      if (p[8]) found.category = p[8];
+      if (p[9]) found.note     = p[9];
+      found.updatedAt = new Date().toLocaleString('vi-VN');
+      saveWarehouse();
+      anyAction = true;
+    }
+    clean = clean.replace(m[0], '');
+  });
+
   // ADD_SALE
   const saleMatches = [...clean.matchAll(/\[ACTION:ADD_SALE\|([^\]]+)\]/g)];
   saleMatches.forEach(m => {
@@ -2216,6 +2298,17 @@ function handleActions(reply) {
       buyer: p[6]||'', source: p[7]||'nhap_moi', note: p[8]||''
     };
     d.conditionLabel = condMap[d.condition] || d.condition;
+
+    // Tự động lấy giá nhập từ kho nếu có IMEI và profit chưa điền
+    if (d.imei && d.profit === 0) {
+      const whItem = WAREHOUSE.find(w => w.imei && w.imei === d.imei && w.type === 'nhap');
+      if (whItem && whItem.price) {
+        d.costBasis = whItem.price; // lưu tham chiếu
+        // Tính lãi = giá bán - giá nhập
+        if (d.price > 0) d.profit = d.price - whItem.price;
+      }
+    }
+
     if (d.device && d.price) {
       // Kiểm tra trùng IMEI
       if (d.imei) {
@@ -2266,7 +2359,7 @@ function handleActions(reply) {
   const whInMatches = [...clean.matchAll(/\[ACTION:ADD_WAREHOUSE_IN\|([^\]]+)\]/g)];
   whInMatches.forEach(m => {
     const p = m[1].split('|');
-    const d = { type:'nhap', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', note: p[7]||'' };
+    const d = { type:'nhap', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', note: p[7]||'', imei: p[8]||'' };
     if (d.name) {
       d.id = Date.now() + Math.random();
       d.createdAt = new Date().toLocaleString('vi-VN');
@@ -2280,7 +2373,7 @@ function handleActions(reply) {
   const whOutMatches = [...clean.matchAll(/\[ACTION:ADD_WAREHOUSE_OUT\|([^\]]+)\]/g)];
   whOutMatches.forEach(m => {
     const p = m[1].split('|');
-    const d = { type:'xuat', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', note: p[7]||'' };
+    const d = { type:'xuat', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', note: p[7]||'', imei: p[8]||'' };
     if (d.name) {
       d.id = Date.now() + Math.random();
       d.createdAt = new Date().toLocaleString('vi-VN');
@@ -2366,7 +2459,7 @@ async function sendMsg() {
 
     // ── Kiểm tra: nếu người dùng đang nhập liệu mà AI quên ACTION → retry ──
     const inputKeywords = /nhận máy|nhận đc|nhận được|sửa máy|bán máy|bán đc|bán được|thu tiền|chi tiền|nhập kho|xuất kho|ghi vào|ghi giúp|lưu giúp|thêm giúp|đã giao|đã xong|đã sửa/i;
-    const hasAction = /\[ACTION:(ADD_REPAIR|UPDATE_REPAIR|ADD_SALE|ADD_INCOME|ADD_EXPENSE|ADD_WAREHOUSE_IN|ADD_WAREHOUSE_OUT)\|/.test(rawReply);
+    const hasAction = /\[ACTION:(ADD_REPAIR|UPDATE_REPAIR|ADD_SALE|UPDATE_SALE|ADD_INCOME|ADD_EXPENSE|ADD_WAREHOUSE_IN|ADD_WAREHOUSE_OUT|UPDATE_WAREHOUSE)\|/.test(rawReply);
     const looksLikeDataEntry = inputKeywords.test(text) || inputKeywords.test(rawReply);
 
     if (looksLikeDataEntry && !hasAction) {
@@ -2709,6 +2802,32 @@ function openEditSale(id) {
   document.getElementById('edit-modal').style.display = 'flex';
 }
 
+function openEditWarehouse(id) {
+  const w = WAREHOUSE.find(x => x.id === id);
+  if (!w) return;
+  editingId = id; editingType = 'warehouse';
+  document.getElementById('edit-modal-title').textContent = '✏️ Chỉnh sửa kho hàng';
+  document.getElementById('edit-modal-body').innerHTML = `
+    <div class="form-grid col2">
+      <div class="field-wrap"><label class="field-label">Loại</label>
+        <select class="field" id="em-wh-type">
+          <option value="nhap" ${w.type==='nhap'?'selected':''}>📦 Nhập kho</option>
+          <option value="xuat" ${w.type==='xuat'?'selected':''}>📤 Xuất kho</option>
+        </select>
+      </div>
+      <div class="field-wrap"><label class="field-label">Tên hàng *</label><input class="field" id="em-wh-name" value="${escHtml(w.name||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Số lượng</label><input class="field" type="number" id="em-wh-qty" value="${w.quantity||1}" step="any" min="0.01"/></div>
+      <div class="field-wrap"><label class="field-label">Đơn vị</label><input class="field" id="em-wh-unit" value="${escHtml(w.unit||'cái')}"/></div>
+      <div class="field-wrap"><label class="field-label">Đơn giá (VND)</label><input class="field" type="number" id="em-wh-price" value="${w.price||0}" min="0"/></div>
+      <div class="field-wrap"><label class="field-label">Nhà cung cấp</label><input class="field" id="em-wh-supplier" value="${escHtml(w.supplier||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Danh mục</label><input class="field" id="em-wh-category" value="${escHtml(w.category||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">IMEI</label><input class="field" id="em-wh-imei" value="${escHtml(w.imei||'')}"/></div>
+      <div class="field-wrap"><label class="field-label">Ngày</label><input class="field" type="date" id="em-wh-date" value="${w.date||''}"/></div>
+    </div>
+    <div class="field-wrap"><label class="field-label">Ghi chú</label><textarea class="field" id="em-wh-note">${escHtml(w.note||'')}</textarea></div>`;
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+
 function closeEditModal() {
   document.getElementById('edit-modal').style.display = 'none';
   editingId = null; editingType = null;
@@ -2747,6 +2866,21 @@ function saveEdit() {
     s.note      = document.getElementById('em-note').value.trim();
     s.updatedAt = new Date().toLocaleString('vi-VN');
     saveSales(); buildSaleList(); updateStats();
+  } else if (editingType === 'warehouse') {
+    const w = WAREHOUSE.find(x => x.id === editingId);
+    if (!w) return;
+    w.type     = document.getElementById('em-wh-type').value;
+    w.name     = document.getElementById('em-wh-name').value.trim();
+    w.quantity = parseFloat(document.getElementById('em-wh-qty').value) || 1;
+    w.unit     = document.getElementById('em-wh-unit').value.trim() || 'cái';
+    w.price    = parseFloat(document.getElementById('em-wh-price').value) || 0;
+    w.supplier = document.getElementById('em-wh-supplier').value.trim();
+    w.category = document.getElementById('em-wh-category').value.trim();
+    w.imei     = document.getElementById('em-wh-imei').value.trim();
+    w.date     = document.getElementById('em-wh-date').value;
+    w.note     = document.getElementById('em-wh-note').value.trim();
+    w.updatedAt = new Date().toLocaleString('vi-VN');
+    saveWarehouse(); buildWarehouseList(); updateStats();
   }
   closeEditModal();
 }
