@@ -785,11 +785,11 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
       </div>
 
       <div class="settings-section">
-        <h4>📊 Đồng bộ Google Sheets</h4>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Xuất dữ liệu lên Google Sheets qua Apps Script Web App. Không cần Firebase hay tài khoản dịch vụ.</div>
+        <h4>☁️ Backup tự động lên Google Drive</h4>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Mỗi khi có dữ liệu mới, app tự động backup file JSON lên Google Drive. Đổi máy chỉ cần nhấn khôi phục là xong.</div>
         <div class="settings-row">
           <div>
-            <div class="settings-row-label">Web App URL</div>
+            <div class="settings-row-label">URL Apps Script</div>
             <div class="settings-row-sub">Dán URL từ Google Apps Script đã deploy</div>
           </div>
         </div>
@@ -797,19 +797,14 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
           <input class="field" id="gsheet-url" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1;" />
           <button class="btn-add" style="padding:8px 14px;white-space:nowrap;" onclick="saveGsheetUrl()">💾 Lưu</button>
         </div>
-        <div class="export-btn-row">
-          <button class="btn-export" onclick="syncToGsheet('repairs')">📤 Xuất phiếu sửa</button>
-          <button class="btn-export" onclick="syncToGsheet('sales')">📤 Xuất bán hàng</button>
-          <button class="btn-export" onclick="syncToGsheet('all')">📤 Xuất tất cả</button>
-        </div>
         <div id="gsheet-status" style="font-size:12px;margin-top:8px;min-height:18px;"></div>
         <div style="margin-top:10px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius-sm);font-size:11.5px;color:var(--text3);">
-          <strong style="color:var(--text2);">Hướng dẫn nhanh:</strong><br>
+          <strong style="color:var(--text2);">Hướng dẫn:</strong><br>
           1. Vào <a href="https://script.google.com" target="_blank" style="color:var(--accent);">script.google.com</a> → Tạo project mới<br>
           2. Dán code Apps Script vào (xem mẫu bên dưới)<br>
           3. Deploy → Web App → Anyone → Copy URL dán vào ô trên
           <details style="margin-top:8px;">
-            <summary style="cursor:pointer;color:var(--accent);">📋 Xem code Apps Script mẫu (đã có backup JSON)</summary>
+            <summary style="cursor:pointer;color:var(--accent);">📋 Xem code Apps Script mẫu</summary>
             <pre style="margin-top:8px;font-size:10px;background:var(--bg);padding:10px;border-radius:6px;overflow-x:auto;white-space:pre-wrap;border:1px solid var(--border);">function doPost(e) {
   try {
     var raw = e.postData.contents;
@@ -825,23 +820,6 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
       return ContentService.createTextOutput('{"ok":true,"saved":"json"}')
         .setMimeType(ContentService.MimeType.JSON);
     }
-
-    // ── Ghi vào Google Sheet ──
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName(data.sheet) || ss.insertSheet(data.sheet);
-    if (data.clear) sheet.clearContents();
-    if (data.headers) {
-      var hr = sheet.getRange(1, 1, 1, data.headers.length);
-      hr.setValues([data.headers]);
-      hr.setFontWeight('bold');
-      hr.setBackground('#1a73e8');
-      hr.setFontColor('#ffffff');
-    }
-    if (data.rows && data.rows.length > 0)
-      sheet.getRange(2, 1, data.rows.length, data.rows[0].length).setValues(data.rows);
-    sheet.autoResizeColumns(1, data.headers ? data.headers.length : 10);
-    return ContentService.createTextOutput('{"ok":true}')
-      .setMimeType(ContentService.MimeType.JSON);
 
   } catch(err) {
     return ContentService.createTextOutput('{"error":"' + err.message + '"}')
@@ -1202,66 +1180,28 @@ function thisMonth() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 
-// ─── AUTO SYNC TO GOOGLE SHEETS + JSON BACKUP ────────────────────────────────
+// ─── AUTO BACKUP JSON LÊN DRIVE ──────────────────────────────────────────────
 let autoSyncTimer = null;
 function autoSyncToGsheet(which) {
   const url = localStorage.getItem('tt_gsheet_url');
   if (!url) return;
   clearTimeout(autoSyncTimer);
   autoSyncTimer = setTimeout(async () => {
-    const tasks = [];
-    if (which === 'repairs' || which === 'all') {
-      tasks.push({
-        sheet: 'Phiếu Sửa', clear: true,
-        headers: ['ID','Chủ máy','SĐT','Thiết bị','IMEI','Mật khẩu','Lỗi','Thu(đ)','Chi(đ)','Lãi(đ)','Ngày','Trạng thái','Ghi chú'],
-        rows: REPAIRS.map(r => [r.id, r.owner, r.phone, r.device, r.imei, r.pass, r.issue, r.profit||0, r.cost||0, (r.profit||0)-(r.cost||0), r.date, r.status, r.note])
-      });
-    }
-    if (which === 'sales' || which === 'all') {
-      tasks.push({
-        sheet: 'Bán Hàng', clear: true,
-        headers: ['ID','Thiết bị','IMEI','Tình trạng','Giá bán(đ)','Lãi(đ)','Ngày','Khách','Nguồn','Ghi chú','Hoàn trả'],
-        rows: SALES.map(s => [s.id, s.device, s.imei, s.conditionLabel||s.condition, s.price||0, s.profit||0, s.date, s.buyer, s.source, s.note, s.returned?'Hoàn trả':''])
-      });
-    }
-    if (which === 'finance' || which === 'all') {
-      tasks.push({
-        sheet: 'Thu Chi', clear: true,
-        headers: ['ID','Loại','Mô tả','Số tiền(đ)','Ngày','Danh mục','Ghi chú'],
-        rows: FINANCE.map(f => [f.id, f.type==='thu'?'Thu':'Chi', f.desc, f.amount||0, f.date, f.cat, f.note])
-      });
-    }
-    if (which === 'warehouse' || which === 'all') {
-      tasks.push({
-        sheet: 'Kho Hàng', clear: true,
-        headers: ['ID','Loại','Tên hàng','Số lượng','Đơn vị','Đơn giá','Nhà cung cấp','Ngày','Danh mục','Ghi chú'],
-        rows: WAREHOUSE.map(w => [w.id, w.type==='nhap'?'Nhập':'Xuất', w.name, w.quantity||1, w.unit||'cái', w.price||0, w.supplier, w.date, w.category, w.note])
-      });
-    }
     showAutoSyncDot('syncing');
-    // Gửi từng sheet
-    for (const task of tasks) {
-      try {
-        await fetch(url, { method:'POST', body: JSON.stringify(task), headers:{'Content-Type':'text/plain'}, mode:'no-cors' });
-        await new Promise(r => setTimeout(r, 600));
-      } catch(e) { showAutoSyncDot('error'); return; }
-    }
-    // Sau khi sync sheet xong → backup toàn bộ JSON lên Drive qua form POST (bypass CORS)
     try {
-      const backupContent = JSON.stringify({
-        version:4,
-        backedUpAt: new Date().toLocaleString('vi-VN'),
-        repairs:REPAIRS, sales:SALES, finance:FINANCE, warehouse:WAREHOUSE
+      const backupPayload = JSON.stringify({
+        type: 'backup_json',
+        content: JSON.stringify({
+          version: 4,
+          backedUpAt: new Date().toLocaleString('vi-VN'),
+          repairs: REPAIRS, sales: SALES, finance: FINANCE, warehouse: WAREHOUSE
+        })
       });
-      // Dùng hidden form POST thay vì fetch để tránh CORS với doPost
-      const formData = new FormData();
-      formData.append('type', 'backup_json');
-      formData.append('content', backupContent);
-      // Gửi qua navigator.sendBeacon hoặc fetch no-cors với body dạng text
-      const backupPayload = JSON.stringify({ type:'backup_json', content: backupContent });
       await fetch(url, { method:'POST', body: backupPayload, headers:{'Content-Type':'text/plain'}, mode:'no-cors' });
-    } catch(e) { /* silent */ }
-    showAutoSyncDot('ok');
+      showAutoSyncDot('ok');
+    } catch(e) {
+      showAutoSyncDot('error');
+    }
   }, 2000);
 }
 
@@ -1299,18 +1239,18 @@ function showAutoSyncDot(state) {
     document.body.appendChild(dot);
   }
   if (state === 'syncing') {
-    dot.textContent = '☁️ Đang lưu Sheet...';
+    dot.textContent = '☁️ Đang backup...';
     dot.style.background = 'rgba(79,142,247,0.15)';
     dot.style.color = '#4f8ef7';
     dot.style.opacity = '1';
   } else if (state === 'ok') {
-    dot.textContent = '✅ Đã lưu Sheet';
+    dot.textContent = '✅ Đã backup Drive';
     dot.style.background = 'rgba(52,200,122,0.15)';
     dot.style.color = '#34c87a';
     dot.style.opacity = '1';
     setTimeout(() => { dot.style.opacity = '0'; }, 3000);
   } else {
-    dot.textContent = '⚠️ Lỗi sync Sheet';
+    dot.textContent = '⚠️ Lỗi backup';
     dot.style.background = 'rgba(240,82,82,0.15)';
     dot.style.color = '#f05252';
     dot.style.opacity = '1';
@@ -3203,65 +3143,6 @@ function saveGsheetUrl() {
   if (!v) return;
   localStorage.setItem('tt_gsheet_url', v);
   showGsheetStatus('✅ Đã lưu URL!', 'ok');
-}
-function showGsheetStatus(msg, type) {
-  const el = document.getElementById('gsheet-status');
-  if (!el) return;
-  el.textContent = msg;
-  el.style.color = type === 'ok' ? 'var(--green)' : type === 'err' ? 'var(--red)' : 'var(--text3)';
-}
-async function syncToGsheet(which) {
-  const url = localStorage.getItem('tt_gsheet_url');
-  if (!url) { showGsheetStatus('⚠️ Chưa nhập Web App URL!', 'err'); return; }
-  showGsheetStatus('⏳ Đang gửi dữ liệu...', '');
-
-  const tasks = [];
-  if (which === 'repairs' || which === 'all') {
-    tasks.push({
-      sheet: 'Phiếu Sửa',
-      clear: true,
-      headers: ['ID','Chủ máy','SĐT','Thiết bị','IMEI','Mật khẩu','Lỗi','Thu(đ)','Chi(đ)','Lãi(đ)','Ngày','Trạng thái','Ghi chú'],
-      rows: REPAIRS.map(r => [r.id, r.owner, r.phone, r.device, r.imei, r.pass, r.issue, r.profit||0, r.cost||0, (r.profit||0)-(r.cost||0), r.date, r.status, r.note])
-    });
-  }
-  if (which === 'sales' || which === 'all') {
-    tasks.push({
-      sheet: 'Bán Hàng',
-      clear: true,
-      headers: ['ID','Thiết bị','IMEI','Tình trạng','Giá bán(đ)','Lãi(đ)','Ngày','Khách','Nguồn','Ghi chú','Hoàn trả'],
-      rows: SALES.map(s => [s.id, s.device, s.imei, s.conditionLabel||s.condition, s.price||0, s.profit||0, s.date, s.buyer, s.source, s.note, s.returned?'Hoàn trả':''])
-    });
-  }
-  if (which === 'all') {
-    tasks.push({
-      sheet: 'Thu Chi',
-      clear: true,
-      headers: ['ID','Loại','Mô tả','Số tiền(đ)','Ngày','Danh mục','Ghi chú'],
-      rows: FINANCE.map(f => [f.id, f.type==='thu'?'Thu':'Chi', f.desc, f.amount||0, f.date, f.cat, f.note])
-    });
-  }
-
-  let successCount = 0;
-  for (const task of tasks) {
-    try {
-      // Dùng no-cors để tránh lỗi CORS với Google Apps Script
-      // no-cors không đọc được response body nhưng request vẫn gửi thành công
-      await fetch(url, {
-        method: 'POST',
-        body: JSON.stringify(task),
-        headers: { 'Content-Type': 'text/plain' },
-        mode: 'no-cors'
-      });
-      successCount++;
-      showGsheetStatus(`⏳ Đã gửi sheet "${task.sheet}"... (${successCount}/${tasks.length})`, '');
-      // Chờ 1 giây giữa các request để Apps Script xử lý kịp
-      if (successCount < tasks.length) await new Promise(r => setTimeout(r, 1000));
-    } catch(err) {
-      showGsheetStatus(`❌ Lỗi sheet "${task.sheet}": ${err.message}`, 'err');
-      return;
-    }
-  }
-  showGsheetStatus(`✅ Đã gửi ${successCount} sheet lên Google Sheets! (Kiểm tra file Sheet để xác nhận)`, 'ok');
 }
 
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
