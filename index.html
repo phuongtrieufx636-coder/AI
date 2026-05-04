@@ -4296,207 +4296,351 @@ function updateSimModeUI() {
 async function sendSimMsg(text, imgData) {
   showTyping();
   document.getElementById('send-btn').disabled = true;
-
-  await new Promise(r => setTimeout(r, 600 + Math.random() * 800));
+  await new Promise(r => setTimeout(r, 500 + Math.random() * 600));
 
   const t = text.toLowerCase();
   let reply = '';
 
-  // Phân tích ý định
-  const isAddRepair     = /nhận máy|nhận đc|nhận được|sửa máy|mang máy|đem máy|nhận hàng|vừa nhận|nhập sửa|nhận sửa|tiếp nhận|giá nhận/.test(t);
-  const isAddSale       = /bán máy|bán đc|bán được|xuất máy|bán cho|vừa bán/.test(t);
-  const isAddIncome     = /thu tiền|thu đc|thu được|khách trả|nhận tiền/.test(t);
-  const isAddExpense    = /chi tiền|mua linh kiện|chi ra|mua đồ|tốn tiền/.test(t);
-  const isAddWarehouseIn  = /nhập kho|thêm kho|nhập hàng|thêm hàng|nhập linh kiện|thêm linh kiện|mua vào kho|nhập vào kho/.test(t);
-  const isAddWarehouseOut = /xuất kho|xuất hàng|lấy kho|dùng linh kiện|xuất linh kiện/.test(t);
-  const isQueryStock    = /kho còn|tồn kho|còn bao nhiêu|kho có|danh sách kho/.test(t);
-  const isQuery         = /bao nhiêu|tổng|doanh thu|lợi nhuận|thống kê|máy nào|danh sách|hôm nay|tháng này/.test(t);
+  // ── Hàm parse tiền linh hoạt ──────────────────────────────────────────────
+  function parseMoney(str) {
+    if (!str) return 0;
+    str = str.trim();
+    const trk = str.match(/(\d+)[,.]?(\d*)tr(\d*)/i);
+    if (trk) {
+      const base = parseInt(trk[1]);
+      const dec  = trk[2] ? parseFloat('0.' + trk[2]) : 0;
+      const sub  = trk[3] ? parseInt(trk[3]) / Math.pow(10, trk[3].length) : 0;
+      return (base + dec + sub) * 1000000;
+    }
+    const trDot = str.match(/([\d]+)[.,](\d+)\s*(?:tr|triệu)/i);
+    if (trDot) return (parseInt(trDot[1]) + parseFloat('0.' + trDot[2])) * 1000000;
+    const trPlain = str.match(/([\d]+)\s*(?:tr|triệu)/i);
+    if (trPlain) return parseInt(trPlain[1]) * 1000000;
+    const kMatch = str.match(/([\d]+)\s*k\b/i);
+    if (kMatch) return parseInt(kMatch[1]) * 1000;
+    const num = str.replace(/[.,]/g,'').match(/\d+/);
+    if (num) {
+      let v = parseInt(num[0]);
+      if (v >= 100 && v < 100000) v *= 1000; // 500 → 500k
+      return v;
+    }
+    return 0;
+  }
 
+  // ── Tìm tiền trong câu — lấy tất cả số tiền có đơn vị ──────────────────
+  function findAllMoney(s) {
+    const results = [];
+    const re = /(\d+(?:[.,]\d+)?)\s*(tr\d*|triệu|k)\b/gi;
+    let m;
+    while ((m = re.exec(s)) !== null) {
+      results.push({ raw: m[0], val: parseMoney(m[0]), index: m.index });
+    }
+    return results;
+  }
+
+  // ── Parse tên máy ─────────────────────────────────────────────────────────
+  function findDevice(s) {
+    const m = s.match(/\b(iphone\s*\d{1,2}(?:\s*(?:pro\s*max|pro|plus|mini|se|xr|xs\s*max|xs))?|samsung\s*(?:galaxy\s*)?(?:s\d{1,2}(?:\s*ultra|\s*plus|\+|\s*fe)?|a\d{2,3}(?:\s*\w+)?|note\s*\d+|zflip\s*\d*|zfold\s*\d*|z\s*flip\s*\d*|z\s*fold\s*\d*|m\d{2}(?:\s*\w+)?)|oppo\s*(?:reno\s*\d+(?:\s*\w+)?|a\d{2,3}(?:\s*\w+)?|find\s*\w+|f\d+(?:\s*\w+)?)|xiaomi\s*(?:\d+[a-z\s]*|redmi\s*\w+|poco\s*\w+|note\s*\d+\w*)|vivo\s*(?:v\d+[a-z\s]*|y\d+[a-z\s]*|x\d+[a-z\s]*)|realme\s*(?:c\d+[a-z\s]*|\d+[a-z\s]*)|nokia\s*\w+|pixel\s*\d+[a-z\s]*|huawei\s*\w+)/i);
+    return m ? m[0].trim().replace(/\s+/g,' ') : '';
+  }
+
+  // ── Parse tên người ───────────────────────────────────────────────────────
+  function findOwner(s) {
+    const m = s.match(/(?:(?:khách|máy|của|cho|anh|chị|em|bé|bạn|ông|bà|cô|chú|con|thằng|thầy|cô)\s+)+([A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂĐƠƯA-Za-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ][a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]+(?: [A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂĐƠƯA-Za-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ][a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]+){0,2})/i);
+    return m ? m[1].trim() : '';
+  }
+
+  // ── Parse lỗi / vấn đề máy ────────────────────────────────────────────────
+  function findIssue(s) {
+    const m = s.match(/(?:lỗi|vấn đề|hỏng|vỡ|bể|sửa|ép|thay|cảm ứng|màn|pin|sạc|loa|camera|mic|ic|cổng|nút|home|main|nguồn|kính|mặt kính|nắp lưng|vỏ|tai nghe|rung|wifi|sim| 4g|5g|bluetooth|touch\s*id|face\s*id|lên nguồn|chết nguồn|chết máy|treo|đơ|lag|nóng máy|hao pin|không sạc|không lên|không rung|không nghe|không nói|không kết nối|không bắt sóng)[^\d,\.]{0,50}/i);
+    return m ? m[0].replace(/^(?:lỗi|vấn đề|sửa)\s*/i,'').trim().substring(0,80) : '';
+  }
+
+  // ── Phát hiện ý định ──────────────────────────────────────────────────────
+  const isUpdateRepair = /(?:đã giao|giao rồi|giao xong|giao cho|vừa giao|trả máy|trả cho|xong rồi|sửa xong|hoàn thành|done|đã xong|lấy máy rồi|khách lấy|cập nhật|update)\s+(?:máy|phiếu|cho)?\s*(?:anh|chị|em|bé|bạn|ông|bà|khách)?\s*\w*/i.test(t)
+    && !/nhận|mới|thêm|nhập/.test(t);
+
+  const isAddRepair = /(?:nhận máy|nhận đc|nhận được|tiếp nhận|nhận sửa|sửa máy|mang máy|đem máy|vừa nhận|nhập sửa|ghi máy|thêm phiếu|phiếu mới|nhận hàng|nhận về|máy vào|bấm giúp|nhập giúp|ghi giúp|thêm giúp|lưu giúp)/.test(t)
+    || (findDevice(t) !== '' && /thu|giá nhận|lãi|tiền sửa|ép|thay|sửa|vốn|linh kiện/.test(t) && !isUpdateRepair);
+
+  const isAddSale = /(?:bán máy|bán đc|bán được|xuất máy|bán cho|vừa bán|đã bán|bán ra|bán hàng|ghi bán|thêm bán|bán với giá|ra đi|chốt máy|chốt đơn)/.test(t);
+
+  const isUpdateSale = /(?:cập nhật bán|sửa phiếu bán|update bán)/.test(t);
+
+  const isAddIncome = /(?:thu tiền|thu đc|thu được|khách trả|nhận tiền|có tiền|vào tiền|thu về|khách đưa|lấy tiền|thu thêm|ghi thu|thêm thu|thu sửa|thu máy|thanh toán rồi|khách thanh toán)/.test(t)
+    && !/nhận máy|nhập kho|nhập hàng/.test(t);
+
+  const isAddExpense = /(?:chi tiền|mua linh kiện|chi ra|mua đồ|tốn tiền|bỏ tiền|chi phí|xuất tiền|ghi chi|thêm chi|mua vật tư|đặt hàng|nhập linh kiện|mua phụ kiện|trả tiền nhà|trả lương|trả nợ|chi lương|điện nước|tiền thuê|chi khác|tốn|bỏ ra)/.test(t)
+    && !/nhập kho|nhập hàng|nhận máy/.test(t);
+
+  const isAddWarehouseIn  = /(?:nhập kho|thêm kho|nhập hàng|thêm hàng|nhập linh kiện|thêm linh kiện|mua vào kho|nhập vào kho|kho vào|vào kho|nhập thêm|bổ sung kho|mua về kho)/.test(t);
+  const isAddWarehouseOut = /(?:xuất kho|xuất hàng|lấy kho|dùng linh kiện|xuất linh kiện|kho ra|ra khỏi kho|lấy từ kho|dùng từ kho)/.test(t);
+
+  const isQueryStock = /(?:kho còn|tồn kho|còn bao nhiêu|kho có|danh sách kho|xem kho|kiểm kho|báo kho|trong kho)/.test(t);
+
+  const isQueryRepair = /(?:đang sửa|chưa giao|máy nào đang|list máy|danh sách sửa|phiếu sửa|bao nhiêu máy|máy sửa)/.test(t);
+
+  const isQuery = /(?:bao nhiêu|tổng|doanh thu|lợi nhuận|thống kê|hôm nay|tháng này|tuần này|báo cáo|tình hình|kết quả|lãi bao nhiêu|thu bao nhiêu)/.test(t);
+
+  // ══════════════════════════════════════════════════════════════════════════
   if (imgData) {
-    reply = '📷 <strong>AI Giả lập</strong> chưa hỗ trợ đọc ảnh. Vui lòng nhập thông tin thủ công hoặc bật Groq API key để AI đọc ảnh tự động.';
-  } else if (isQueryStock) {
-    const stock = getStockSummary().filter(s => s.qty > 0);
-    if (stock.length === 0) {
-      reply = `📦 <strong>Kho hiện tại trống.</strong> [AI Giả lập]<br><em style="font-size:11px;color:var(--text3);">Nhập hàng bằng lệnh: "nhập kho iPhone 15, 2 cái, giá vốn 20tr"</em>`;
+    reply = '📷 <strong>AI Giả lập</strong> chưa hỗ trợ đọc ảnh. Nhập Groq API key miễn phí để AI đọc ảnh tự động nhé!';
+
+  // ── CẬP NHẬT TRẠNG THÁI PHIẾU SỬA ───────────────────────────────────────
+  } else if (isUpdateRepair) {
+    const device = findDevice(t);
+    const owner  = findOwner(t);
+    const newStatus = /(?:chưa giao|xong chưa|hoàn thành chưa giao)/.test(t) ? 'xong_chua_giao' : 'da_giao';
+
+    const found = REPAIRS.find(r => {
+      const rOwner  = r.owner.toLowerCase();
+      const rDevice = r.device.toLowerCase();
+      return (owner  && rOwner.includes(owner.toLowerCase()))
+          || (device && rDevice.includes(device.toLowerCase()));
+    });
+
+    if (found) {
+      found.status = newStatus;
+      found.updatedAt = new Date().toLocaleString('vi-VN');
+      saveRepairs(); buildRepairList(); updateStats();
+      const stLabel = newStatus === 'da_giao' ? '📦 Đã giao' : '✅ Xong, chưa giao';
+      reply = `✅ <strong>Cập nhật thành công!</strong><br>👤 ${escHtml(found.owner)} · 📱 ${escHtml(found.device)}<br>Trạng thái: <strong>${stLabel}</strong>`;
     } else {
-      const rows = stock.map(s => `• ${escHtml(s.name)}: <strong>${s.qty}</strong> ${s.unit||'cái'}`).join('<br>');
-      reply = `📦 <strong>Tồn kho hiện tại:</strong> [AI Giả lập]<br>${rows}<br><em style="font-size:11px;color:var(--text3);">Xem chi tiết tại tab <strong>Kho</strong>.</em>`;
+      const hint = owner || device;
+      reply = `🤖 Không tìm thấy phiếu${hint?' của <strong>'+escHtml(hint)+'</strong>':''} trong danh sách.<br>
+        Đang sửa: <strong>${REPAIRS.filter(r=>r.status==='dang_sua').length}</strong> · Chờ giao: <strong>${REPAIRS.filter(r=>r.status==='xong_chua_giao').length}</strong><br>
+        <em style="font-size:11px">Nói rõ hơn: "Giao máy anh Quang iPhone 13"</em>`;
     }
-  } else if (isAddWarehouseIn || isAddWarehouseOut) {
-    // Parse tên hàng — lấy đến dấu phẩy đầu, hoặc trước từ khoá số lượng/giá
-    const nameMatch = text.match(/(?:nhập kho|thêm kho|nhập hàng|thêm hàng|nhập linh kiện|thêm linh kiện|mua vào kho|nhập vào kho|xuất kho|xuất hàng|lấy kho|dùng linh kiện|xuất linh kiện)\s+(.+?)(?=,\s*\d|\s+\d+\s*(?:cái|chiếc|máy|cây|bộ|hộp|cặp)|,\s*(?:giá|vốn|imei|seri)|$)/i);
-    const name = nameMatch ? nameMatch[1].trim().replace(/\s+/g,' ') : '';
 
-    // Parse số lượng — ưu tiên "X cái" sau dấu phẩy
-    const qtyMatch = text.match(/,\s*(\d+(?:[.,]\d+)?)\s*(?:cái|chiếc|máy|cây|bộ|hộp|cặp)?/) || text.match(/(\d+(?:[.,]\d+)?)\s*(?:cái|chiếc|máy|cây|bộ|hộp|cặp)/i);
-    const qty = qtyMatch ? parseFloat(qtyMatch[1].replace(',','.')) : 1;
-
-    // Parse đơn vị
-    const unitMatch = text.match(/\d+\s*(cái|chiếc|máy|cây|bộ|hộp|cặp)/i);
-    const unit = unitMatch ? unitMatch[1] : 'cái';
-
-    // Parse giá vốn
-    function parseMoneyWh(str) {
-      if (!str) return 0;
-      const trk = str.match(/(\d+)tr(\d*)/i);
-      if (trk) return (parseInt(trk[1]) + (trk[2] ? parseInt(trk[2])/10 : 0)) * 1000000;
-      const trDot = str.match(/([\d.,]+)\s*(?:tr|triệu)/i);
-      if (trDot) return parseFloat(trDot[1].replace(',','.')) * 1000000;
-      const kMatch = str.match(/([\d.,]+)\s*k\b/i);
-      if (kMatch) return parseFloat(kMatch[1].replace(/[.,]/g,'')) * 1000;
-      return 0;
-    }
-    const priceMatch = text.match(/(?:giá vốn|vốn|giá nhập|giá|tiền)\s*[:\s]*([\d.,]+\s*(?:k|tr\d*|triệu)?)/i);
-    const price = parseMoneyWh(priceMatch ? priceMatch[1] : '');
-
-    // Parse IMEI — chấp nhận mọi độ dài sau từ khoá IMEI/seri
-    const imeiMatch = text.match(/(?:imei|seri|serial)[:\s]*(\w+)/i);
-    const imei = imeiMatch ? imeiMatch[1] : '';
-
-    // Parse nhà cung cấp
-    const supplierMatch = text.match(/(?:nhà cung cấp|ncc|từ|của|mua từ|nhập từ)[:\s]+([^\d,\.]+?)(?=,|$)/i);
-    const supplier = supplierMatch ? supplierMatch[1].trim() : '';
-
-    // Parse tình trạng máy — "98%", "đẹp", "trầy nhẹ", "tình trạng 9/10"...
-    const conditionMatch = text.match(/(?:tình trạng|tt|máy)\s*[:\s]*(\d{1,3}%|(?:\d+\/10)|(?:đẹp|mới|zin|trầy nhẹ|trầy|cũ|xước nhẹ|xước|móp)[^\d,]*)/i);
-    const condition = conditionMatch ? conditionMatch[1].trim() : '';
-
-    // Parse % pin — "pin 87%", "pin 87", "battery 90%"
-    const batteryMatch = text.match(/(?:pin|battery)\s*[:\s]*(\d{1,3})\s*%?/i);
-    const battery = batteryMatch ? batteryMatch[1] + '%' : '';
-
-    const whType = isAddWarehouseOut ? 'xuat' : 'nhap';
-
-    if (name) {
-      // Gộp tình trạng + pin vào note
-      const noteExtra = [condition ? `Tình trạng: ${condition}` : '', battery ? `Pin: ${battery}` : ''].filter(Boolean).join(' · ');
-      const d = {
-        type: whType, name, quantity: qty, unit, price,
-        supplier, imei, date: todayStr(), category: '',
-        note: noteExtra ? `${noteExtra} [AI Giả lập]` : '[AI Giả lập]'
-      };
-      d.id = Date.now() + Math.random();
-      d.createdAt = new Date().toLocaleString('vi-VN');
-      WAREHOUSE.unshift(d);
-      saveWarehouse(); buildWarehouseList(); updateStats();
-      const typeLabel = whType === 'nhap' ? '📦 Nhập kho' : '📤 Xuất kho';
-      reply = `✅ <strong>${typeLabel} thành công!</strong> [AI Giả lập]<br>` +
-        `📱 ${escHtml(name)} · SL: ${qty} ${unit}` +
-        (price ? ` · Giá: ${fmtMoney(price)}` : '') +
-        (imei ? `<br>🔢 IMEI: ${escHtml(imei)}` : '') +
-        (condition ? `<br>✨ Tình trạng: ${escHtml(condition)}` : '') +
-        (battery ? ` · 🔋 Pin: ${escHtml(battery)}` : '') +
-        `<br><em style="font-size:11px;color:var(--text3);">Xem chi tiết tại tab <strong>Kho</strong>.</em>`;
-    } else {
-      reply = `🤖 <strong>AI Giả lập</strong> hiểu bạn muốn ${isAddWarehouseOut?'xuất':'nhập'} kho, nhưng cần biết <strong>tên hàng</strong>.<br>` +
-        `Ví dụ: "${isAddWarehouseOut?'Xuất kho màn iPhone 13, 1 cái':'Nhập kho iPhone 15 Pro, 2 cái, giá vốn 22tr'}"<br>` +
-        `<em style="font-size:11px;">Hoặc vào tab <strong>Kho</strong> để nhập trực tiếp.</em>`;
-    }
+  // ── NHẬN MÁY SỬA ─────────────────────────────────────────────────────────
   } else if (isAddRepair) {
-    // Parse tên chủ máy — ưu tiên "cho An", "của Lan", "anh Quang"...
-    const ownerMatch  = text.match(/(?:khách\s+tên\s+|tên\s+(?:khách\s+)?|cho\s+|của\s+|anh\s+|chị\s+|em\s+|bé\s+|bạn\s+)([A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]*(?: [A-ZÀ-Ỹa-zà-ỹ][a-zà-ỹ]+){0,2})/i);
-    // Parse tên máy — nhận diện rộng hơn, kể cả "Zflip 5", "Z Fold", "S24 Ultra"...
-    const deviceMatch = text.match(/(?:iphone|samsung|oppo|xiaomi|vivo|realme|nokia|sony|huawei|pixel|redmi|zflip\d*|z flip\d*|z fold\d*|zfold\d*|s\d{1,2}(?:\s*ultra|\s*plus|\+)?|note\s*\d+|a\d{2,3}(?:\s*\w+)?|xs\s*max|xs|xr)[^,.]*/i);
+    const device = findDevice(text);
+    const owner  = findOwner(text) || 'Khách';
+    const phone  = (text.match(/\b(0\d{9})\b/) || [])[1] || '';
+    const imei   = (text.match(/(?:imei|seri|serial)[:\s]*(\d{5,15})/i) || [])[1] || '';
+    const pass   = (text.match(/(?:pass|mật khẩu|passcode|mã|pin máy)[:\s]*(\w+)/i) || [])[1] || '';
+    const issue  = findIssue(text);
 
-    // Parse số tiền — hỗ trợ "1tr2", "1.2tr", "1200k", "300k", "300.000"
-    function parseMoney(str) {
-      if (!str) return 0;
-      // "1tr2" → 1.2 triệu
-      const trk = str.match(/(\d+)tr(\d*)/i);
-      if (trk) return (parseInt(trk[1]) + (trk[2] ? parseInt(trk[2])/10 : 0)) * 1000000;
-      // "1.2tr" hoặc "1,2tr"
-      const trDot = str.match(/([\d.,]+)\s*(?:tr|triệu)/i);
-      if (trDot) return parseFloat(trDot[1].replace(',','.')) * 1000000;
-      // "300k"
-      const kMatch = str.match(/([\d.,]+)\s*k\b/i);
-      if (kMatch) return parseFloat(kMatch[1].replace(/[.,]/g,'')) * 1000;
-      // số thường
-      const num = str.match(/[\d.,]+/);
-      if (num) {
-        let v = parseFloat(num[0].replace(/[.,]/g,''));
-        if (v < 1000 && v > 0) v *= 1000; // heuristic: 300 → 300k
-        return v;
-      }
-      return 0;
+    // Tìm tất cả số tiền rồi gán: số lớn hơn = thu, số nhỏ = chi
+    const moneys  = findAllMoney(text);
+    const profitM = text.match(/(?:thu|giá nhận|giá sửa|tiền sửa|lãi|nhận)\s*[:\s]*([\d]+(?:[.,]\d+)?\s*(?:k|tr\d*|triệu)?)/i);
+    const costM   = text.match(/(?:vốn|âm|chi|mua|linh kiện|lk|phụ kiện|tốn|bỏ ra)\s*[:\s]*([\d]+(?:[.,]\d+)?\s*(?:k|tr\d*|triệu)?)/i);
+
+    let profit = profitM ? parseMoney(profitM[1]) : 0;
+    let cost   = costM   ? parseMoney(costM[1])   : 0;
+
+    // Nếu không match từ khoá nhưng có 2 số → số lớn = thu, nhỏ = chi
+    if (!profit && !cost && moneys.length >= 2) {
+      const sorted = [...moneys].sort((a,b) => b.val - a.val);
+      profit = sorted[0].val;
+      cost   = sorted[1].val;
+    } else if (!profit && !cost && moneys.length === 1) {
+      profit = moneys[0].val;
     }
 
-    const profitMatch = text.match(/(?:giá nhận|thu|lãi|giá|tiền)\s*[:\s]*([\d.,]+\s*(?:k|tr\d*|triệu)?)/i);
-    const costMatch   = text.match(/(?:vốn|âm|chi|mua|linh kiện)\s*[:\s]*([\d.,]+\s*(?:k|tr\d*|triệu)?)/i);
-    const phoneMatch  = text.match(/\b(0\d{9})\b/);
-    const statusMatch = /(?:đã giao|giao rồi|xong rồi)/.test(t) ? 'da_giao' : /(?:xong|hoàn thành)(?!\s*chưa)/.test(t) ? 'xong_chua_giao' : 'dang_sua';
+    const status = /(?:đã giao|giao rồi|giao xong|trả máy|xong rồi|done)/.test(t) ? 'da_giao'
+                 : /(?:xong|hoàn thành|sửa xong)(?!\s*chưa)/.test(t) ? 'xong_chua_giao'
+                 : 'dang_sua';
 
-    const owner  = ownerMatch  ? ownerMatch[1].trim()  : (device ? 'Khách' : '');
-    const device = deviceMatch ? deviceMatch[0].replace(/,$/, '').trim() : '';
-
-    const profit = parseMoney(profitMatch ? profitMatch[1] : '');
-    const cost   = parseMoney(costMatch   ? costMatch[1]   : '');
-
-    if (device) {
+    if (device || (owner !== 'Khách' && profit > 0)) {
       const d = {
-        owner, phone: phoneMatch?phoneMatch[1]:'', device,
-        imei:'', pass:'', issue: text.replace(owner,'').replace(device,'').substring(0,60).trim(),
-        profit, cost, date: todayStr(), status: statusMatch, note:''
+        owner, phone, device: device || 'Chưa rõ',
+        imei, pass, issue, profit, cost,
+        date: todayStr(), status, note: '[AI Giả lập]'
       };
-      d.id = Date.now() + Math.floor(Math.random() * 1000);
+      d.id = Date.now() + Math.floor(Math.random()*1000);
       d.createdAt = new Date().toLocaleString('vi-VN');
       REPAIRS.unshift(d);
       saveRepairs(); buildRepairList(); updateStats();
       const net = profit - cost;
-      reply = `✅ <strong>Đã nhận máy!</strong> [AI Giả lập]<br>👤 ${escHtml(owner)} · 📱 ${escHtml(device)}<br>💰 Thu: ${fmtMoney(profit)} · Chi: ${fmtMoney(cost)} · Lãi: ${fmtMoney(net)}<br><em style="font-size:11px;color:var(--text3);">Thiếu thông tin? Vào tab Nhận máy sửa để bổ sung thêm.</em>`;
+      const stLabel = {da_giao:'📦 Đã giao', xong_chua_giao:'✅ Chưa giao', dang_sua:'🔧 Đang sửa'}[status];
+      reply = `✅ <strong>Đã nhận máy!</strong><br>`
+        + `👤 ${escHtml(owner)}${phone?' · 📞 '+phone:''} · 📱 ${escHtml(d.device)}`
+        + (issue ? `<br>🔧 Lỗi: ${escHtml(issue)}` : '')
+        + (imei  ? `<br>🔢 IMEI: ${escHtml(imei)}`  : '')
+        + (pass  ? `<br>🔑 Pass: ${escHtml(pass)}`   : '')
+        + `<br>💰 Thu: ${fmtMoney(profit)}${cost?' · Vốn: '+fmtMoney(cost)+' · Lãi: '+fmtMoney(net):''}`
+        + `<br>${stLabel}`
+        + `<br><em style="font-size:11px;color:var(--text3)">Thiếu gì? Nhấn vào phiếu để bổ sung.</em>`;
     } else {
-      reply = `🤖 <strong>AI Giả lập</strong> hiểu bạn muốn nhận máy sửa, nhưng cần thêm thông tin:<br>• Tên chủ máy (VD: anh Quang)<br>• Tên máy (VD: iPhone 13)<br><em style="font-size:11px;">Hoặc vào tab <strong>Nhận máy sửa</strong> để nhập trực tiếp.</em>`;
+      reply = `🤖 Hiểu bạn muốn nhận máy sửa, cho mình biết thêm:<br>`
+        + `• <strong>Tên máy</strong> (VD: iPhone 13, Samsung S24)<br>`
+        + `• Tên khách (VD: anh Quang)<br>`
+        + `<em style="font-size:11px">VD: "nhận máy anh Tuấn iPhone 13 pro, ép màn, thu 500k vốn 150k"</em>`;
     }
+
+  // ── BÁN MÁY ──────────────────────────────────────────────────────────────
   } else if (isAddSale) {
-    reply = `💰 <strong>AI Giả lập</strong>: Để ghi nhận máy bán, vui lòng vào tab <strong>Bán máy</strong> để nhập đầy đủ thông tin (tên máy, IMEI, giá bán, lãi/lỗ).<br><em style="font-size:11px;color:var(--text3);">Bật Groq API key để AI tự nhập từ mô tả tự nhiên của bạn.</em>`;
+    const device = findDevice(text);
+    const imei   = (text.match(/(?:imei|seri)[:\s]*(\d{5,15})/i) || [])[1] || '';
+    const buyer  = findOwner(text);
+    const moneys = findAllMoney(text);
+
+    const priceM  = text.match(/(?:giá bán|bán|giá|bán với giá)\s*[:\s]*([\d]+(?:[.,]\d+)?\s*(?:k|tr\d*|triệu)?)/i);
+    const profitM = text.match(/(?:lãi|lời|lợi nhuận|lời ra)\s*[:\s]*([\d]+(?:[.,]\d+)?\s*(?:k|tr\d*|triệu)?)/i);
+    const lossM   = text.match(/(?:lỗ|lỗ ra|thua)\s*[:\s]*([\d]+(?:[.,]\d+)?\s*(?:k|tr\d*|triệu)?)/i);
+
+    let price  = priceM  ? parseMoney(priceM[1])  : 0;
+    let profit = profitM ? parseMoney(profitM[1]) : (lossM ? -parseMoney(lossM[1]) : 0);
+
+    // Nếu không match từ khoá → số lớn nhất = giá bán
+    if (!price && moneys.length >= 1) {
+      const sorted = [...moneys].sort((a,b) => b.val - a.val);
+      price  = sorted[0].val;
+      profit = sorted[1] ? sorted[0].val - sorted[1].val : 0;
+    }
+
+    // Thử tìm giá nhập từ kho theo IMEI
+    if (imei && price > 0 && profit === 0) {
+      const whItem = WAREHOUSE.find(w => w.imei && w.imei === imei && w.type === 'nhap');
+      if (whItem && whItem.price) profit = price - whItem.price;
+    }
+
+    const condMap = { 'mới 100%':'moi', 'moi':'moi', 'like new':'like_new', 'likenew':'like_new', '99':'99', '97':'97', 'cũ đẹp':'cu_dep', 'cu dep':'cu_dep', 'cũ thường':'cu_thuong' };
+    const condMatch = text.match(/(?:tình trạng|tt|máy|hàng)\s*[:\s]*(mới 100%|like new|likenew|99%?|97%?|cũ đẹp|cu dep|cũ thường|moi)/i);
+    const condition = condMatch ? (condMap[condMatch[1].toLowerCase()] || '99') : '99';
+
+    if (device || price > 0) {
+      const d = {
+        device: device || 'Chưa rõ', imei, condition,
+        conditionLabel: {moi:'Mới 100%',like_new:'Like New','99':'99%','97':'97%',cu_dep:'Cũ đẹp',cu_thuong:'Cũ thường'}[condition]||'99%',
+        price, profit, date: todayStr(), buyer, source: 'nhap_moi', note: '[AI Giả lập]'
+      };
+      d.id = Date.now() + Math.floor(Math.random()*1000);
+      d.createdAt = new Date().toLocaleString('vi-VN');
+      SALES.unshift(d);
+      saveSales(); buildSaleList(); updateStats();
+      reply = `✅ <strong>Đã ghi bán máy!</strong><br>`
+        + `📱 ${escHtml(d.device)}${imei?' · IMEI: '+imei:''}`
+        + (buyer ? `<br>👤 Khách: ${escHtml(buyer)}` : '')
+        + `<br>💰 Giá bán: ${fmtMoney(price)}${profit?' · Lãi: '+fmtMoney(profit):''}`;
+    } else {
+      reply = `🤖 Hiểu bạn muốn ghi bán máy, cho mình biết thêm:<br>`
+        + `• <strong>Tên máy</strong> và <strong>giá bán</strong><br>`
+        + `<em style="font-size:11px">VD: "bán iPhone 14 Pro giá 22tr lãi 1.5tr cho anh Nam"</em>`;
+    }
+
+  // ── THU TIỀN ──────────────────────────────────────────────────────────────
   } else if (isAddIncome) {
-    const amtMatch = text.match(/(\d[\d.,]*)\s*(?:k|tr|triệu|đồng|đ)?/);
-    let amount = 0;
-    if (amtMatch) {
-      amount = parseFloat(amtMatch[1].replace(/[.,]/g,''));
-      if (/k/.test(amtMatch[0]) && amount < 10000) amount *= 1000;
-      if (/tr|triệu/.test(amtMatch[0])) amount *= 1000000;
-    }
+    const moneys = findAllMoney(text);
+    const amount = moneys.length ? Math.max(...moneys.map(m=>m.val)) : 0;
+    // Tạo mô tả tự động từ câu
+    const descClean = text.replace(/thu\s*đc|thu được|thu tiền|khách trả|nhận tiền|có tiền|ghi thu|thêm thu/gi,'').replace(/\d+[\d.,]*\s*(?:k|tr\d*|triệu|đồng|đ)/gi,'').trim().replace(/\s+/g,' ').substring(0,60) || 'Thu tiền';
     if (amount > 0) {
-      const d = { type:'thu', amount, desc: text.substring(0,60), date: todayStr(), cat:'Sửa chữa', note:'[AI Giả lập]', id: Date.now()+Math.random(), createdAt: new Date().toLocaleString('vi-VN') };
+      const d = { type:'thu', amount, desc: descClean || 'Thu tiền', date: todayStr(), cat:'Sửa chữa', note:'[AI Giả lập]', id: Date.now()+Math.random(), createdAt: new Date().toLocaleString('vi-VN') };
       FINANCE.unshift(d); saveFinance(); buildFinanceList(); updateStats();
-      reply = `✅ <strong>Đã ghi thu ${fmtMoney(amount)}!</strong> [AI Giả lập]`;
+      reply = `✅ <strong>Đã ghi thu ${fmtMoney(amount)}!</strong><br>📝 ${escHtml(descClean)}`;
     } else {
-      reply = `🤖 <strong>AI Giả lập</strong>: Vui lòng nêu rõ số tiền thu. VD: "thu 300k tiền sửa iPhone"`;
+      reply = `🤖 Cho mình biết số tiền thu bao nhiêu nhé!<br><em style="font-size:11px">VD: "thu 300k tiền sửa iPhone anh Hùng"</em>`;
     }
+
+  // ── CHI TIỀN ─────────────────────────────────────────────────────────────
   } else if (isAddExpense) {
-    const amtMatch = text.match(/(\d[\d.,]*)\s*(?:k|tr|triệu|đồng|đ)?/);
-    let amount = 0;
-    if (amtMatch) {
-      amount = parseFloat(amtMatch[1].replace(/[.,]/g,''));
-      if (/k/.test(amtMatch[0]) && amount < 10000) amount *= 1000;
-      if (/tr|triệu/.test(amtMatch[0])) amount *= 1000000;
-    }
+    const moneys = findAllMoney(text);
+    const amount = moneys.length ? Math.max(...moneys.map(m=>m.val)) : 0;
+    const descClean = text.replace(/chi\s*tiền|mua\s*linh\s*kiện|chi\s*ra|mua\s*đồ|tốn\s*tiền|bỏ\s*tiền|chi\s*phí|ghi\s*chi|thêm\s*chi/gi,'').replace(/\d+[\d.,]*\s*(?:k|tr\d*|triệu|đồng|đ)/gi,'').trim().replace(/\s+/g,' ').substring(0,60) || 'Chi tiền';
     if (amount > 0) {
-      const d = { type:'chi', amount, desc: text.substring(0,60), date: todayStr(), cat:'Linh kiện', note:'[AI Giả lập]', id: Date.now()+Math.random(), createdAt: new Date().toLocaleString('vi-VN') };
+      const cat = /(?:lương|nhân viên|thợ)/.test(t) ? 'Lương' : /(?:thuê|nhà|mặt bằng)/.test(t) ? 'Mặt bằng' : /(?:điện|nước|internet)/.test(t) ? 'Điện nước' : 'Linh kiện';
+      const d = { type:'chi', amount, desc: descClean || 'Chi tiền', date: todayStr(), cat, note:'[AI Giả lập]', id: Date.now()+Math.random(), createdAt: new Date().toLocaleString('vi-VN') };
       FINANCE.unshift(d); saveFinance(); buildFinanceList(); updateStats();
-      reply = `✅ <strong>Đã ghi chi ${fmtMoney(amount)}!</strong> [AI Giả lập]`;
+      reply = `✅ <strong>Đã ghi chi ${fmtMoney(amount)}!</strong><br>📝 ${escHtml(descClean)}<br>🏷️ Danh mục: ${cat}`;
     } else {
-      reply = `🤖 <strong>AI Giả lập</strong>: Vui lòng nêu rõ số tiền chi. VD: "chi 150k mua màn iPhone"`;
+      reply = `🤖 Cho mình biết số tiền chi bao nhiêu nhé!<br><em style="font-size:11px">VD: "chi 150k mua màn iPhone 11"</em>`;
     }
+
+  // ── NHẬP / XUẤT KHO ──────────────────────────────────────────────────────
+  } else if (isAddWarehouseIn || isAddWarehouseOut) {
+    const kwRe = /nhập kho|thêm kho|nhập hàng|thêm hàng|nhập linh kiện|thêm linh kiện|mua vào kho|nhập vào kho|nhập thêm|bổ sung kho|mua về kho|xuất kho|xuất hàng|lấy kho|dùng linh kiện|xuất linh kiện/gi;
+    let nameStr = text.replace(kwRe,'').trim();
+    // Lấy tên: từ đầu đến dấu phẩy hoặc đến số/từ khoá phụ
+    const nameM = nameStr.match(/^([^,\d]+?)(?=,|\s+\d|\s+(?:giá|vốn|sl|số lượng|imei|seri|từ|ncc|nhà|mua từ)|$)/i);
+    const name  = nameM ? nameM[1].trim().replace(/\s+/g,' ').substring(0,80) : '';
+
+    const qtyM  = text.match(/(?:sl|số lượng|,)\s*(\d+(?:[.,]\d+)?)\s*(cái|chiếc|máy|cây|bộ|hộp|cặp|cuộn)?/i)
+                || text.match(/(\d+)\s*(cái|chiếc|máy|cây|bộ|hộp|cặp|cuộn)/i);
+    const qty   = qtyM ? parseFloat(qtyM[1]) : 1;
+    const unit  = (qtyM && qtyM[2]) ? qtyM[2] : 'cái';
+
+    const moneys  = findAllMoney(text);
+    const priceM  = text.match(/(?:giá vốn|vốn|giá nhập|giá|tiền)\s*[:\s]*([\d]+(?:[.,]\d+)?\s*(?:k|tr\d*|triệu)?)/i);
+    const price   = priceM ? parseMoney(priceM[1]) : (moneys.length ? moneys[0].val : 0);
+
+    const imeiM   = text.match(/(?:imei|seri|serial)[:\s]*(\w+)/i);
+    const imei    = imeiM ? imeiM[1] : '';
+    const supplM  = text.match(/(?:từ|của|mua từ|nhập từ|ncc|nhà cung cấp)[:\s]+([^\d,]+?)(?=,|giá|vốn|$)/i);
+    const supplier= supplM ? supplM[1].trim() : '';
+
+    const whType  = isAddWarehouseOut ? 'xuat' : 'nhap';
+
+    if (name) {
+      const d = { type: whType, name, quantity: qty, unit, price, supplier, imei, date: todayStr(), category: '', note: '[AI Giả lập]' };
+      d.id = Date.now() + Math.random();
+      d.createdAt = new Date().toLocaleString('vi-VN');
+      WAREHOUSE.unshift(d);
+      saveWarehouse(); buildWarehouseList(); updateStats();
+      const label = whType === 'nhap' ? '📦 Nhập kho' : '📤 Xuất kho';
+      reply = `✅ <strong>${label} thành công!</strong><br>`
+        + `📦 ${escHtml(name)} · SL: ${qty} ${unit}`
+        + (price    ? ` · Giá: ${fmtMoney(price)}`     : '')
+        + (imei     ? `<br>🔢 IMEI: ${escHtml(imei)}`  : '')
+        + (supplier ? `<br>🏭 NCC: ${escHtml(supplier)}`:'');
+    } else {
+      reply = `🤖 Cho mình biết <strong>tên hàng</strong> muốn ${isAddWarehouseOut?'xuất':'nhập'} nhé!<br>`
+        + `<em style="font-size:11px">VD: "${isAddWarehouseOut?'Xuất kho màn iPhone 13, 1 cái':'Nhập kho iPhone 15 Pro, 2 cái, giá vốn 22tr'}"</em>`;
+    }
+
+  // ── XEM KHO ──────────────────────────────────────────────────────────────
+  } else if (isQueryStock) {
+    const stock = getStockSummary().filter(s => s.qty > 0);
+    if (!stock.length) {
+      reply = `📦 <strong>Kho hiện tại trống.</strong><br><em style="font-size:11px">VD nhập kho: "nhập kho iPhone 15, 2 cái, giá vốn 20tr"</em>`;
+    } else {
+      reply = `📦 <strong>Tồn kho hiện tại (${stock.length} mặt hàng):</strong><br>`
+        + stock.map(s => `• ${escHtml(s.name)}: <strong>${s.qty}</strong> ${s.unit||'cái'}`).join('<br>');
+    }
+
+  // ── XEM PHIẾU SỬA ─────────────────────────────────────────────────────────
+  } else if (isQueryRepair) {
+    const repairing = REPAIRS.filter(r => r.status === 'dang_sua');
+    const pending   = REPAIRS.filter(r => r.status === 'xong_chua_giao');
+    let rep = `🔧 <strong>Đang sửa (${repairing.length} máy):</strong><br>`;
+    if (repairing.length) rep += repairing.slice(0,5).map(r=>`• ${escHtml(r.owner)} — ${escHtml(r.device)}${r.issue?` (${escHtml(r.issue)})`:''}`).join('<br>');
+    else rep += '(Không có máy nào)';
+    if (pending.length) {
+      rep += `<br>✅ <strong>Chờ giao (${pending.length} máy):</strong><br>`
+        + pending.slice(0,5).map(r=>`• ${escHtml(r.owner)} — ${escHtml(r.device)}`).join('<br>');
+    }
+    reply = rep;
+
+  // ── BÁO CÁO / THỐNG KÊ ────────────────────────────────────────────────────
   } else if (isQuery) {
-    // Trả lời câu hỏi từ dữ liệu thực
     const month = thisMonth();
     const repairing  = REPAIRS.filter(r => r.status === 'dang_sua').length;
     const pending    = REPAIRS.filter(r => r.status === 'xong_chua_giao').length;
     const monthRNet  = REPAIRS.filter(r=>r.date&&r.date.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
     const monthSNet  = SALES.filter(s=>s.date&&s.date.startsWith(month)&&!s.returned).reduce((s,x)=>s+(x.profit||0),0);
-    reply = `📊 <strong>Báo cáo nhanh</strong> [AI Giả lập]<br>
-🔧 Đang sửa: <strong>${repairing}</strong> máy · Chờ giao: <strong>${pending}</strong> máy<br>
-💰 Lãi sửa tháng này: <strong style="color:var(--${monthRNet>=0?'green':'red'})">${fmtMoney(monthRNet)}</strong><br>
-📱 Lãi bán tháng này: <strong style="color:var(--${monthSNet>=0?'green':'red'})">${fmtMoney(monthSNet)}</strong><br>
-<em style="font-size:11px;color:var(--text3);">Xem chi tiết tại tab <strong>Thống kê</strong>.</em>`;
+    const monthFIn   = FINANCE.filter(f=>f.date&&f.date.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
+    const monthFOut  = FINANCE.filter(f=>f.date&&f.date.startsWith(month)&&f.type==='chi').reduce((s,f)=>s+f.amount,0);
+    reply = `📊 <strong>Báo cáo tháng ${month.slice(5)}:</strong><br>`
+      + `🔧 Đang sửa: <strong>${repairing}</strong> · Chờ giao: <strong>${pending}</strong><br>`
+      + `💰 Lãi sửa: <strong style="color:var(--${monthRNet>=0?'green':'red'})">${fmtMoney(monthRNet)}</strong><br>`
+      + `📱 Lãi bán: <strong style="color:var(--${monthSNet>=0?'green':'red'})">${fmtMoney(monthSNet)}</strong><br>`
+      + (monthFIn||monthFOut ? `💳 Thu/Chi: +${fmtMoney(monthFIn)} / -${fmtMoney(monthFOut)}<br>` : '')
+      + `🏆 Tổng lãi: <strong style="color:var(--${(monthRNet+monthSNet)>=0?'green':'red'})">${fmtMoney(monthRNet+monthSNet)}</strong>`;
+
+  // ── FALLBACK ──────────────────────────────────────────────────────────────
   } else {
-    const tips = [
-      '🤖 AI Giả lập đang hoạt động. Tôi hiểu các lệnh như:<br>• "nhận máy anh X, iPhone 13, thu 500k"<br>• "thu 300k tiền sửa"<br>• "doanh thu hôm nay bao nhiêu?"',
-      `🤖 Chào! Cửa hàng hiện có <strong>${REPAIRS.filter(r=>r.status==='dang_sua').length}</strong> máy đang sửa và <strong>${REPAIRS.filter(r=>r.status==='xong_chua_giao').length}</strong> máy chờ giao. Bạn cần gì?`,
-      '🤖 Để dùng AI thông minh hơn (đọc ảnh, nhận lệnh phức tạp), bạn có thể thêm <strong>Groq API key miễn phí</strong> tại <a href="https://console.groq.com" target="_blank" style="color:var(--accent)">console.groq.com</a>!'
-    ];
-    reply = tips[Math.floor(Math.random() * tips.length)];
+    const repairs = REPAIRS.filter(r=>r.status==='dang_sua').length;
+    const pending = REPAIRS.filter(r=>r.status==='xong_chua_giao').length;
+    reply = `🤖 <strong>AI Giả lập</strong> — Shop đang có <strong>${repairs}</strong> máy sửa, <strong>${pending}</strong> chờ giao.<br><br>`
+      + `Mình hiểu các lệnh tự nhiên như:<br>`
+      + `• <em>"nhận máy anh Tuấn iPhone 13, ép màn, thu 500k vốn 150k"</em><br>`
+      + `• <em>"bán iPhone 14 Pro giá 22tr lãi 1.5tr"</em><br>`
+      + `• <em>"thu 300k tiền sửa Samsung"</em><br>`
+      + `• <em>"chi 80k mua ốc vít"</em><br>`
+      + `• <em>"nhập kho màn iPhone 11, 3 cái, giá 250k"</em><br>`
+      + `• <em>"giao máy anh Hùng rồi"</em><br>`
+      + `• <em>"tháng này lãi bao nhiêu?"</em>`;
   }
 
   hideTyping();
