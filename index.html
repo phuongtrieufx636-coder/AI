@@ -2473,19 +2473,19 @@ function qsend(text) { document.getElementById('msg-input').value = text; sendMs
 
 function buildContext() {
   const repLines = REPAIRS.length
-    ? REPAIRS.slice(0,20).map(r => `- [${r.status}] Chủ:${r.owner} / Máy:${r.device} / thu:${fmtMoney(r.profit||0)} chi:${fmtMoney(r.cost||0)} lãi:${fmtMoney((r.profit||0)-(r.cost||0))} / ngày:${r.date}`).join('\n')
+    ? REPAIRS.slice(0,10).map(r => `- [${r.status}] ${r.owner}/${r.device} thu:${(r.profit||0)/1000}k chi:${(r.cost||0)/1000}k ${r.date}`).join('\n')
     : '(Chưa có phiếu sửa nào)';
   const saleLines = SALES.length
-    ? SALES.slice(0,20).map(s => {
-        const returnedFlag = s.returned ? ` [HOÀN TRẢ - lãi thực giữ: ${fmtMoney(s.profit||0)}${s.returnNote?' / '+s.returnNote:''}]` : '';
-        return `- ${s.device} / IMEI:${s.imei||'?'} / ${s.conditionLabel||s.condition} / bán:${fmtMoney(s.price)} / lãi_ròng:${fmtMoney(s.profit||0)} / ngày:${s.date}${returnedFlag}`;
+    ? SALES.slice(0,10).map(s => {
+        const ret = s.returned ? ` [HT:${(s.profit||0)/1000}k]` : '';
+        return `- ${s.device} IMEI:${s.imei||'?'} bán:${(s.price||0)/1000}k lãi:${(s.profit||0)/1000}k ${s.date}${ret}`;
       }).join('\n')
     : '(Chưa có giao dịch bán nào)';
   const finLines = FINANCE.length
-    ? FINANCE.slice(0,15).map(f => `- [${f.type==='thu'?'THU':'CHI'}] ${f.desc} / ${fmtMoney(f.amount)} / ngày:${f.date}${f.cat?' / '+f.cat:''}`).join('\n')
+    ? FINANCE.slice(0,10).map(f => `- [${f.type==='thu'?'T':'C'}] ${f.desc} ${(f.amount||0)/1000}k ${f.date}`).join('\n')
     : '(Chưa có thu/chi nào)';
   const whLines = WAREHOUSE.length
-    ? WAREHOUSE.slice(0,15).map(w => `- [${w.type==='nhap'?'NHẬP':'XUẤT'}] ${w.name}${w.imei?' IMEI:'+w.imei:''} / SL:${w.quantity||1} ${w.unit||'cái'} / giá:${fmtMoney(w.price||0)} / ngày:${w.date}`).join('\n')
+    ? WAREHOUSE.slice(0,10).map(w => `- [${w.type==='nhap'?'N':'X'}] ${w.name}${w.imei?' '+w.imei:''} SL:${w.quantity||1} giá:${(w.price||0)/1000}k ${w.date}`).join('\n')
     : '(Kho trống)';
   const stockSummary = getStockSummary().filter(s=>s.qty>0).map(s=>`${s.name}: ${s.qty} ${s.unit||'cái'}`).join(', ') || '(Không có tồn kho)';
 
@@ -3020,7 +3020,7 @@ async function sendMsg() {
   document.getElementById('send-btn').disabled = true;
 
   try {
-    const useModel = imgData ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile';
+    const useModel = imgData ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant';
     const historyMsgs = chatHistory.slice(0,-1).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : '[ảnh]' }));
     const messages = [
       { role:'system', content: buildContext() },
@@ -3033,11 +3033,38 @@ async function sendMsg() {
       headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + groqKey },
       body: JSON.stringify({
         model: useModel,
-        max_tokens:1200,
+        max_tokens:600,
         temperature: 0.7,
         messages
       })
     });
+
+    // Auto-retry nếu rate limit (429) — chờ 20 giây
+    if (res.status === 429) {
+      hideTyping();
+      addMsg('bot', '⏳ Đang bị giới hạn tốc độ, tự động thử lại sau 20 giây...');
+      await new Promise(r => setTimeout(r, 20000));
+      showTyping();
+      const retryOnRateLimit = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + groqKey },
+        body: JSON.stringify({ model: useModel, max_tokens:600, temperature: 0.7, messages })
+      });
+      hideTyping();
+      if (!retryOnRateLimit.ok) {
+        const errData = await retryOnRateLimit.json();
+        throw new Error(errData.error?.message || 'Lỗi API ' + retryOnRateLimit.status);
+      }
+      const retryData = await retryOnRateLimit.json();
+      const retryReply = retryData.choices[0].message.content || '';
+      const retryClean = handleActions(retryReply);
+      const retryDisplay = retryClean.replace(/</g,'&lt;').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+      addMsg('bot', retryDisplay || '✅ Đã xử lý xong!');
+      chatHistory.push({ role:'assistant', content: retryClean });
+      localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+      document.getElementById('send-btn').disabled = false;
+      return;
+    }
 
     hideTyping();
     const data = await res.json();
