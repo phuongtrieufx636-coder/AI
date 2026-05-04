@@ -4717,7 +4717,13 @@ document.addEventListener('click', e => {
 // ═══════════════════════════════════════════════════════════════════
 // ② XÁC NHẬN 2 BƯỚC KHI XÓA
 // ═══════════════════════════════════════════════════════════════════
+let _deleteCallback = null;
+function _doConfirmDelete() {
+  document.getElementById('confirm-delete-modal').style.display = 'none';
+  if (_deleteCallback) { _deleteCallback(); _deleteCallback = null; }
+}
 function confirmDelete(msg, detail, onConfirm) {
+  _deleteCallback = onConfirm;
   let modal = document.getElementById('confirm-delete-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -4742,7 +4748,7 @@ function confirmDelete(msg, detail, onConfirm) {
         style="background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;width:100%;"
         oninput="var ok=this.value.trim().toUpperCase()==='XOA';var btn=document.getElementById('confirm-delete-btn');btn.disabled=!ok;btn.style.opacity=ok?'1':'0.4';btn.style.cursor=ok?'pointer':'not-allowed';" />
       <div style="display:flex;gap:8px;">
-        <button id="confirm-delete-btn" disabled onclick="if(!this.disabled){document.getElementById('confirm-delete-modal').style.display='none';(${onConfirm.toString()})();}"
+        <button id="confirm-delete-btn" disabled onclick="_doConfirmDelete()"
           style="flex:1;padding:10px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:not-allowed;font-family:inherit;opacity:0.4;transition:opacity 0.15s;">
           🗑️ Xác nhận xóa
         </button>
@@ -4752,7 +4758,6 @@ function confirmDelete(msg, detail, onConfirm) {
         </button>
       </div>
     </div>`;
-  // Button starts disabled; oninput handler updates opacity dynamically
   modal.style.display = 'flex';
   setTimeout(() => modal.querySelector('#confirm-delete-input').focus(), 100);
 }
