@@ -279,6 +279,15 @@ select.field option{background:var(--bg2);}
 
 /* ── PRINT RECEIPT ── */
 .btn-print{padding:4px 12px;font-size:11px;font-weight:600;background:var(--purple-dim);color:var(--purple);border:1px solid rgba(155,114,245,0.2);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;}
+.btn-pay{padding:4px 12px;font-size:11px;font-weight:600;background:var(--green-dim);color:var(--green);border:1px solid rgba(52,200,122,0.2);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;}
+.btn-pay:hover{background:rgba(52,200,122,0.25);}
+.badge-debt{background:rgba(240,82,82,0.15);color:var(--red);border:1px solid rgba(240,82,82,0.3);}
+.badge-paid{background:var(--green-dim);color:var(--green);border:1px solid rgba(52,200,122,0.25);}
+.badge-partial{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(240,160,48,0.25);}
+/* Payment inline row */
+.pay-row{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--red-dim);border:1px solid rgba(240,82,82,0.2);border-radius:var(--radius-sm);margin-top:6px;flex-wrap:wrap;}
+.pay-row.paid{background:var(--green-dim);border-color:rgba(52,200,122,0.2);}
+.pay-row.partial{background:var(--amber-dim);border-color:rgba(240,160,48,0.2);}
 .btn-print:hover{background:rgba(155,114,245,0.25);}
 .btn-zalo{padding:4px 12px;font-size:11px;font-weight:600;background:rgba(0,120,255,0.1);color:#0078ff;border:1px solid rgba(0,120,255,0.25);border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;}
 .btn-zalo:hover{background:rgba(0,120,255,0.2);}
@@ -586,6 +595,7 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
             <button class="filter-btn" onclick="setRepairFilter('dang_sua',this)">🔧 Đang sửa</button>
             <button class="filter-btn" onclick="setRepairFilter('xong_chua_giao',this)">✅ Chưa giao</button>
             <button class="filter-btn" onclick="setRepairFilter('da_giao',this)">📦 Đã giao</button>
+            <button class="filter-btn" onclick="setRepairFilter('chua_tt',this)">💸 Chưa TT</button>
           </div>
         </div>
         <div class="search-bar-wrap">
@@ -682,6 +692,7 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
             <button class="filter-btn active" onclick="setSaleFilter('all',this)">Tất cả</button>
             <button class="filter-btn" onclick="setSaleFilter('lai',this)">📈 Có lãi</button>
             <button class="filter-btn" onclick="setSaleFilter('lo',this)">📉 Lỗ</button>
+            <button class="filter-btn" onclick="setSaleFilter('chua_tt',this)">💸 Chưa TT</button>
           </div>
         </div>
         <div class="search-bar-wrap">
@@ -818,6 +829,25 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
         <div class="kpi">
           <div class="kpi-label">📤 Tổng chi ngoài</div>
           <div class="kpi-val" id="stat-total-expense" style="color:var(--red);font-size:18px;">0đ</div>
+        </div>
+      </div>
+
+      <div class="section-hd" style="margin-top:8px;">💸 Công nợ chưa thu</div>
+      <div class="kpi-grid" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="kpi" style="border:1px solid rgba(240,82,82,0.3);background:var(--red-dim);" onclick="switchTab('repair')" title="Nhấn để xem phiếu sửa">
+          <div class="kpi-label">🔧 Nợ sửa máy</div>
+          <div class="kpi-val" id="stat-debt-repair" style="color:var(--red);font-size:18px;">0đ</div>
+          <div class="kpi-sub">Nhấn để xem</div>
+        </div>
+        <div class="kpi" style="border:1px solid rgba(240,82,82,0.3);background:var(--red-dim);" onclick="switchTab('sales')" title="Nhấn để xem bán hàng">
+          <div class="kpi-label">📱 Nợ bán máy</div>
+          <div class="kpi-val" id="stat-debt-sale" style="color:var(--red);font-size:18px;">0đ</div>
+          <div class="kpi-sub">Nhấn để xem</div>
+        </div>
+        <div class="kpi" style="border:1px solid rgba(240,82,82,0.4);background:rgba(240,82,82,0.08);">
+          <div class="kpi-label">💰 Tổng công nợ</div>
+          <div class="kpi-val" id="stat-total-debt" style="color:var(--red);font-size:18px;">0đ</div>
+          <div class="kpi-sub">Cần thu về</div>
         </div>
       </div>
 
@@ -1603,7 +1633,8 @@ function addRepair(data) {
     date:   document.getElementById('rep-date').value || todayStr(),
     status: document.getElementById('rep-status').value,
     note:   document.getElementById('rep-note').value.trim(),
-    photos: pendingRepairPhotos.slice()
+    photos: pendingRepairPhotos.slice(),
+    paidAmount: 0  // mặc định chưa thanh toán
   };
   if (!d.owner || !d.device) { alert('Vui lòng nhập tên chủ máy và tên máy!'); return false; }
   d.id = Date.now() + Math.floor(Math.random() * 1000);
@@ -1611,6 +1642,7 @@ function addRepair(data) {
   REPAIRS.unshift(d);
   saveRepairs();
   buildRepairList();
+  buildCustomerList();
   updateStats();
   if (!data) {
     ['rep-owner','rep-phone','rep-device','rep-imei','rep-pass','rep-issue','rep-profit','rep-cost','rep-note'].forEach(id => document.getElementById(id).value = '');
@@ -1655,7 +1687,8 @@ function buildRepairList() {
   const searchQ = (document.getElementById('repair-search')?.value || '').toLowerCase().trim();
 
   let filtered = REPAIRS;
-  if (repairFilter !== 'all') filtered = REPAIRS.filter(r => r.status === repairFilter);
+  if (repairFilter === 'chua_tt') filtered = REPAIRS.filter(r => (r.profit||0) > 0 && (r.paidAmount||0) < (r.profit||0));
+  else if (repairFilter !== 'all') filtered = REPAIRS.filter(r => r.status === repairFilter);
   if (searchQ) {
     filtered = filtered.filter(r =>
       (r.owner||'').toLowerCase().includes(searchQ) ||
@@ -1685,6 +1718,11 @@ function buildRepairList() {
     const netLabel = net >= 0 ? `+${fmtMoney(net)} lãi` : `${fmtMoney(net)} lỗ`;
     const daysSince = r.date ? Math.floor((now - new Date(r.date)) / 86400000) : 0;
     const overdueWarn = (r.status !== 'da_giao' && daysSince >= 3) ? `<span class="badge badge-red">⏰ ${daysSince} ngày</span>` : '';
+    // Thanh toán
+    const payTotal = r.profit || 0;
+    const payPaid  = r.paidAmount || 0;
+    const ps = getPayStatus(payTotal, payPaid);
+    const payBadge = payTotal > 0 ? `<span class="badge ${ps.cls}" style="cursor:pointer;" onclick="openPayModal('repair',${r.id})" title="Nhấn để cập nhật thanh toán">${ps.label}</span>` : '';
     // Phát hiện issue bị nhập sai (là số thuần) để hiển thị cảnh báo
     const issueIsNumber = r.issue && /^\d[\d.,\s]*$/.test(r.issue.trim());
     const issueDisplay = !r.issue
@@ -1717,11 +1755,14 @@ function buildRepairList() {
         ${r.profit > 0 ? `<span class="badge badge-green">Thu: ${fmtMoney(r.profit)}</span>` : ''}
         ${r.cost > 0 ? `<span class="badge badge-red">Chi: ${fmtMoney(r.cost)}</span>` : ''}
         ${(r.profit||r.cost) ? `<span class="badge ${netCls}">${netLabel}</span>` : ''}
+        ${payBadge}
+        ${r.lastPaidAt && payPaid > 0 && payPaid < payTotal ? `<span style="font-size:10px;color:var(--text3);padding:2px 6px;">Đã trả: ${fmtMoney(payPaid)}</span>` : ''}
       </div>
       <div class="card-actions">
         ${r.status !== 'da_giao' ? `<button class="btn-done" onclick="updateRepairStatus(${r.id}, '${r.status==='dang_sua'?'xong_chua_giao':'da_giao'}')">
           ${r.status==='dang_sua'?'✅ Đã sửa xong':'📦 Đã giao khách'}
         </button>` : ''}
+        ${payTotal > 0 ? `<button class="btn-pay" onclick="openPayModal('repair',${r.id})">${ps.debt>0?'💳 Thu tiền':'✅ Đã TT'}</button>` : ''}
         <button class="btn-edit" onclick="openEditRepair(${r.id})">✏️ Sửa</button>
         <button class="btn-print" onclick="printRepairTicket(${r.id})">🖨️ In phiếu</button>
         ${r.phone ? `<button class="btn-zalo" onclick="sendZaloNotify(${r.id})" title="Zalo báo máy xong">💬 Zalo</button>` : ''}
@@ -1868,7 +1909,8 @@ function addSale(data) {
     date:      document.getElementById('sale-date').value || todayStr(),
     buyer:     document.getElementById('sale-buyer').value.trim(),
     source:    document.getElementById('sale-source').value,
-    note:      document.getElementById('sale-note').value.trim()
+    note:      document.getElementById('sale-note').value.trim(),
+    paidAmount: 0  // mặc định chưa thanh toán
   };
   if (!d.device || !d.price) { alert('Vui lòng nhập tên máy và giá bán!'); return false; }
   if (!d.conditionLabel) d.conditionLabel = condMap[d.condition] || d.condition;
@@ -1877,6 +1919,7 @@ function addSale(data) {
   SALES.unshift(d);
   saveSales();
   buildSaleList();
+  buildCustomerList();
   updateStats();
   if (!data) {
     ['sale-device','sale-imei','sale-price','sale-profit','sale-buyer','sale-note'].forEach(id => document.getElementById(id).value = '');
@@ -1975,6 +2018,7 @@ function buildSaleList() {
   let filtered = SALES;
   if (saleFilter === 'lai') filtered = SALES.filter(s => s.profit >= 0);
   else if (saleFilter === 'lo') filtered = SALES.filter(s => s.profit < 0);
+  else if (saleFilter === 'chua_tt') filtered = SALES.filter(s => !s.returned && (s.price||0) > 0 && (s.paidAmount||0) < (s.price||0));
   if (searchQ) {
     filtered = filtered.filter(s =>
       (s.device||'').toLowerCase().includes(searchQ) ||
@@ -1999,13 +2043,18 @@ function buildSaleList() {
       : (s.profit >= 0 ? `📈 Lãi ${fmtMoney(s.profit)}` : `📉 Lỗ ${fmtMoney(Math.abs(s.profit))}`);
     const returnedStyle = s.returned ? 'opacity:0.6;border-left:3px solid var(--purple);' : '';
     const returnBtnLabel = s.returned ? '↩ Bỏ hoàn trả' : '↩ Đánh dấu hoàn trả';
+    // Thanh toán bán
+    const sPayTotal = s.price || 0;
+    const sPayPaid  = s.paidAmount || 0;
+    const sps = getPayStatus(sPayTotal, sPayPaid);
+    const sPayBadge = !s.returned && sPayTotal > 0 ? `<span class="badge ${sps.cls}" style="cursor:pointer;" onclick="openPayModal('sale',${s.id})" title="Nhấn để cập nhật thanh toán">${sps.label}</span>` : '';
     return `<div class="sale-card" style="${returnedStyle}">
       <div class="card-top">
         <div class="card-icon sale-icon">📱</div>
         <div class="card-info">
           <div class="card-title">${escHtml(s.device)}${s.returned?' <span style="color:var(--purple);font-size:11px;">[Hoàn trả]</span>':''}</div>
           <div class="card-sub">${s.buyer ? '👤 '+escHtml(s.buyer)+' · ' : ''}${s.conditionLabel || s.condition} · ${fmtMoney(s.price)}</div>
-          <div class="card-meta">📅 ${fmtDate(s.date)}${s.note ? ' · '+escHtml(s.note) : ''}</div>
+          <div class="card-meta">📅 ${fmtDate(s.date)}${s.note ? ' · '+escHtml(s.note) : ''}${s.lastPaidAt&&sPayPaid>0&&sPayPaid<sPayTotal?' · 💳 Đã trả: '+fmtMoney(sPayPaid):''}</div>
         </div>
       </div>
       <div class="card-badges">
@@ -2013,9 +2062,11 @@ function buildSaleList() {
         <span class="badge badge-accent">💵 ${fmtMoney(s.price)}</span>
         <span class="badge ${pCls}">${pLabel}</span>
         <span class="badge badge-purple">${s.conditionLabel || s.condition}</span>
+        ${sPayBadge}
       </div>
       <div class="card-actions">
         <button class="btn-done" style="background:var(--purple-dim);color:var(--purple);border-color:rgba(155,114,245,0.2);" onclick="markSaleReturned(${s.id})">${returnBtnLabel}</button>
+        ${!s.returned && sPayTotal > 0 ? `<button class="btn-pay" onclick="openPayModal('sale',${s.id})">${sps.debt>0?'💳 Thu tiền':'✅ Đã TT'}</button>` : ''}
         <button class="btn-edit" onclick="openEditSale(${s.id})">✏️ Sửa</button>
         <button class="btn-print" onclick="printSaleInvoice(${s.id})">🖨️ In hoá đơn</button>
         <button class="btn-del" onclick="deleteSale(${s.id})">🗑 Xóa</button>
@@ -2084,6 +2135,17 @@ function updateStats() {
   const teEl = document.getElementById('stat-total-expense');
   if (tiEl) tiEl.textContent = fmtMoney(totalIncome);
   if (teEl) teEl.textContent = fmtMoney(totalExpense);
+
+  // Tổng công nợ
+  const totalDebtRepair = REPAIRS.reduce((s,r) => { const d = Math.max(0,(r.profit||0)-(r.paidAmount||0)); return s+d; }, 0);
+  const totalDebtSale   = SALES.filter(x=>!x.returned).reduce((s,x) => { const d = Math.max(0,(x.price||0)-(x.paidAmount||0)); return s+d; }, 0);
+  const totalDebt = totalDebtRepair + totalDebtSale;
+  const debtEl = document.getElementById('stat-total-debt');
+  if (debtEl) { debtEl.textContent = fmtMoney(totalDebt); debtEl.style.color = totalDebt>0?'var(--red)':'var(--green)'; }
+  const debtRepEl = document.getElementById('stat-debt-repair');
+  if (debtRepEl) debtRepEl.textContent = fmtMoney(totalDebtRepair);
+  const debtSaleEl = document.getElementById('stat-debt-sale');
+  if (debtSaleEl) debtSaleEl.textContent = fmtMoney(totalDebtSale);
 
   // Recent
   const recR = document.getElementById('stat-recent-repair');
@@ -3378,6 +3440,7 @@ function openEditRepair(id) {
           <option value="da_giao" ${r.status==='da_giao'?'selected':''}>📦 Đã giao</option>
         </select>
       </div>
+      <div class="field-wrap"><label class="field-label">💳 Đã thanh toán (VND)</label><input class="field" type="number" id="em-paid" value="${r.paidAmount||0}" min="0" placeholder="0 = chưa thanh toán"/></div>
     </div>
     <div class="field-wrap"><label class="field-label">Ghi chú</label><textarea class="field" id="em-note">${escHtml(r.note||'')}</textarea></div>
     <div class="field-wrap">
@@ -3421,6 +3484,7 @@ function openEditSale(id) {
           <option value="khac" ${s.source==='khac'?'selected':''}>Khác</option>
         </select>
       </div>
+      <div class="field-wrap"><label class="field-label">💳 Đã thanh toán (VND)</label><input class="field" type="number" id="em-paid" value="${s.paidAmount||0}" min="0" placeholder="0 = chưa thanh toán"/></div>
     </div>
     <div class="field-wrap"><label class="field-label">Ghi chú</label><textarea class="field" id="em-note">${escHtml(s.note||'')}</textarea></div>`;
   document.getElementById('edit-modal').style.display = 'flex';
@@ -3476,6 +3540,7 @@ function saveEdit() {
     r.date   = document.getElementById('em-date').value;
     r.status = document.getElementById('em-status').value;
     r.note   = document.getElementById('em-note').value.trim();
+    r.paidAmount = parseFloat(document.getElementById('em-paid')?.value) || 0;
     r.updatedAt = new Date().toLocaleString('vi-VN');
     saveRepairs(); buildRepairList(); updateStats(); checkOverdue();
   } else if (editingType === 'sale') {
@@ -3492,6 +3557,7 @@ function saveEdit() {
     s.buyer     = document.getElementById('em-buyer').value.trim();
     s.source    = document.getElementById('em-source').value;
     s.note      = document.getElementById('em-note').value.trim();
+    s.paidAmount = parseFloat(document.getElementById('em-paid')?.value) || 0;
     s.updatedAt = new Date().toLocaleString('vi-VN');
     saveSales(); buildSaleList(); updateStats();
   } else if (editingType === 'warehouse') {
@@ -3896,6 +3962,115 @@ function drawChart(ctx, labels, repairData, saleData, finData, gridColor, textCo
 
 // ─── CUSTOMERS ───────────────────────────────────────────────────────────────
 function saveCustomers() { localStorage.setItem(SK_CUSTOMERS, JSON.stringify(CUSTOMERS)); }
+
+// ─── PAYMENT / DEBT HELPERS ───────────────────────────────────────────────────
+function getPayStatus(total, paid) {
+  paid = paid || 0;
+  if (total <= 0) return { cls:'badge-paid', label:'✅ Đủ tiền', rowCls:'paid', debt:0 };
+  if (paid >= total) return { cls:'badge-paid', label:'✅ Đã thanh toán đủ', rowCls:'paid', debt:0 };
+  if (paid <= 0) return { cls:'badge-debt', label:`💸 Chưa TT: ${fmtMoney(total)}`, rowCls:'', debt:total };
+  const debt = total - paid;
+  return { cls:'badge-partial', label:`⚠️ Còn nợ: ${fmtMoney(debt)}`, rowCls:'partial', debt };
+}
+
+function openPayModal(type, id) {
+  const record = type === 'repair' ? REPAIRS.find(x=>x.id===id) : SALES.find(x=>x.id===id);
+  if (!record) return;
+  const total = type === 'repair' ? (record.profit||0) : (record.price||0);
+  const paid  = record.paidAmount || 0;
+  const debt  = Math.max(0, total - paid);
+  const label = type === 'repair'
+    ? `${record.owner} — ${record.device}`
+    : `${record.device}${record.buyer?' / '+record.buyer:''}`;
+
+  let modal = document.getElementById('pay-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'pay-modal';
+    modal.className = 'modal-overlay';
+    modal.onclick = e => { if (e.target === modal) modal.style.display='none'; };
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div class="modal-box" style="max-width:400px;">
+      <div class="modal-header">
+        <h3>💳 Thanh toán công nợ</h3>
+        <button class="modal-close" onclick="document.getElementById('pay-modal').style.display='none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">📋 ${escHtml(label)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+          <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Tổng tiền</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);">${fmtMoney(total)}</div>
+          </div>
+          <div style="background:var(--green-dim);border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Đã trả</div>
+            <div style="font-size:14px;font-weight:700;color:var(--green);">${fmtMoney(paid)}</div>
+          </div>
+          <div style="background:${debt>0?'var(--red-dim)':'var(--green-dim)'};border-radius:8px;padding:10px;text-align:center;">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Còn nợ</div>
+            <div style="font-size:14px;font-weight:700;color:${debt>0?'var(--red)':'var(--green)'};">${fmtMoney(debt)}</div>
+          </div>
+        </div>
+        ${debt > 0 ? `
+        <div class="field-wrap" style="margin-bottom:8px;">
+          <label class="field-label">Số tiền thu thêm (VND)</label>
+          <input class="field" type="number" id="pay-amount" placeholder="VD: ${debt}" min="0" max="${debt}" value="${debt}" />
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button onclick="document.getElementById('pay-amount').value='${debt}'" style="flex:1;padding:7px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;">💯 Thu hết ${fmtMoney(debt)}</button>
+          <button onclick="document.getElementById('pay-amount').value='${Math.round(debt/2)}'" style="flex:1;padding:7px;border-radius:6px;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;">½ Thu ${fmtMoney(Math.round(debt/2))}</button>
+        </div>
+        ` : `<div style="text-align:center;padding:10px;background:var(--green-dim);border-radius:8px;color:var(--green);font-weight:600;">✅ Đã thanh toán đầy đủ!</div>`}
+        <div class="field-wrap">
+          <label class="field-label">Ghi chú thanh toán</label>
+          <input class="field" id="pay-note" placeholder="VD: Khách trả tiền mặt, chuyển khoản..." />
+        </div>
+      </div>
+      <div class="modal-footer" style="flex-wrap:wrap;gap:8px;">
+        ${debt > 0 ? `<button class="btn-save" onclick="doPayment('${type}',${id})">💳 Xác nhận thu tiền</button>` : ''}
+        <button class="btn-save" style="background:var(--red-dim);color:var(--red);" onclick="resetPayment('${type}',${id})">↩ Đặt lại về 0</button>
+        <button class="btn-cancel" onclick="document.getElementById('pay-modal').style.display='none'">Đóng</button>
+      </div>
+    </div>`;
+  modal.style.display = 'flex';
+  if (debt > 0) setTimeout(() => document.getElementById('pay-amount')?.focus(), 100);
+}
+
+function doPayment(type, id) {
+  const record = type === 'repair' ? REPAIRS.find(x=>x.id===id) : SALES.find(x=>x.id===id);
+  if (!record) return;
+  const addAmt = parseFloat(document.getElementById('pay-amount')?.value) || 0;
+  const payNote = document.getElementById('pay-note')?.value.trim() || '';
+  if (addAmt <= 0) { alert('Vui lòng nhập số tiền thu!'); return; }
+  const total = type === 'repair' ? (record.profit||0) : (record.price||0);
+  record.paidAmount = Math.min(total, (record.paidAmount||0) + addAmt);
+  if (payNote) record.payNote = payNote;
+  record.lastPaidAt = new Date().toLocaleString('vi-VN');
+  if (type === 'repair') { saveRepairs(); buildRepairList(); }
+  else { saveSales(); buildSaleList(); }
+  updateStats();
+  document.getElementById('pay-modal').style.display = 'none';
+
+  // Tự động ghi vào Thu/Chi nếu có mô tả
+  const desc = type === 'repair'
+    ? `Thu tiền sửa: ${record.owner} - ${record.device}`
+    : `Thu tiền bán: ${record.device}${record.buyer?' / '+record.buyer:''}`;
+  const fin = { type:'thu', amount:addAmt, desc: payNote || desc, date:todayStr(), cat:'Sửa chữa', note:`[TT tự động] ${payNote||''}`.trim(), id:Date.now()+Math.random(), createdAt:new Date().toLocaleString('vi-VN') };
+  FINANCE.unshift(fin); saveFinance(); buildFinanceList();
+}
+
+function resetPayment(type, id) {
+  const record = type === 'repair' ? REPAIRS.find(x=>x.id===id) : SALES.find(x=>x.id===id);
+  if (!record) return;
+  if (!confirm('Đặt lại số tiền đã thanh toán về 0?')) return;
+  record.paidAmount = 0;
+  delete record.payNote; delete record.lastPaidAt;
+  if (type === 'repair') { saveRepairs(); buildRepairList(); }
+  else { saveSales(); buildSaleList(); }
+  document.getElementById('pay-modal').style.display = 'none';
+}
 
 // ─── EDIT CUSTOMER ───────────────────────────────────────────────────────────
 function openEditCustomer(name) {
@@ -4371,7 +4546,11 @@ async function sendSimMsg(text, imgData) {
 
   const isAddSale = /(?:bán máy|bán đc|bán được|xuất máy|bán cho|vừa bán|đã bán|bán ra|bán hàng|ghi bán|thêm bán|bán với giá|ra đi|chốt máy|chốt đơn)/.test(t);
 
-  const isUpdateSale = /(?:cập nhật bán|sửa phiếu bán|update bán)/.test(t);
+  const isUpdateSale = /(?:cập nhật bán|sửa phiếu bán|update bán|đổi giá bán|sửa giá bán|chỉnh phiếu bán)/.test(t);
+
+  // Sửa phiếu sửa đã có (thay đổi tiền, tên, trạng thái)
+  const isEditRepair = /(?:sửa lại phiếu|chỉnh phiếu|đổi tiền|cập nhật phiếu|update phiếu|sửa phiếu|thay đổi phiếu|chỉnh lại)/.test(t)
+    && !isAddRepair && !isUpdateRepair;
 
   const isAddIncome = /(?:thu tiền|thu đc|thu được|khách trả|nhận tiền|có tiền|vào tiền|thu về|khách đưa|lấy tiền|thu thêm|ghi thu|thêm thu|thu sửa|thu máy|thanh toán rồi|khách thanh toán)/.test(t)
     && !/nhận máy|nhập kho|nhập hàng/.test(t);
@@ -4416,6 +4595,43 @@ async function sendSimMsg(text, imgData) {
       reply = `🤖 Không tìm thấy phiếu${hint?' của <strong>'+escHtml(hint)+'</strong>':''} trong danh sách.<br>
         Đang sửa: <strong>${REPAIRS.filter(r=>r.status==='dang_sua').length}</strong> · Chờ giao: <strong>${REPAIRS.filter(r=>r.status==='xong_chua_giao').length}</strong><br>
         <em style="font-size:11px">Nói rõ hơn: "Giao máy anh Quang iPhone 13"</em>`;
+    }
+
+  // ── SỬA PHIẾU SỬA ĐÃ CÓ (AI giả lập) ──────────────────────────────────
+  } else if (isEditRepair) {
+    const owner  = findOwner(text);
+    const device = findDevice(text);
+    const moneys = findAllMoney(text);
+    const profitM = text.match(/(?:thu|giá sửa|tiền sửa|lãi|thành tiền|thành|sửa thành)\s*[:\s]*([\d]+(?:[.,]\d+)?\s*(?:k|tr\d*|triệu)?)/i);
+    const costM   = text.match(/(?:vốn|âm|chi|mua|linh kiện|lk|phụ kiện)\s*[:\s]*([\d]+(?:[.,]\d+)?\s*(?:k|tr\d*|triệu)?)/i);
+    const newProfit = profitM ? parseMoney(profitM[1]) : 0;
+    const newCost   = costM   ? parseMoney(costM[1])   : 0;
+    const newStatus = /da.giao|đã giao|giao rồi/.test(t) ? 'da_giao' : /xong.chua|xong chưa/.test(t) ? 'xong_chua_giao' : null;
+
+    const found = REPAIRS.find(r => {
+      const rOwner  = r.owner.toLowerCase();
+      const rDevice = r.device.toLowerCase();
+      return (owner  && rOwner.includes(owner.toLowerCase()))
+          || (device && rDevice.includes(device.toLowerCase()));
+    });
+
+    if (found) {
+      if (newProfit > 0) found.profit = newProfit;
+      if (newCost   > 0) found.cost   = newCost;
+      if (newStatus)     found.status  = newStatus;
+      if (!newProfit && !newCost && !newStatus && moneys.length === 1) found.profit = moneys[0].val;
+      found.updatedAt = new Date().toLocaleString('vi-VN');
+      saveRepairs(); buildRepairList(); updateStats();
+      reply = `✅ <strong>Đã cập nhật phiếu!</strong><br>`
+        + `👤 ${escHtml(found.owner)} · 📱 ${escHtml(found.device)}<br>`
+        + (newProfit ? `💰 Thu: ${fmtMoney(found.profit)}<br>` : '')
+        + (newCost   ? `🔧 Chi: ${fmtMoney(found.cost)}<br>` : '')
+        + `🏷️ Lãi: ${fmtMoney((found.profit||0)-(found.cost||0))}<br>`
+        + `<em style="font-size:11px;color:var(--text3)">Vào tab Sửa máy để xem chi tiết.</em>`;
+    } else {
+      const hint = owner || device;
+      reply = `🤖 Không tìm thấy phiếu${hint?' của <strong>'+escHtml(hint)+'</strong>':''} để sửa.<br>`
+        + `<em style="font-size:11px">VD: "sửa lại phiếu anh Tuấn thành 600k" hoặc "chỉnh phiếu iPhone 13 thu thành 800k"</em>`;
     }
 
   // ── NHẬN MÁY SỬA ─────────────────────────────────────────────────────────
@@ -4680,9 +4896,21 @@ function _doGlobalSearch(q) {
     const txt = [f.desc,f.cat,f.note].join(' ').toLowerCase();
     if (txt.includes(kw)) results.push({ type:'finance', icon: f.type==='thu'?'📥':'📤', title:f.desc, sub:`${fmtDate(f.date)} · ${f.type==='thu'?'+':'-'}${fmtMoney(f.amount)}`, action:`switchTab('finance')` });
   });
-  CUSTOMERS.forEach(c => {
-    const txt = [c.name,c.phone,c.note].join(' ').toLowerCase();
-    if (txt.includes(kw)) results.push({ type:'customer', icon:'👤', title:c.name, sub:`${c.phone||''}`, action:`switchTab('customers')` });
+  WAREHOUSE.forEach(w => {
+    const txt = [w.name,w.imei,w.supplier,w.category,w.note].join(' ').toLowerCase();
+    if (txt.includes(kw)) results.push({ type:'warehouse', icon: w.type==='nhap'?'📦':'📤', title:`${w.type==='nhap'?'Nhập':'Xuất'} kho: ${w.name}`, sub:`${fmtDate(w.date)} · ${w.quantity||1} ${w.unit||'cái'}${w.price?' · '+fmtMoney(w.price):''}`, action:`switchTab('warehouse')` });
+  });
+  PARTS.forEach(p => {
+    const txt = [p.name,p.category,p.supplier,p.usedfor,p.note].join(' ').toLowerCase();
+    if (txt.includes(kw)) results.push({ type:'parts', icon: p.type==='nhap'?'🔩':'📤', title:`${p.type==='nhap'?'Nhập':'Xuất'} linh kiện: ${p.name}`, sub:`${fmtDate(p.date)} · ${p.quantity||1} ${p.unit||'cái'}${p.price?' · '+fmtMoney(p.price):''}`, action:`switchTab('parts')` });
+  });
+  // Also search customers dynamically from repairs+sales
+  const custMap2 = {};
+  REPAIRS.forEach(r => { if (r.owner) { const k = r.owner.toLowerCase().trim(); if (!custMap2[k]) custMap2[k] = {name:r.owner,phone:r.phone||''}; } });
+  SALES.forEach(s => { if (s.buyer) { const k = s.buyer.toLowerCase().trim(); if (!custMap2[k]) custMap2[k] = {name:s.buyer,phone:''}; } });
+  Object.values(custMap2).forEach(c => {
+    const txt = [c.name,c.phone].join(' ').toLowerCase();
+    if (txt.includes(kw)) results.push({ type:'customer', icon:'👤', title:c.name, sub:`${c.phone||'Chưa có SĐT'}`, action:`switchTab('customers')` });
   });
 
   if (results.length === 0) {
@@ -4912,10 +5140,14 @@ function exportMonthCSV() {
   rows.push(['TỔNG','','','',totIncome,totExpense,totProfit]);
 
   const csv = '\uFEFF' + rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=UTF-8'});
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.href = url;
   a.download = `bao-cao-${month}.csv`;
+  document.body.appendChild(a);
   a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 500);
 }
 
 function exportMonthExcel() {
@@ -4968,22 +5200,29 @@ function _exportExcel(monthFilter, title, filename) {
   );
 
   const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="UTF-8">
-<style>td{border:1px solid #ccc;padding:4px 6px;font-size:11pt;font-family:Arial;}
-th,td:first-child{background:#e8f0fe;}table{border-collapse:collapse;margin-bottom:20px;}
+<head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>BaoCao</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+<style>td{border:1px solid #ccc;padding:4px 6px;font-size:11pt;font-family:Arial,sans-serif;mso-number-format:General;}
+th{background:#e8f0fe;font-weight:bold;}table{border-collapse:collapse;margin-bottom:20px;}
 h2{font-size:14pt;margin:10px 0 4px;}h3{font-size:12pt;color:#333;margin:16px 0 4px;}</style></head>
 <body>
 <h2>${escHtml(sh.name)} — ${escHtml(title)}</h2>
 <p style="font-size:10pt;color:#555;">Xuất lúc: ${new Date().toLocaleString('vi-VN')} | Tổng lãi sửa: ${fmtMoney(repTotal)} | Tổng lãi bán: ${fmtMoney(saleTotal)} | Thu/Chi ròng: ${fmtMoney(finIn-finOut)}</p>
-<h3>🔧 Sửa chữa (${repRows.length} phiếu)</h3>${repSheet}
-<h3>💰 Bán máy (${saleRows.length} giao dịch)</h3>${saleSheet}
-<h3>💳 Thu / Chi (${finRows.length} giao dịch)</h3>${finSheet}
+<h3>Sua chua (${repRows.length} phieu)</h3>${repSheet}
+<h3>Ban may (${saleRows.length} giao dich)</h3>${saleSheet}
+<h3>Thu / Chi (${finRows.length} giao dich)</h3>${finSheet}
 </body></html>`;
 
+  // BOM + UTF-8 encoding ensures Vietnamese renders correctly in Excel
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + html], {type:'application/vnd.ms-excel;charset=UTF-8'});
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8'}));
+  a.href = url;
   a.download = filename;
+  document.body.appendChild(a);
   a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 500);
 }
 
 // ═══════════════════════════════════════════════════════════════════
