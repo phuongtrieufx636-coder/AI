@@ -4346,8 +4346,11 @@ async function sendSimMsg(text, imgData) {
 
   // ── Parse tên người ───────────────────────────────────────────────────────
   function findOwner(s) {
-    const m = s.match(/(?:(?:khách|máy|của|cho|anh|chị|em|bé|bạn|ông|bà|cô|chú|con|thằng|thầy|cô)\s+)+([A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂĐƠƯA-Za-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ][a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]+(?: [A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂĐƠƯA-Za-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ][a-záàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]+){0,2})/i);
-    return m ? m[1].trim() : '';
+    // Pattern 1: "anh/chị/... Tên" ở bất kỳ đâu trong câu
+    const viName = '[A-ZÀ-Ỹa-zà-ỹÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂĐƠƯáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ]';
+    const m1 = s.match(new RegExp('(?:khách|máy|của|cho|anh|chị|em|bé|bạn|ông|bà|cô|chú|con|thằng)\\s+(' + viName + '[a-zà-ỹáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]+(?:\\s+' + viName + '[a-zà-ỹáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]+){0,2})', 'i'));
+    if (m1) return m1[1].trim();
+    return '';
   }
 
   // ── Parse lỗi / vấn đề máy ────────────────────────────────────────────────
@@ -4360,8 +4363,11 @@ async function sendSimMsg(text, imgData) {
   const isUpdateRepair = /(?:đã giao|giao rồi|giao xong|giao cho|vừa giao|trả máy|trả cho|xong rồi|sửa xong|hoàn thành|done|đã xong|lấy máy rồi|khách lấy|cập nhật|update)\s+(?:máy|phiếu|cho)?\s*(?:anh|chị|em|bé|bạn|ông|bà|khách)?\s*\w*/i.test(t)
     && !/nhận|mới|thêm|nhập/.test(t);
 
-  const isAddRepair = /(?:nhận máy|nhận đc|nhận được|tiếp nhận|nhận sửa|sửa máy|mang máy|đem máy|vừa nhận|nhập sửa|ghi máy|thêm phiếu|phiếu mới|nhận hàng|nhận về|máy vào|bấm giúp|nhập giúp|ghi giúp|thêm giúp|lưu giúp)/.test(t)
-    || (findDevice(t) !== '' && /thu|giá nhận|lãi|tiền sửa|ép|thay|sửa|vốn|linh kiện/.test(t) && !isUpdateRepair);
+  const isAddRepair = /(?:nhận máy|nhận đc|nhận được|tiếp nhận|nhận sửa|sửa máy|mang máy|đem máy|vừa nhận|nhập sửa|ghi máy|thêm phiếu|phiếu mới|nhận hàng|nhận về|máy vào|bấm giúp|nhập giúp|ghi giúp|thêm giúp|lưu giúp|có máy|máy mới vào|máy vừa vào|vào sửa|cần sửa|đem vào|mang vào|gửi máy|để sửa|ghi phiếu|tạo phiếu)/.test(t)
+    || /(?:anh|chị|em|bé|bạn|ông|bà|cô|chú|khách)\s+\w+(?:\s+\w+)?\s*(?:vào|đem|mang|gửi|để|nhờ sửa|cần sửa)/.test(t)
+    || /máy\s+(?:anh|chị|em|bé|bạn|ông|bà|cô|chú|khách)\s+\w+/.test(t)
+    || (findDevice(t) !== '' && /thu|giá nhận|lãi|tiền sửa|ép|thay|sửa|vốn|linh kiện|lk|màn|pin|cảm ứng|cổng sạc|loa|camera|mic|kính|ic|main|nguồn/.test(t) && !isUpdateRepair)
+    || (findOwner(t) !== '' && /(?:ép|thay|sửa|ic|cảm ứng|màn|pin|cổng|loa|camera|mic|kính|main|nguồn)/.test(t) && /\d+\s*(?:k|tr|triệu)/.test(t) && !isUpdateRepair);
 
   const isAddSale = /(?:bán máy|bán đc|bán được|xuất máy|bán cho|vừa bán|đã bán|bán ra|bán hàng|ghi bán|thêm bán|bán với giá|ra đi|chốt máy|chốt đơn)/.test(t);
 
