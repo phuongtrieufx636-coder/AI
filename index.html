@@ -740,6 +740,27 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
     <div class="tab-body">
       <div class="section-hd">Tổng quan tài chính</div>
       <div id="overdue-alert-wrap"></div>
+
+      <!-- HÔM NAY -->
+      <div class="section-hd" style="margin-top:4px;margin-bottom:6px;">📅 Hôm nay</div>
+      <div class="kpi-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:12px;">
+        <div class="kpi">
+          <div class="kpi-label">🔧 Lãi sửa</div>
+          <div class="kpi-val" id="stat-today-repair" style="color:var(--green);font-size:18px;">0đ</div>
+          <div class="kpi-sub" id="stat-today-repair-sub">0 phiếu</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">💵 Doanh thu bán</div>
+          <div class="kpi-val" id="stat-today-sale-rev" style="color:var(--accent);font-size:18px;">0đ</div>
+          <div class="kpi-sub" id="stat-today-sale-sub">0 máy</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">💳 Thu/Chi</div>
+          <div class="kpi-val" id="stat-today-finance" style="color:var(--green);font-size:18px;">0đ</div>
+          <div class="kpi-sub" id="stat-today-finance-sub">thu - chi</div>
+        </div>
+      </div>
+
       <div class="kpi-grid">
         <div class="kpi">
           <div class="kpi-label">🔧 Máy đang sửa</div>
@@ -796,6 +817,7 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
       <div class="section-hd" style="margin-top:8px;">Biểu đồ doanh thu</div>
       <div class="chart-wrap">
         <div class="chart-tabs">
+          <button class="chart-tab-btn" onclick="setChartPeriod('today',this)">📅 Hôm nay</button>
           <button class="chart-tab-btn active" onclick="setChartPeriod('week',this)">7 ngày</button>
           <button class="chart-tab-btn" onclick="setChartPeriod('month',this)">30 ngày</button>
           <button class="chart-tab-btn" onclick="setChartPeriod('6month',this)">6 tháng</button>
@@ -1146,23 +1168,11 @@ function doGet(e) {
 <!-- ── PRINT SIZE MODAL ── -->
 <div id="print-size-modal">
   <div class="psm-box">
-    <h3>🖨️ Chọn khổ giấy in</h3>
+    <h3>📄 Xuất phiếu / Hóa đơn</h3>
     <div class="psm-options">
-      <button class="psm-btn" onclick="executePrint('58')">
-        <span class="psm-icon">🧾</span>
-        <div><div class="psm-label">Khổ 58mm</div><div class="psm-sub">Máy in nhiệt mini nhỏ (58mm)</div></div>
-      </button>
-      <button class="psm-btn" onclick="executePrint('80')">
-        <span class="psm-icon">🖨️</span>
-        <div><div class="psm-label">Khổ 80mm</div><div class="psm-sub">Máy in nhiệt POS tiêu chuẩn (80mm)</div></div>
-      </button>
-      <button class="psm-btn" onclick="executePrint('a4')">
-        <span class="psm-icon">📄</span>
-        <div><div class="psm-label">Khổ A4</div><div class="psm-sub">Máy in thường, in đầy trang</div></div>
-      </button>
       <button class="psm-btn" onclick="downloadPrintAsImage()">
         <span class="psm-icon">🖼️</span>
-        <div><div class="psm-label">Tải ảnh PNG</div><div class="psm-sub">Lưu phiếu dạng ảnh để gửi Zalo</div></div>
+        <div><div class="psm-label">Tải ảnh PNG</div><div class="psm-sub">Lưu phiếu dạng ảnh để gửi Zalo / lưu điện thoại</div></div>
       </button>
     </div>
     <button class="psm-cancel" onclick="closePrintModal()">✕ Hủy</button>
@@ -1985,8 +1995,30 @@ function buildSaleList() {
 // ─── STATS ────────────────────────────────────────────────────────────────────
 function updateStats() {
   const month = thisMonth();
+  const today = todayStr();
   const repairing = REPAIRS.filter(r => r.status === 'dang_sua').length;
   const pending   = REPAIRS.filter(r => r.status === 'xong_chua_giao').length;
+
+  // ── HÔM NAY ──
+  const todayRepairs = REPAIRS.filter(r => r.date === today);
+  const todayRepairProfit = todayRepairs.reduce((s,r) => s + (r.profit||0) - (r.cost||0), 0);
+  const todaySales = SALES.filter(s => s.date === today && !s.returned);
+  const todaySaleRev = todaySales.reduce((s,x) => s + (x.price||0), 0);
+  const todayFinIn  = FINANCE.filter(f => f.date === today && f.type === 'thu').reduce((s,f)=>s+f.amount,0);
+  const todayFinOut = FINANCE.filter(f => f.date === today && f.type === 'chi').reduce((s,f)=>s+f.amount,0);
+  const todayFinNet = todayFinIn - todayFinOut;
+  const el_trp = document.getElementById('stat-today-repair');
+  const el_trps = document.getElementById('stat-today-repair-sub');
+  const el_tsrev = document.getElementById('stat-today-sale-rev');
+  const el_tss = document.getElementById('stat-today-sale-sub');
+  const el_tf = document.getElementById('stat-today-finance');
+  const el_tfs = document.getElementById('stat-today-finance-sub');
+  if (el_trp) { el_trp.textContent = fmtMoney(todayRepairProfit); el_trp.style.color = todayRepairProfit>=0?'var(--green)':'var(--red)'; }
+  if (el_trps) el_trps.textContent = `${todayRepairs.length} phiếu`;
+  if (el_tsrev) { el_tsrev.textContent = fmtMoney(todaySaleRev); el_tsrev.style.color = 'var(--accent)'; }
+  if (el_tss) el_tss.textContent = `${todaySales.length} máy`;
+  if (el_tf) { el_tf.textContent = fmtMoney(todayFinNet); el_tf.style.color = todayFinNet>=0?'var(--green)':'var(--red)'; }
+  if (el_tfs) el_tfs.textContent = `+${fmtMoney(todayFinIn)} / -${fmtMoney(todayFinOut)}`;
 
   const repairMonth = REPAIRS.filter(r => r.date && r.date !== 'undefined' && r.date.startsWith(month));
   const repairProfit = repairMonth.reduce((s,r) => s + (r.profit||0) - (r.cost||0), 0);
@@ -2911,8 +2943,12 @@ async function sendMsg() {
   const text = input.value.trim();
   if (!text && !chatImgData) return;
 
-  // AI giả lập khi không có key hoặc sim mode bật (mặc định offline)
+  // AI giả lập khi không có key hoặc sim mode bật
   if (simModeEnabled || !groqKey) {
+    if (!groqKey && !simModeEnabled) {
+      addMsg('bot', '⚠️ Vui lòng nhập <strong>Groq API Key</strong> ở trên hoặc bật <strong>AI Giả lập</strong> để dùng AI!');
+      return;
+    }
     const userText = text || '(Xem ảnh đính kèm)';
     addMsg('user', escHtml(userText));
     input.value = ''; input.style.height = '';
@@ -2921,6 +2957,8 @@ async function sendMsg() {
     await sendSimMsg(userText, imgData);
     return;
   }
+
+  if (!groqKey) { addMsg('bot', '⚠️ Vui lòng nhập <strong>Groq API Key</strong> ở trên để dùng AI!'); return; }
   aiMessageCount++; // Tăng đếm để AI "mệt" dần
 
   const userText = text || '(Xem ảnh bill đính kèm)';
@@ -3512,9 +3550,10 @@ function buildRepairHtml(r) {
 function buildSaleHtml(s) {
   const sh = getShopInfo();
   const invoiceNo = String(s.id).slice(-6);
+  const cost = (s.price||0) - (s.profit||0);
   return `<div class="ticket-wrap" style="font-family:'Courier New',Courier,monospace;font-size:12px;color:#000;background:#fff;width:100%;max-width:420px;margin:0 auto;padding:10px 14px;box-sizing:border-box;">
     <!-- HEADER -->
-    <div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:8px;margin-bottom:8px;">
+    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:8px;">
       <div class="tk-shopname" style="font-size:20px;font-weight:900;letter-spacing:1px;text-transform:uppercase;">${escHtml(sh.name)}</div>
       <div style="font-size:10px;margin-top:2px;">Sua chua &amp; mua ban dien thoai</div>
       ${sh.phone?`<div style="font-size:11px;margin-top:2px;">DTH: ${escHtml(sh.phone)}</div>`:''}
@@ -3522,25 +3561,48 @@ function buildSaleHtml(s) {
     </div>
     <!-- TITLE -->
     <div style="text-align:center;margin-bottom:8px;">
-      <div class="tk-title" style="font-size:14px;font-weight:900;letter-spacing:0.5px;">HOA DON BAN HANG</div>
-      <div style="font-size:10px;margin-top:2px;">So HD: #${invoiceNo} | ${new Date().toLocaleDateString('vi-VN')}</div>
+      <div class="tk-title" style="font-size:15px;font-weight:900;letter-spacing:1px;">HOA DON BAN HANG</div>
+      <div style="font-size:10px;margin-top:3px;">So HD: #${invoiceNo} &nbsp;|&nbsp; Ngay: ${new Date().toLocaleDateString('vi-VN')}</div>
     </div>
     <div style="border-top:1px dashed #000;margin:6px 0;"></div>
-    <!-- SAN PHAM -->
+    <!-- KHACH HANG -->
     <table style="width:100%;border-collapse:collapse;font-size:11px;">
-      <tr><td style="padding:2px 0;color:#555;width:90px;">San pham:</td><td style="padding:2px 0;font-weight:900;" class="tk-big">${escHtml(s.device||'—')}</td></tr>
-      <tr><td style="padding:2px 0;color:#555;">Tinh trang:</td><td style="padding:2px 0;font-weight:700;">${escHtml(s.conditionLabel||s.condition||'—')}</td></tr>
-      ${s.imei?`<tr><td style="padding:2px 0;color:#555;">IMEI:</td><td style="padding:2px 0;font-family:monospace;font-size:10px;">${escHtml(s.imei)}</td></tr>`:''}
-      ${s.buyer?`<tr><td style="padding:2px 0;color:#555;">Khach hang:</td><td style="padding:2px 0;font-weight:700;">${escHtml(s.buyer)}</td></tr>`:''}
+      ${s.buyer?`<tr><td style="padding:2px 0;color:#555;width:90px;">Khach hang:</td><td style="padding:2px 0;font-weight:700;">${escHtml(s.buyer)}</td></tr>`:''}
       <tr><td style="padding:2px 0;color:#555;">Ngay ban:</td><td style="padding:2px 0;">${fmtDate(s.date)}</td></tr>
     </table>
     <div style="border-top:1px dashed #000;margin:6px 0;"></div>
-    <!-- GIA -->
+    <!-- HEADER BANG HANG HOA -->
+    <div style="font-size:10px;font-weight:700;color:#333;display:flex;justify-content:space-between;border-bottom:1px solid #999;padding-bottom:4px;margin-bottom:4px;">
+      <span style="flex:1;">San pham</span>
+      <span style="width:70px;text-align:right;">Don gia</span>
+    </div>
+    <!-- SAN PHAM ROW -->
+    <div style="font-size:11px;display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+      <div style="flex:1;padding-right:8px;">
+        <div style="font-weight:900;font-size:12px;">${escHtml(s.device||'—')}</div>
+        <div style="color:#555;margin-top:2px;">Tinh trang: ${escHtml(s.conditionLabel||s.condition||'—')}</div>
+        ${s.imei?`<div style="color:#555;font-family:monospace;font-size:10px;">IMEI: ${escHtml(s.imei)}</div>`:''}
+        ${s.note?`<div style="color:#555;font-size:10px;margin-top:2px;">GC: ${escHtml(s.note)}</div>`:''}
+      </div>
+      <div style="width:70px;text-align:right;font-weight:700;white-space:nowrap;">${fmtMoney(s.price)}</div>
+    </div>
+    <!-- TONG CONG -->
+    <div style="border-top:1px dashed #000;margin:8px 0;"></div>
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+      <tr>
+        <td style="padding:3px 0;color:#555;">So luong:</td>
+        <td style="padding:3px 0;text-align:right;font-weight:700;">1 cai</td>
+      </tr>
+      <tr>
+        <td style="padding:3px 0;color:#555;">Don gia:</td>
+        <td style="padding:3px 0;text-align:right;font-weight:700;">${fmtMoney(s.price)}</td>
+      </tr>
+    </table>
+    <div style="border-top:2px solid #000;margin:8px 0;"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
-      <span style="font-size:12px;font-weight:700;">GIA BAN:</span>
+      <span style="font-size:13px;font-weight:900;">TONG CONG:</span>
       <span class="tk-price" style="font-size:24px;font-weight:900;">${fmtMoney(s.price)}</span>
     </div>
-    ${s.note?`<div style="font-size:10px;color:#555;margin-top:2px;">Ghi chu: ${escHtml(s.note)}</div>`:''}
     <div style="border-top:1px dashed #000;margin:8px 0;"></div>
     <!-- CHU KY -->
     <div class="tk-sig" style="display:flex;justify-content:space-between;margin-bottom:10px;">
@@ -3556,6 +3618,7 @@ function buildSaleHtml(s) {
     <!-- FOOTER -->
     <div style="text-align:center;border-top:1px dashed #000;padding-top:6px;font-size:10px;color:#555;">
       <div>Cam on quy khach! Bao hanh theo thoa thuan.</div>
+      <div>Vui long lien he neu co van de ve san pham.</div>
       <div style="margin-top:4px;font-size:9px;color:#aaa;">#${invoiceNo} | ${new Date().toLocaleString('vi-VN')}</div>
     </div>
   </div>`;
@@ -3672,21 +3735,30 @@ function renderChart() {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
 
-  // Generate date labels
+  // Helper: local date string yyyy-mm-dd (tránh lỗi múi giờ UTC)
+  function localDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
   const labels = [], repairData = [], saleData = [], finData = [];
   const now = new Date();
 
   let periods = [];
-  if (chartPeriod === 'week') {
+  if (chartPeriod === 'today') {
+    // 24 giờ trong ngày hôm nay, chia theo từng giờ
+    const todayStr2 = localDateStr(now);
+    for (let h = 0; h < 24; h++) {
+      periods.push({ label: h % 3 === 0 ? `${h}h` : '', prefix: todayStr2, type: 'hour', hour: h });
+    }
+  } else if (chartPeriod === 'week') {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now); d.setDate(d.getDate() - i);
-      periods.push({ label: `${d.getDate()}/${d.getMonth()+1}`, prefix: d.toISOString().split('T')[0], type: 'day' });
+      periods.push({ label: `${d.getDate()}/${d.getMonth()+1}`, prefix: localDateStr(d), type: 'day' });
     }
   } else if (chartPeriod === 'month') {
     for (let i = 29; i >= 0; i--) {
       const d = new Date(now); d.setDate(d.getDate() - i);
-      const ds = d.toISOString().split('T')[0];
-      periods.push({ label: i % 5 === 0 ? `${d.getDate()}/${d.getMonth()+1}` : '', prefix: ds, type: 'day' });
+      periods.push({ label: i % 5 === 0 ? `${d.getDate()}/${d.getMonth()+1}` : '', prefix: localDateStr(d), type: 'day' });
     }
   } else if (chartPeriod === '6month') {
     for (let i = 5; i >= 0; i--) {
@@ -3704,12 +3776,23 @@ function renderChart() {
 
   periods.forEach(p => {
     labels.push(p.label);
-    const repNet = REPAIRS.filter(r => r.date && r.date.startsWith(p.prefix)).reduce((s,r) => s+(r.profit||0)-(r.cost||0), 0);
-    const saleNet = SALES.filter(s => s.date && s.date.startsWith(p.prefix)).reduce((s,x) => s+(x.profit||0), 0);
-    const finNet = FINANCE.filter(f => f.date && f.date.startsWith(p.prefix)).reduce((s,f) => s + (f.type==='thu' ? f.amount : -f.amount), 0);
-    repairData.push(Math.round(repNet/1000));
-    saleData.push(Math.round(saleNet/1000));
-    finData.push(Math.round(finNet/1000));
+    if (p.type === 'hour') {
+      // Lọc theo giờ trong ngày hôm nay
+      const h = p.hour;
+      const repNet = REPAIRS.filter(r => r.date === p.prefix && r.createdAt && new Date(r.createdAt.replace(/(\d+)\/(\d+)\/(\d+)/,'$3-$2-$1')).getHours() === h).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
+      const saleNet = SALES.filter(s => s.date === p.prefix && s.createdAt && new Date(s.createdAt.replace(/(\d+)\/(\d+)\/(\d+)/,'$3-$2-$1')).getHours() === h).reduce((s,x)=>s+(x.profit||0),0);
+      const finNet = FINANCE.filter(f => f.date === p.prefix && f.createdAt && new Date(f.createdAt.replace(/(\d+)\/(\d+)\/(\d+)/,'$3-$2-$1')).getHours() === h).reduce((s,f)=>s+(f.type==='thu'?f.amount:-f.amount),0);
+      repairData.push(Math.round(repNet/1000));
+      saleData.push(Math.round(saleNet/1000));
+      finData.push(Math.round(finNet/1000));
+    } else {
+      const repNet = REPAIRS.filter(r => r.date && r.date.startsWith(p.prefix)).reduce((s,r) => s+(r.profit||0)-(r.cost||0), 0);
+      const saleNet = SALES.filter(s => s.date && s.date.startsWith(p.prefix)).reduce((s,x) => s+(x.profit||0), 0);
+      const finNet = FINANCE.filter(f => f.date && f.date.startsWith(p.prefix)).reduce((s,f) => s + (f.type==='thu' ? f.amount : -f.amount), 0);
+      repairData.push(Math.round(repNet/1000));
+      saleData.push(Math.round(saleNet/1000));
+      finData.push(Math.round(finNet/1000));
+    }
   });
 
   if (revenueChart) { revenueChart.destroy(); revenueChart = null; }
@@ -4057,8 +4140,9 @@ async function installPWA() {
 // Đăng ký Service Worker (cache offline)
 if ('serviceWorker' in navigator) {
   const swCode = `
-const CACHE = 'shopapp-offline-v1';
+const CACHE = 'thuantrieuv1';
 self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(['/'])));
   self.skipWaiting();
 });
 self.addEventListener('activate', e => {
@@ -4069,17 +4153,7 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   e.respondWith(
-    caches.open(CACHE).then(cache =>
-      cache.match(e.request).then(cached => {
-        const fetchPromise = fetch(e.request).then(response => {
-          if (response && response.status === 200) {
-            cache.put(e.request, response.clone());
-          }
-          return response;
-        }).catch(() => cached);
-        return cached || fetchPromise;
-      })
-    )
+    fetch(e.request).catch(() => caches.match(e.request))
   );
 });`;
   const blob = new Blob([swCode], { type: 'application/javascript' });
@@ -4118,9 +4192,9 @@ self.addEventListener('fetch', e => {
 let simModeEnabled = false;
 
 function initSimMode() {
-  // AI giả lập mặc định bật, hoạt động hoàn toàn offline
+  // Hiện thanh AI sim khi chưa có key
   const saved = localStorage.getItem('tt_sim_mode');
-  simModeEnabled = saved !== 'false'; // mặc định true, trừ khi người dùng tắt
+  simModeEnabled = saved === 'true';
   updateSimModeUI();
 }
 
@@ -4140,14 +4214,22 @@ function updateSimModeUI() {
   const btn  = document.getElementById('ai-sim-toggle');
   if (!bar || !btn) return;
 
-  bar.style.display = 'flex';
-  if (!groqKey || simModeEnabled) {
+  if (!groqKey) {
+    // Không có key → luôn hiện thanh, sim mode auto bật
+    bar.style.display = 'flex';
     simModeEnabled = true;
     btn.className = 'active';
-    btn.textContent = '🤖 Chế độ Offline (AI Giả lập)';
+    btn.textContent = '🤖 Đang dùng AI Giả lập';
   } else {
-    btn.className = '';
-    btn.textContent = '🤖 Bật AI Giả lập (Offline)';
+    // Có key → cho phép toggle
+    bar.style.display = 'flex';
+    if (simModeEnabled) {
+      btn.className = 'active';
+      btn.textContent = '🤖 Đang dùng AI Giả lập';
+    } else {
+      btn.className = '';
+      btn.textContent = '🤖 Bật AI Giả lập';
+    }
   }
 }
 
