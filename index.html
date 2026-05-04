@@ -2954,7 +2954,7 @@ async function sendMsg() {
   document.getElementById('send-btn').disabled = true;
 
   try {
-    const useModel = imgData ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'gemma2-9b-it';
+    const useModel = imgData ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant';
     const historyMsgs = chatHistory.slice(0,-1).slice(-8).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : '[ảnh]' }));
     const messages = [
       { role:'system', content: buildContext() },
