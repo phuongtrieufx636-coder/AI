@@ -412,6 +412,13 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
 <div id="main">
   <div id="topbar">
     <h2 id="tab-title">Trợ lý quản lý cửa hàng</h2>
+    <div id="global-search-wrap" style="position:relative;flex:1;max-width:260px;margin:0 8px;">
+      <input id="global-search-input" type="text" placeholder="🔍 Tìm toàn bộ..." autocomplete="off"
+        style="width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:20px;padding:6px 32px 6px 14px;font-size:12.5px;font-family:inherit;outline:none;transition:border-color 0.15s;"
+        oninput="runGlobalSearch(this.value)" onfocus="showGlobalResults()" />
+      <button onclick="clearGlobalSearch()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0;line-height:1;">✕</button>
+      <div id="global-search-results" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.25);z-index:300;max-height:360px;overflow-y:auto;"></div>
+    </div>
     <button id="theme-toggle" onclick="cycleTheme()" title="Đổi giao diện">🌙</button>
   </div>
 
@@ -824,6 +831,31 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
           <button class="chart-tab-btn" onclick="setChartPeriod('year',this)">12 tháng</button>
         </div>
         <canvas id="revenue-chart"></canvas>
+      </div>
+
+      <!-- SO SÁNH THÁNG -->
+      <div class="section-hd" style="margin-top:8px;">📊 So sánh tháng này vs tháng trước</div>
+      <div class="chart-wrap" style="padding:14px 16px;">
+        <div id="month-compare-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;"></div>
+      </div>
+
+      <!-- TOP KHÁCH HÀNG -->
+      <div class="section-hd" style="margin-top:8px;">🏆 Top khách hàng</div>
+      <div class="chart-wrap" style="padding:12px 16px;">
+        <div id="top-customers-list"></div>
+      </div>
+
+      <!-- XUẤT EXCEL -->
+      <div class="section-hd" style="margin-top:8px;">📤 Xuất báo cáo</div>
+      <div class="chart-wrap" style="padding:14px 16px;">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Xuất dữ liệu tháng hiện tại ra file Excel để in hoặc gửi kế toán.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-export" onclick="exportMonthExcel()" style="flex:1;min-width:140px;">📊 Xuất Excel tháng này</button>
+          <button class="btn-export" onclick="exportMonthCSV()" style="flex:1;min-width:140px;background:var(--green-dim);color:var(--green);border-color:rgba(52,200,122,0.3);">📋 Xuất CSV tháng này</button>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-export" onclick="exportAllExcel()" style="flex:1;min-width:140px;background:var(--purple-dim);color:var(--purple);border-color:rgba(155,114,245,0.3);">📁 Xuất Excel toàn bộ</button>
+        </div>
       </div>
 
       <div class="section-hd" style="margin-top:8px;">Phiếu sửa gần đây</div>
@@ -4444,6 +4476,345 @@ async function sendSimMsg(text, imgData) {
   addMsg('bot', reply);
   document.getElementById('send-btn').disabled = false;
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// ① TÌM KIẾM TOÀN CỤC
+// ═══════════════════════════════════════════════════════════════════
+let _gsTimer = null;
+function runGlobalSearch(q) {
+  clearTimeout(_gsTimer);
+  _gsTimer = setTimeout(() => _doGlobalSearch(q), 180);
+}
+function _doGlobalSearch(q) {
+  const box = document.getElementById('global-search-results');
+  if (!q || q.trim().length < 1) { box.style.display='none'; return; }
+  const kw = q.toLowerCase().trim();
+  const results = [];
+
+  REPAIRS.forEach(r => {
+    const txt = [r.owner,r.phone,r.device,r.imei,r.issue,r.note].join(' ').toLowerCase();
+    if (txt.includes(kw)) results.push({ type:'repair', icon:'🔧', title:`${r.owner} — ${r.device}`, sub:`${fmtDate(r.date)} · ${fmtMoney((r.profit||0)-(r.cost||0))} lãi`, action:`switchTab('repair')`, id: r.id });
+  });
+  SALES.forEach(s => {
+    const txt = [s.device,s.imei,s.buyer,s.note].join(' ').toLowerCase();
+    if (txt.includes(kw)) results.push({ type:'sale', icon:'💰', title:`${s.device}${s.buyer?' → '+s.buyer:''}`, sub:`${fmtDate(s.date)} · ${fmtMoney(s.price)}`, action:`switchTab('sales')`, id: s.id });
+  });
+  FINANCE.forEach(f => {
+    const txt = [f.desc,f.cat,f.note].join(' ').toLowerCase();
+    if (txt.includes(kw)) results.push({ type:'finance', icon: f.type==='thu'?'📥':'📤', title:f.desc, sub:`${fmtDate(f.date)} · ${f.type==='thu'?'+':'-'}${fmtMoney(f.amount)}`, action:`switchTab('finance')` });
+  });
+  CUSTOMERS.forEach(c => {
+    const txt = [c.name,c.phone,c.note].join(' ').toLowerCase();
+    if (txt.includes(kw)) results.push({ type:'customer', icon:'👤', title:c.name, sub:`${c.phone||''}`, action:`switchTab('customers')` });
+  });
+
+  if (results.length === 0) {
+    box.innerHTML = `<div style="padding:14px 16px;color:var(--text3);font-size:13px;text-align:center;">Không tìm thấy kết quả nào</div>`;
+  } else {
+    box.innerHTML = results.slice(0,12).map(r => `
+      <div onclick="${r.action};clearGlobalSearch();" style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s;" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
+        <span style="font-size:18px;flex-shrink:0;">${r.icon}</span>
+        <div style="min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(r.title)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px;">${escHtml(r.sub)}</div>
+        </div>
+      </div>`).join('') + (results.length > 12 ? `<div style="padding:8px;text-align:center;font-size:11px;color:var(--text3);">+${results.length-12} kết quả khác…</div>` : '');
+  }
+  box.style.display = 'block';
+}
+function showGlobalResults() {
+  const q = document.getElementById('global-search-input').value;
+  if (q.trim()) _doGlobalSearch(q);
+}
+function clearGlobalSearch() {
+  document.getElementById('global-search-input').value = '';
+  document.getElementById('global-search-results').style.display = 'none';
+}
+document.addEventListener('click', e => {
+  if (!document.getElementById('global-search-wrap')?.contains(e.target)) {
+    const box = document.getElementById('global-search-results');
+    if (box) box.style.display = 'none';
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// ② XÁC NHẬN 2 BƯỚC KHI XÓA
+// ═══════════════════════════════════════════════════════════════════
+function confirmDelete(msg, detail, onConfirm) {
+  let modal = document.getElementById('confirm-delete-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'confirm-delete-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid rgba(240,82,82,0.4);border-radius:12px;width:100%;max-width:380px;padding:22px 20px;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:28px;">🗑️</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">${escHtml(msg)}</div>
+          ${detail?`<div style="font-size:12px;color:var(--text3);margin-top:3px;">${escHtml(detail)}</div>`:''}
+        </div>
+      </div>
+      <div style="background:var(--red-dim);border:1px solid rgba(240,82,82,0.2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--red);">
+        ⚠️ Hành động này <strong>không thể hoàn tác</strong>. Dữ liệu sẽ bị xóa vĩnh viễn.
+      </div>
+      <div style="font-size:12px;color:var(--text2);">Nhập <strong style="color:var(--red);">XOA</strong> để xác nhận:</div>
+      <input id="confirm-delete-input" type="text" placeholder="Nhập XOA" autocomplete="off"
+        style="background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;width:100%;"
+        oninput="document.getElementById('confirm-delete-btn').disabled=this.value.trim().toUpperCase()!=='XOA';" />
+      <div style="display:flex;gap:8px;">
+        <button id="confirm-delete-btn" disabled onclick="document.getElementById('confirm-delete-modal').style.display='none';(${onConfirm.toString()})();"
+          style="flex:1;padding:10px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;opacity:0.4;transition:opacity 0.15s;"
+          onmouseover="if(!this.disabled)this.style.opacity=0.85" onmouseout="this.style.opacity=this.disabled?0.4:1">
+          🗑️ Xác nhận xóa
+        </button>
+        <button onclick="document.getElementById('confirm-delete-modal').style.display='none';"
+          style="padding:10px 16px;background:var(--bg3);color:var(--text2);border:1px solid var(--border2);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">
+          Hủy
+        </button>
+      </div>
+    </div>`;
+  // Enable button when typing XOA
+  modal.querySelector('#confirm-delete-btn').style.opacity='0.4';
+  modal.style.display = 'flex';
+  setTimeout(() => modal.querySelector('#confirm-delete-input').focus(), 100);
+}
+
+// Patch delete functions to use 2-step confirm
+const _origDeleteRepair = deleteRepair;
+deleteRepair = function(id) {
+  const r = REPAIRS.find(x => x.id === id);
+  if (!r) return;
+  confirmDelete(`Xóa phiếu sửa: ${r.owner} — ${r.device}`, `Ngày: ${fmtDate(r.date)} · Lãi: ${fmtMoney((r.profit||0)-(r.cost||0))}`, () => {
+    REPAIRS = REPAIRS.filter(x => x.id !== id);
+    saveRepairs(); buildRepairList(); updateStats();
+    chatHistory = []; localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+  });
+};
+const _origDeleteSale = deleteSale;
+deleteSale = function(id) {
+  const s = SALES.find(x => x.id === id);
+  if (!s) return;
+  confirmDelete(`Xóa giao dịch bán: ${s.device}`, `Ngày: ${fmtDate(s.date)} · Giá: ${fmtMoney(s.price)}`, () => {
+    SALES = SALES.filter(x => x.id !== id);
+    saveSales(); buildSaleList(); updateStats();
+    chatHistory = []; localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+  });
+};
+const _origDeleteFinance = deleteFinance;
+deleteFinance = function(id) {
+  const f = FINANCE.find(x => x.id === id);
+  if (!f) return;
+  confirmDelete(`Xóa giao dịch ${f.type==='thu'?'thu':'chi'}: ${f.desc}`, `Số tiền: ${fmtMoney(f.amount)} · Ngày: ${fmtDate(f.date)}`, () => {
+    FINANCE = FINANCE.filter(x => x.id !== id);
+    saveFinance(); buildFinanceList(); updateStats();
+    chatHistory = []; localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+  });
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// ③ SO SÁNH THÁNG + TOP KHÁCH HÀNG (cập nhật trong updateStats)
+// ═══════════════════════════════════════════════════════════════════
+function updateMonthCompare() {
+  const now = new Date();
+  const thisM  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const prevD  = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const prevM  = `${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,'0')}`;
+
+  function calc(month) {
+    const repP = REPAIRS.filter(r=>r.date&&r.date.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
+    const saleP = SALES.filter(s=>s.date&&s.date.startsWith(month)&&!s.returned).reduce((s,x)=>s+(x.profit||0),0);
+    const finIn = FINANCE.filter(f=>f.date&&f.date.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
+    const finOut= FINANCE.filter(f=>f.date&&f.date.startsWith(month)&&f.type==='chi').reduce((s,f)=>s+f.amount,0);
+    return { repP, saleP, finNet: finIn-finOut };
+  }
+  const cur  = calc(thisM);
+  const prev = calc(prevM);
+
+  function diffHtml(cur, prev, label) {
+    const diff = cur - prev;
+    const pct  = prev !== 0 ? Math.round(diff/Math.abs(prev)*100) : (cur>0?100:0);
+    const up   = diff >= 0;
+    return `
+      <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">${label}</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text);">${fmtMoney(cur)}</div>
+        <div style="font-size:11px;margin-top:3px;color:${up?'var(--green)':'var(--red)'};">
+          ${up?'▲':'▼'} ${fmtMoney(Math.abs(diff))} (${up?'+':''}${pct}%) vs tháng trước
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:1px;">Tháng trước: ${fmtMoney(prev)}</div>
+      </div>`;
+  }
+
+  const grid = document.getElementById('month-compare-grid');
+  if (grid) grid.innerHTML =
+    diffHtml(cur.repP,  prev.repP,  '🔧 Lãi sửa chữa') +
+    diffHtml(cur.saleP, prev.saleP, '💰 Lãi bán máy') +
+    diffHtml(cur.finNet,prev.finNet,'💳 Thu/Chi ròng');
+}
+
+function updateTopCustomers() {
+  const el = document.getElementById('top-customers-list');
+  if (!el) return;
+
+  // Tính tổng doanh thu từng khách (repair + sale)
+  const map = {};
+  REPAIRS.forEach(r => {
+    if (!r.owner) return;
+    const key = r.owner.trim();
+    if (!map[key]) map[key] = { name:key, phone:r.phone||'', repairCount:0, saleCount:0, total:0, profit:0 };
+    map[key].repairCount++;
+    map[key].total += (r.profit||0);
+    map[key].profit += (r.profit||0)-(r.cost||0);
+  });
+  SALES.forEach(s => {
+    if (!s.buyer) return;
+    const key = s.buyer.trim();
+    if (!map[key]) map[key] = { name:key, phone:'', repairCount:0, saleCount:0, total:0, profit:0 };
+    map[key].saleCount++;
+    map[key].total += (s.price||0);
+    map[key].profit += (s.profit||0);
+  });
+
+  const top = Object.values(map).sort((a,b)=>b.total-a.total).slice(0,8);
+  if (top.length === 0) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px 0;">Chưa có dữ liệu khách hàng</div>';
+    return;
+  }
+  const maxTotal = top[0].total || 1;
+  el.innerHTML = top.map((c,i) => {
+    const bar = Math.round(c.total/maxTotal*100);
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;
+    return `<div style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;min-width:24px;">${medal}</span>
+          <span style="font-size:13px;font-weight:600;color:var(--text);">${escHtml(c.name)}</span>
+          ${c.phone?`<span style="font-size:11px;color:var(--text3);">${escHtml(c.phone)}</span>`:''}
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:13px;font-weight:700;color:var(--green);">${fmtMoney(c.total)}</div>
+          <div style="font-size:10px;color:var(--text3);">${c.repairCount?c.repairCount+' phiếu sửa ':''}${c.saleCount?c.saleCount+' máy mua':''}</div>
+        </div>
+      </div>
+      <div style="height:5px;background:var(--bg);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${bar}%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:3px;transition:width 0.5s;"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ④ XUẤT EXCEL / CSV THÁNG
+// ═══════════════════════════════════════════════════════════════════
+function exportMonthCSV() {
+  const month = thisMonth();
+  const rows = [
+    ['Loại','Ngày','Tên/Mô tả','Chi tiết','Thu(đ)','Chi(đ)','Lãi(đ)']
+  ];
+  REPAIRS.filter(r=>r.date&&r.date.startsWith(month)).forEach(r => {
+    rows.push(['Sửa chữa', r.date, r.owner+' - '+r.device, r.issue||'', r.profit||0, r.cost||0, (r.profit||0)-(r.cost||0)]);
+  });
+  SALES.filter(s=>s.date&&s.date.startsWith(month)&&!s.returned).forEach(s => {
+    rows.push(['Bán máy', s.date, s.device, (s.buyer||'')+(s.imei?' IMEI:'+s.imei:''), s.price||0, (s.price||0)-(s.profit||0), s.profit||0]);
+  });
+  FINANCE.filter(f=>f.date&&f.date.startsWith(month)).forEach(f => {
+    rows.push([f.type==='thu'?'Thu ngoài':'Chi ngoài', f.date, f.desc, f.cat||'', f.type==='thu'?f.amount:0, f.type==='chi'?f.amount:0, f.type==='thu'?f.amount:-f.amount]);
+  });
+
+  // Totals
+  const totIncome = rows.slice(1).reduce((s,r)=>s+(+r[4]||0),0);
+  const totExpense= rows.slice(1).reduce((s,r)=>s+(+r[5]||0),0);
+  const totProfit = rows.slice(1).reduce((s,r)=>s+(+r[6]||0),0);
+  rows.push([]);
+  rows.push(['TỔNG','','','',totIncome,totExpense,totProfit]);
+
+  const csv = '\uFEFF' + rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download = `bao-cao-${month}.csv`;
+  a.click();
+}
+
+function exportMonthExcel() {
+  const month = thisMonth();
+  const [yr, mo] = month.split('-');
+  _exportExcel(month, `Báo cáo tháng ${mo}/${yr}`, `bao-cao-${month}.xls`);
+}
+
+function exportAllExcel() {
+  _exportExcel(null, 'Báo cáo toàn bộ', 'bao-cao-toan-bo.xls');
+}
+
+function _exportExcel(monthFilter, title, filename) {
+  const sh = getShopInfo();
+  let repRows = REPAIRS;
+  let saleRows = SALES.filter(s=>!s.returned);
+  let finRows = FINANCE;
+  if (monthFilter) {
+    repRows  = repRows.filter(r=>r.date&&r.date.startsWith(monthFilter));
+    saleRows = saleRows.filter(s=>s.date&&s.date.startsWith(monthFilter));
+    finRows  = finRows.filter(f=>f.date&&f.date.startsWith(monthFilter));
+  }
+
+  function tr(cells, bold=false) {
+    return `<tr>${cells.map(c=>`<td style="${bold?'font-weight:bold;background:#f0f0f0;':''}">${c??''}</td>`).join('')}</tr>`;
+  }
+  function sheet(name, headers, rows, totals) {
+    return `<table><thead>${tr(headers,true)}</thead><tbody>${rows.map(r=>tr(r)).join('')}${totals?'<tr>'+totals.map(c=>`<td style="font-weight:bold;border-top:2px solid #000;">${c??''}</td>`).join('')+'</tr>':''}</tbody></table>`;
+  }
+
+  const repTotal = repRows.reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
+  const saleTotal= saleRows.reduce((s,x)=>s+(x.profit||0),0);
+  const finIn    = finRows.filter(f=>f.type==='thu').reduce((s,f)=>s+f.amount,0);
+  const finOut   = finRows.filter(f=>f.type==='chi').reduce((s,f)=>s+f.amount,0);
+
+  const repSheet  = sheet('Sửa chữa',
+    ['Ngày','Tên KH','SĐT','Thiết bị','IMEI','Lỗi','Thu(đ)','Chi(đ)','Lãi(đ)','Trạng thái','Ghi chú'],
+    repRows.map(r=>[r.date,r.owner,r.phone,r.device,r.imei,r.issue,r.profit||0,r.cost||0,(r.profit||0)-(r.cost||0),{dang_sua:'Đang sửa',xong_chua_giao:'Chưa giao',da_giao:'Đã giao'}[r.status],r.note]),
+    ['TỔNG','','','','','',repRows.reduce((s,r)=>s+(r.profit||0),0),repRows.reduce((s,r)=>s+(r.cost||0),0),repTotal,'','']
+  );
+  const saleSheet = sheet('Bán máy',
+    ['Ngày','Tên máy','IMEI','Tình trạng','Khách hàng','Giá bán(đ)','Lãi(đ)','Ghi chú'],
+    saleRows.map(s=>[s.date,s.device,s.imei,s.conditionLabel||s.condition,s.buyer,s.price||0,s.profit||0,s.note]),
+    ['TỔNG','','','','',saleRows.reduce((s,x)=>s+(x.price||0),0),saleTotal,'']
+  );
+  const finSheet  = sheet('Thu/Chi',
+    ['Loại','Ngày','Mô tả','Danh mục','Số tiền(đ)','Ghi chú'],
+    finRows.map(f=>[f.type==='thu'?'Thu':'Chi',f.date,f.desc,f.cat,f.amount,f.note]),
+    ['','','','','Thu: '+finIn+' | Chi: '+finOut+' | Còn: '+(finIn-finOut),'']
+  );
+
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8">
+<style>td{border:1px solid #ccc;padding:4px 6px;font-size:11pt;font-family:Arial;}
+th,td:first-child{background:#e8f0fe;}table{border-collapse:collapse;margin-bottom:20px;}
+h2{font-size:14pt;margin:10px 0 4px;}h3{font-size:12pt;color:#333;margin:16px 0 4px;}</style></head>
+<body>
+<h2>${escHtml(sh.name)} — ${escHtml(title)}</h2>
+<p style="font-size:10pt;color:#555;">Xuất lúc: ${new Date().toLocaleString('vi-VN')} | Tổng lãi sửa: ${fmtMoney(repTotal)} | Tổng lãi bán: ${fmtMoney(saleTotal)} | Thu/Chi ròng: ${fmtMoney(finIn-finOut)}</p>
+<h3>🔧 Sửa chữa (${repRows.length} phiếu)</h3>${repSheet}
+<h3>💰 Bán máy (${saleRows.length} giao dịch)</h3>${saleSheet}
+<h3>💳 Thu / Chi (${finRows.length} giao dịch)</h3>${finSheet}
+</body></html>`;
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8'}));
+  a.download = filename;
+  a.click();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Patch updateStats to also update compare + top customers
+// ═══════════════════════════════════════════════════════════════════
+const _origUpdateStats = updateStats;
+updateStats = function() {
+  _origUpdateStats();
+  updateMonthCompare();
+  updateTopCustomers();
+};
 
 init();
 </script>
