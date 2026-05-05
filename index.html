@@ -2523,7 +2523,7 @@ function qsend(text) { document.getElementById('msg-input').value = text; sendMs
 
 function buildContext() {
   const repLines = REPAIRS.length
-    ? REPAIRS.slice(0,10).map(r => `- [${r.status}] ${r.owner}/${r.device} thu:${(r.profit||0)/1000}k chi:${(r.cost||0)/1000}k ${r.date}`).join('\n')
+    ? REPAIRS.slice(0,10).map(r => `- [${r.status}] ${r.owner}/${r.device} thu:${(r.profit||0)/1000}k chi:${(r.cost||0)/1000}k ${r.date}${r.status==='da_giao'?' (ĐÃ GIAO - KHÔNG phải đang sửa)':''}`).join('\n')
     : '(Chưa có phiếu sửa nào)';
   const saleLines = SALES.length
     ? SALES.slice(0,10).map(s => {
@@ -2542,6 +2542,9 @@ function buildContext() {
   const totalRepairNet = REPAIRS.reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
   const totalSaleNet   = SALES.filter(s=>!s.returned).reduce((s,x)=>s+(x.profit||0),0);
   const month = thisMonth();
+  const todayForCtx = todayStr();
+  const todayNewRepairs = REPAIRS.filter(r=>r.date===todayForCtx); // tất cả phiếu nhận hôm nay (kể cả đã giao)
+  const todayActiveRepairs = todayNewRepairs.filter(r=>r.status!=='da_giao'); // chỉ chưa giao
   const monthRepairNet = REPAIRS.filter(r=>r.date && r.date!=='undefined' && r.date.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
   const monthSaleNet   = SALES.filter(s=>s.date && s.date!=='undefined' && s.date.startsWith(month) && !s.returned).reduce((s,x)=>s+(x.profit||0),0);
   const monthFinIn     = FINANCE.filter(f=>f.date && f.date!=='undefined' && f.date.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
@@ -2556,7 +2559,8 @@ function buildContext() {
 Tập trung: SỬA CHỮA, BÁN MÁY, THU/CHI, KHO HÀNG.
 
 DỮ LIỆU CỬA HÀNG HIỆN TẠI (ĐÂY LÀ DỮ LIỆU MỚI NHẤT — bỏ qua mọi thông tin từ lịch sử chat nếu mâu thuẫn):
-─ PHIẾU SỬA CHỮA (${REPAIRS.length} phiếu):
+─ PHIẾU SỬA CHỮA (${REPAIRS.length} phiếu tổng | Đang sửa: ${REPAIRS.filter(r=>r.status==='dang_sua').length} | Chờ giao: ${REPAIRS.filter(r=>r.status==='xong_chua_giao').length} | Đã giao: ${REPAIRS.filter(r=>r.status==='da_giao').length}):
+LƯU Ý QUAN TRỌNG: Hôm nay (${todayForCtx}) nhận ${todayNewRepairs.length} phiếu MỚI, trong đó ${todayActiveRepairs.length} phiếu CHƯA giao (đang sửa/xong chưa giao) và ${todayNewRepairs.length - todayActiveRepairs.length} phiếu đã giao xong hôm nay. Khi người dùng hỏi "hôm nay nhận bao nhiêu máy" thì báo ${todayNewRepairs.length} phiếu. Khi hỏi "đang sửa bao nhiêu" thì CHỈ đếm status=dang_sua.
 ${repLines}
 
 ─ BÁN HÀNG (${SALES.length} giao dịch):
@@ -2627,6 +2631,11 @@ function handleActions(reply) {
     const deviceKey = (p[1]||'').toLowerCase().trim();
     const newStatus = p[2]||'da_giao';
     const found = REPAIRS.find(r =>
+      (r.status !== 'da_giao') && (
+        (ownerKey && r.owner.toLowerCase().includes(ownerKey)) ||
+        (deviceKey && r.device.toLowerCase().includes(deviceKey))
+      )
+    ) || REPAIRS.find(r =>
       (ownerKey && r.owner.toLowerCase().includes(ownerKey)) ||
       (deviceKey && r.device.toLowerCase().includes(deviceKey))
     );
@@ -4450,6 +4459,13 @@ async function sendSimMsg(text, imgData) {
     const newStatus = /(?:chưa giao|xong chưa|hoàn thành chưa giao)/.test(t) ? 'xong_chua_giao' : 'da_giao';
 
     const found = REPAIRS.find(r => {
+      const rOwner  = r.owner.toLowerCase();
+      const rDevice = r.device.toLowerCase();
+      return (r.status !== 'da_giao') && (
+        (owner  && rOwner.includes(owner.toLowerCase()))
+        || (device && rDevice.includes(device.toLowerCase()))
+      );
+    }) || REPAIRS.find(r => {
       const rOwner  = r.owner.toLowerCase();
       const rDevice = r.device.toLowerCase();
       return (owner  && rOwner.includes(owner.toLowerCase()))
