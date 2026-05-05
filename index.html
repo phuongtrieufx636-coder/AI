@@ -61,19 +61,15 @@ html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
 #theme-toggle:hover{background:var(--accent-dim);color:var(--accent);}
 
 /* API KEY BAR */
-#apibar{display:flex;align-items:center;gap:8px;padding:8px 22px;background:var(--bg3);border-bottom:1px solid var(--border);flex-wrap:wrap;}
+#apibar{display:flex;align-items:center;gap:10px;padding:8px 22px;background:var(--bg3);border-bottom:1px solid var(--border);}
 #apibar label{font-size:12px;color:var(--text3);white-space:nowrap;}
-#provider-select{background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:5px 8px;font-size:12px;font-family:inherit;outline:none;cursor:pointer;transition:border-color 0.15s;flex-shrink:0;}
-#provider-select:focus{border-color:var(--accent);}
-#provider-select option{background:var(--bg2);}
-#apibar input{flex:1;min-width:120px;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;font-family:'Courier New',monospace;outline:none;transition:border-color 0.15s;}
+#apibar input{flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;font-family:'Courier New',monospace;outline:none;transition:border-color 0.15s;}
 #apibar input:focus{border-color:var(--accent);}
 #apibar button{padding:6px 14px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
 #apibar button:hover{background:var(--accent-dark);}
 .key-status{font-size:11px;white-space:nowrap;padding:4px 10px;border-radius:20px;}
 .key-status.ok{background:var(--green-dim);color:var(--green);}
 .key-status.none{background:var(--red-dim);color:var(--red);}
-.provider-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--accent-dim);color:var(--accent);white-space:nowrap;}
 
 /* TABS */
 .tab{flex:1;display:flex;flex-direction:column;overflow:hidden;}
@@ -363,26 +359,6 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
 /* ── ALERT BANNER ── */
 .alert-banner{background:var(--amber-dim);border:1px solid rgba(240,160,48,0.3);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--amber);}
 .alert-banner .ab-count{font-weight:700;font-size:15px;white-space:nowrap;}
-
-/* ── REMINDER BADGES ── */
-.badge-due-ok{background:rgba(79,142,247,0.12);color:var(--accent);border:1px solid rgba(79,142,247,0.25);}
-.badge-due-soon{background:rgba(240,160,48,0.18);color:var(--amber);border:1px solid rgba(240,160,48,0.35);animation:pulse-due 2s infinite;}
-.badge-due-over{background:rgba(240,82,82,0.18);color:var(--red);border:1px solid rgba(240,82,82,0.35);animation:pulse-due 1.2s infinite;}
-@keyframes pulse-due{0%,100%{opacity:1;}50%{opacity:0.6;}}
-/* ── REMINDER PANEL ── */
-.remind-card{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);transition:border-color 0.15s;}
-.remind-card:hover{border-color:var(--border2);}
-.remind-card.over{border-color:rgba(240,82,82,0.35);background:var(--red-dim);}
-.remind-card.soon{border-color:rgba(240,160,48,0.35);background:var(--amber-dim);}
-.remind-icon{font-size:22px;flex-shrink:0;}
-.remind-info{flex:1;min-width:0;}
-.remind-name{font-size:13px;font-weight:700;color:var(--text);}
-.remind-sub{font-size:11.5px;color:var(--text2);margin-top:2px;}
-.remind-due{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
-/* ── NOTIFY PERMISSION BAR ── */
-#notify-bar{display:none;padding:8px 22px;background:linear-gradient(90deg,var(--purple-dim),var(--accent-dim));border-bottom:1px solid rgba(155,114,245,0.25);align-items:center;gap:10px;font-size:12px;color:var(--text2);}
-#notify-bar button{padding:5px 14px;border-radius:var(--radius-sm);background:var(--purple);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;}
-#notify-bar .nb-close{background:transparent;color:var(--text3);border:none;font-size:16px;cursor:pointer;padding:0 2px;line-height:1;}
 .alert-bell{font-size:20px;flex-shrink:0;animation:ring 2s infinite;}
 @keyframes ring{0%,90%,100%{transform:rotate(0);}93%{transform:rotate(-15deg);}96%{transform:rotate(15deg);}99%{transform:rotate(-8deg);}}
 
@@ -434,8 +410,8 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
     <div class="model-chip">
       <div class="model-dot"></div>
       <div>
-        <div class="model-name" id="sidebar-model-name">llama-3.3-70b (Groq)</div>
-        <div class="model-sub" id="sidebar-model-sub">Groq · Miễn phí & nhanh</div>
+        <div class="model-name">llama-3.3-70b (Groq)</div>
+        <div class="model-sub">Groq · Miễn phí & nhanh</div>
       </div>
     </div>
   </div>
@@ -456,24 +432,10 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
   </div>
 
   <div id="apibar">
-    <label>🤖</label>
-    <select id="provider-select" onchange="onProviderChange(this.value)" title="Chọn AI provider">
-      <option value="groq">Groq (miễn phí)</option>
-      <option value="openai">OpenAI (GPT)</option>
-      <option value="anthropic">Anthropic (Claude)</option>
-    </select>
+    <label>🔑 Groq API Key:</label>
     <input type="password" id="key-input" placeholder="gsk_xxxxxxxxxxxxxxxxxxxx" />
     <button onclick="saveKey()">Lưu key</button>
     <span class="key-status none" id="key-status">Chưa có key</span>
-    <span class="provider-badge" id="provider-badge">Groq</span>
-  </div>
-
-  <!-- ── NOTIFY PERMISSION BAR ── -->
-  <div id="notify-bar">
-    <span style="font-size:18px;">🔔</span>
-    <span style="flex:1;">Bật thông báo để app nhắc hẹn khách <strong>tự động</strong> ngay trên điện thoại!</span>
-    <button onclick="requestNotifyPermission()">Bật thông báo</button>
-    <button class="nb-close" onclick="dismissNotifyBar()" title="Đóng">✕</button>
   </div>
 
   <!-- ── AI SIMULATION BAR ── -->
@@ -577,10 +539,6 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
           <div class="field-wrap">
             <label class="field-label">Ngày nhận *</label>
             <input class="field" type="date" id="rep-date" />
-          </div>
-          <div class="field-wrap">
-            <label class="field-label">📅 Hẹn ngày trả</label>
-            <input class="field" type="date" id="rep-due" />
           </div>
           <div class="field-wrap">
             <label class="field-label">Trạng thái</label>
@@ -800,14 +758,6 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
     <div class="tab-body">
       <div class="section-hd">Tổng quan tài chính</div>
       <div id="overdue-alert-wrap"></div>
-      <!-- ── REMINDER PANEL ── -->
-      <div id="reminder-panel" style="display:none;margin-bottom:12px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div class="section-hd" style="margin:0;padding:0;border:none;">🔔 Nhắc hẹn khách</div>
-          <button onclick="switchTab('repair')" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;">Xem tất cả →</button>
-        </div>
-        <div id="reminder-list" class="card-list"></div>
-      </div>
 
       <!-- HÔM NAY -->
       <div class="section-hd" style="margin-top:4px;margin-bottom:6px;">📅 Hôm nay</div>
@@ -939,19 +889,15 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
   <div class="tab hidden" id="tab-settings">
     <div class="tab-body">
       <div class="settings-section">
-        <h4>🤖 AI Provider & API Key</h4>
+        <h4>🔑 Groq API Key</h4>
         <div class="settings-row">
           <div>
             <div class="settings-row-label">Trạng thái key</div>
             <div class="settings-row-sub" id="settings-key-status">Chưa lưu key nào</div>
           </div>
-          <button class="btn-danger" onclick="clearKey()">Xóa key hiện tại</button>
+          <button class="btn-danger" onclick="clearKey()">Xóa key</button>
         </div>
-        <div style="font-size:12px;color:var(--text3);display:flex;flex-direction:column;gap:4px;">
-          <span>🟢 <a href="https://console.groq.com" target="_blank" style="color:var(--accent)">Groq</a> — Miễn phí, nhanh. Lấy key tại console.groq.com</span>
-          <span>🔵 <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--accent)">OpenAI</a> — GPT-4o, chính xác cao. Trả phí theo token.</span>
-          <span>🟣 <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">Anthropic</a> — Claude Sonnet, thông minh. Trả phí theo token.</span>
-        </div>
+        <div style="font-size:12px;color:var(--text3);">Key được lưu trong trình duyệt (localStorage). Lấy key tại <a href="https://console.groq.com" target="_blank" style="color:var(--accent)">console.groq.com</a></div>
       </div>
 
       <div class="settings-section">
@@ -1299,8 +1245,6 @@ function doGet(e) {
 <script>
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 const SK_KEY       = 'tt_api_key';
-const SK_PROVIDER  = 'tt_ai_provider';
-const SK_KEYS      = 'tt_api_keys'; // {groq:'', openai:'', anthropic:''}
 const SK_REPAIRS   = 'tt_repairs';
 const SK_SALES     = 'tt_sales';
 const SK_CHAT      = 'tt_chat_history';
@@ -1310,8 +1254,6 @@ const SK_PARTS     = 'tt_parts';
 const SK_CUSTOMERS = 'tt_customers';
 
 let groqKey = '';
-let currentProvider = 'groq'; // 'groq' | 'openai' | 'anthropic'
-let providerKeys = { groq: '', openai: '', anthropic: '' };
 let REPAIRS = [];
 let SALES = [];
 let FINANCE = [];
@@ -1357,22 +1299,8 @@ function migrateSalesData() {
 }
 
 function init() {
-  // Load provider settings
-  const savedProvider = localStorage.getItem(SK_PROVIDER) || 'groq';
-  const savedKeys = JSON.parse(localStorage.getItem(SK_KEYS) || '{}');
-  providerKeys = { groq: savedKeys.groq || '', openai: savedKeys.openai || '', anthropic: savedKeys.anthropic || '' };
-  // Legacy: migrate old single key to groq slot
-  const legacyKey = localStorage.getItem(SK_KEY) || '';
-  if (legacyKey && !providerKeys.groq) { providerKeys.groq = legacyKey; saveProviderKeys(); }
-  currentProvider = savedProvider;
-  groqKey = providerKeys[currentProvider] || '';
-  // Update UI
-  const provSel = document.getElementById('provider-select');
-  if (provSel) provSel.value = currentProvider;
-  const keyInput = document.getElementById('key-input');
-  if (keyInput) keyInput.value = groqKey;
-  updateProviderUI(currentProvider);
-  if (groqKey) { setKeyStatus(true); updateSettingsStatus(); }
+  const k = localStorage.getItem(SK_KEY) || '';
+  if (k) { groqKey = k; document.getElementById('key-input').value = k; setKeyStatus(true); updateSettingsStatus(); }
   REPAIRS = JSON.parse(localStorage.getItem(SK_REPAIRS) || '[]');
   SALES   = JSON.parse(localStorage.getItem(SK_SALES)   || '[]');
   FINANCE = JSON.parse(localStorage.getItem(SK_FINANCE) || '[]');
@@ -1414,152 +1342,46 @@ function init() {
   window.addEventListener('resize', () => document.body.classList.toggle('has-bnav', window.innerWidth <= 700));
   applyTheme(localStorage.getItem('tt_theme') || 'auto');
   initSimMode();
-  initNotifyBar();
-}
-
-// ─── PROVIDER HELPERS ────────────────────────────────────────────────────────
-const PROVIDER_META = {
-  groq:      { name:'Groq', sub:'Groq · Miễn phí & nhanh', placeholder:'gsk_xxxxxxxxxxxxxxxxxxxx',  model:'llama-3.3-70b-versatile', visionModel:'meta-llama/llama-4-scout-17b-16e-instruct', badge:'Groq' },
-  openai:    { name:'GPT-4o (OpenAI)', sub:'OpenAI · Chính xác cao', placeholder:'sk-xxxxxxxxxxxxxxxxxxxx', model:'gpt-4o-mini', visionModel:'gpt-4o', badge:'OpenAI' },
-  anthropic: { name:'Claude (Anthropic)', sub:'Anthropic · Thông minh', placeholder:'sk-ant-xxxxxxxxxxxx', model:'claude-sonnet-4-20250514', visionModel:'claude-sonnet-4-20250514', badge:'Claude' },
-};
-
-function saveProviderKeys() {
-  localStorage.setItem(SK_KEYS, JSON.stringify(providerKeys));
-}
-
-function onProviderChange(provider) {
-  currentProvider = provider;
-  localStorage.setItem(SK_PROVIDER, provider);
-  groqKey = providerKeys[provider] || '';
-  const keyInput = document.getElementById('key-input');
-  if (keyInput) keyInput.value = groqKey;
-  updateProviderUI(provider);
-  if (groqKey) { setKeyStatus(true); } else { setKeyStatus(false); }
-  updateSettingsStatus();
-}
-
-function updateProviderUI(provider) {
-  const meta = PROVIDER_META[provider] || PROVIDER_META.groq;
-  const keyInput = document.getElementById('key-input');
-  if (keyInput) keyInput.placeholder = meta.placeholder;
-  const badge = document.getElementById('provider-badge');
-  if (badge) badge.textContent = meta.badge;
-  const sidebarName = document.getElementById('sidebar-model-name');
-  if (sidebarName) sidebarName.textContent = meta.name;
-  const sidebarSub = document.getElementById('sidebar-model-sub');
-  if (sidebarSub) sidebarSub.textContent = meta.sub;
-  const simLabel = document.querySelector('#ai-sim-bar label');
-  if (simLabel) simLabel.textContent = 'Chế độ demo không cần API key';
-}
-
-// Unified API call — works with Groq (OpenAI-compat), OpenAI, Anthropic
-async function callAI({ messages, max_tokens = 450, temperature = 0.7, useVision = false }) {
-  const provider = currentProvider;
-  const key = providerKeys[provider] || groqKey;
-  if (!key) throw new Error('Chưa có API key cho ' + (PROVIDER_META[provider]?.name || provider));
-  const meta = PROVIDER_META[provider];
-  const model = useVision ? meta.visionModel : meta.model;
-
-  if (provider === 'anthropic') {
-    // Anthropic Messages API
-    const sysMsg = messages.find(m => m.role === 'system');
-    const nonSys = messages.filter(m => m.role !== 'system');
-    // Convert image_url blocks to Anthropic format
-    const converted = nonSys.map(m => {
-      if (typeof m.content === 'string') return m;
-      const parts = m.content.map(p => {
-        if (p.type === 'image_url') {
-          const url = p.image_url?.url || '';
-          if (url.startsWith('data:')) {
-            const [header, data] = url.split(',');
-            const mediaType = header.replace('data:', '').replace(';base64', '');
-            return { type: 'image', source: { type: 'base64', media_type: mediaType, data } };
-          }
-          return { type: 'image', source: { type: 'url', url } };
-        }
-        return p;
-      });
-      return { role: m.role, content: parts };
-    });
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, max_tokens, temperature, system: sysMsg?.content || '', messages: converted })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'Lỗi Anthropic API ' + res.status);
-    return data.content?.[0]?.text || '';
-  } else {
-    // OpenAI-compatible (Groq + OpenAI)
-    const endpoint = provider === 'openai'
-      ? 'https://api.openai.com/v1/chat/completions'
-      : 'https://api.groq.com/openai/v1/chat/completions';
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-      body: JSON.stringify({ model, max_tokens, temperature, messages })
-    });
-    if (res.status === 429) {
-      // surface 429 as special error for caller to handle
-      const e = new Error('RATE_LIMIT');
-      e.status = 429;
-      throw e;
-    }
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'Lỗi API ' + res.status);
-    return data.choices[0].message.content || '';
-  }
 }
 
 // ─── KEY ─────────────────────────────────────────────────────────────────────
 function saveKey() {
   const v = document.getElementById('key-input').value.trim();
   if (!v) return;
-  providerKeys[currentProvider] = v;
   groqKey = v;
-  saveProviderKeys();
-  localStorage.setItem(SK_KEY, currentProvider === 'groq' ? v : (providerKeys.groq || '')); // legacy compat
+  localStorage.setItem(SK_KEY, v);
   setKeyStatus(true);
   updateSettingsStatus();
   simModeEnabled = false;
   localStorage.setItem('tt_sim_mode', 'false');
   updateSimModeUI();
-  const meta = PROVIDER_META[currentProvider];
-  addMsg('bot', `✅ API key <strong>${meta?.name || currentProvider}</strong> đã lưu! AI sẵn sàng phục vụ.`);
+  addMsg('bot', '✅ API key đã lưu! AI Groq đã sẵn sàng. Bạn có thể bắt đầu dùng AI để nhập dữ liệu.');
 }
 function clearKey() {
-  if (!confirm('Xóa API key của ' + (PROVIDER_META[currentProvider]?.name || currentProvider) + '?')) return;
-  providerKeys[currentProvider] = '';
+  if (!confirm('Xóa API key?')) return;
   groqKey = '';
-  saveProviderKeys();
-  if (currentProvider === 'groq') localStorage.removeItem(SK_KEY);
+  localStorage.removeItem(SK_KEY);
   document.getElementById('key-input').value = '';
   setKeyStatus(false);
   updateSettingsStatus();
-  // Nếu không còn key nào → bật sim mode
-  if (!Object.values(providerKeys).some(k => k)) {
-    simModeEnabled = true;
-    localStorage.setItem('tt_sim_mode', 'true');
-    updateSimModeUI();
-  }
+  simModeEnabled = true;
+  localStorage.setItem('tt_sim_mode', 'true');
+  updateSimModeUI();
 }
 function setKeyStatus(ok) {
   const el = document.getElementById('key-status');
-  const meta = PROVIDER_META[currentProvider];
-  el.textContent = ok ? ('✓ ' + (meta?.badge || currentProvider)) : 'Chưa có key';
+  el.textContent = ok ? '✓ Đã lưu' : 'Chưa có key';
   el.className = 'key-status ' + (ok ? 'ok' : 'none');
 }
 function updateSettingsStatus() {
   const el = document.getElementById('settings-key-status');
-  if (!el) return;
-  const parts = Object.entries(PROVIDER_META).map(([p, meta]) => {
-    const k = providerKeys[p];
-    return k
-      ? `<span style="color:var(--green)">✓ ${meta.badge}</span>`
-      : `<span style="color:var(--text3)">${meta.badge}</span>`;
-  });
-  el.innerHTML = parts.join(' · ');
+  if (groqKey) {
+    el.textContent = '✓ ' + groqKey.substring(0,12) + '••••' + groqKey.slice(-4);
+    el.style.color = 'var(--green)';
+  } else {
+    el.textContent = 'Chưa lưu key nào';
+    el.style.color = 'var(--text3)';
+  }
 }
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
@@ -1797,7 +1619,6 @@ function addRepair(data) {
     profit: parseFloat(document.getElementById('rep-profit').value) || 0,
     cost:   parseFloat(document.getElementById('rep-cost').value) || 0,
     date:   document.getElementById('rep-date').value || todayStr(),
-    due:    document.getElementById('rep-due').value || '',
     status: document.getElementById('rep-status').value,
     note:   document.getElementById('rep-note').value.trim(),
     photos: pendingRepairPhotos.slice(),
@@ -1814,7 +1635,6 @@ function addRepair(data) {
   if (!data) {
     ['rep-owner','rep-phone','rep-device','rep-imei','rep-pass','rep-issue','rep-profit','rep-cost','rep-note'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('rep-date').value = todayStr();
-    document.getElementById('rep-due').value = '';
     document.getElementById('rep-status').value = 'dang_sua';
     pendingRepairPhotos = [];
     document.getElementById('rep-photo-preview').innerHTML = '';
@@ -1886,21 +1706,6 @@ function buildRepairList() {
     const netLabel = net >= 0 ? `+${fmtMoney(net)} lãi` : `${fmtMoney(net)} lỗ`;
     const daysSince = r.date ? Math.floor((now - new Date(r.date)) / 86400000) : 0;
     const overdueWarn = (r.status !== 'da_giao' && daysSince >= 3) ? `<span class="badge badge-red">⏰ ${daysSince} ngày</span>` : '';
-    // Due date badge
-    let dueBadge = '';
-    if (r.due && r.status !== 'da_giao') {
-      const dueDate = new Date(r.due);
-      const daysUntilDue = Math.ceil((dueDate - now) / 86400000);
-      if (daysUntilDue < 0) {
-        dueBadge = `<span class="badge badge-due-over" title="Quá hẹn ${Math.abs(daysUntilDue)} ngày">📅 Quá hẹn ${Math.abs(daysUntilDue)}N</span>`;
-      } else if (daysUntilDue === 0) {
-        dueBadge = `<span class="badge badge-due-soon">📅 Hẹn hôm nay!</span>`;
-      } else if (daysUntilDue <= 2) {
-        dueBadge = `<span class="badge badge-due-soon">📅 Hẹn ${daysUntilDue}N nữa</span>`;
-      } else {
-        dueBadge = `<span class="badge badge-due-ok">📅 Hẹn ${fmtDate(r.due)}</span>`;
-      }
-    }
     // Thanh toán
     const payTotal = r.profit || 0;
     const payPaid  = r.paidAmount || 0;
@@ -1933,7 +1738,6 @@ function buildRepairList() {
       <div class="card-badges">
         <span class="badge ${st.cls}">${st.label}</span>
         ${overdueWarn}
-        ${dueBadge}
         ${imeiBadge}
         ${r.pass ? `<span class="badge badge-purple">🔐 ${escHtml(r.pass)}</span>` : ''}
         ${r.profit > 0 ? `<span class="badge badge-green">Thu: ${fmtMoney(r.profit)}</span>` : ''}
@@ -1950,7 +1754,6 @@ function buildRepairList() {
         <button class="btn-edit" onclick="openEditRepair(${r.id})">✏️ Sửa</button>
         <button class="btn-print" onclick="printRepairTicket(${r.id})">🖨️ In phiếu</button>
         ${r.phone ? `<button class="btn-zalo" onclick="sendZaloNotify(${r.id})" title="Zalo báo máy xong">💬 Zalo</button>` : ''}
-        ${(r.due && r.status !== 'da_giao') ? `<button class="btn-print" style="background:var(--accent-dim);color:var(--accent);border-color:rgba(79,142,247,0.25);" onclick="remindRepair(${r.id})" title="Gửi push notification nhắc hẹn">🔔</button>` : ''}
         <button class="btn-del" onclick="deleteRepair(${r.id})">🗑 Xóa</button>
       </div>
     </div>`;
@@ -3109,7 +2912,7 @@ async function sendMsg() {
   // AI giả lập khi không có key hoặc sim mode bật
   if (simModeEnabled || !groqKey) {
     if (!groqKey && !simModeEnabled) {
-      addMsg('bot', '⚠️ Vui lòng chọn AI provider và nhập API Key ở trên, hoặc bật <strong>AI Giả lập</strong> để dùng!');
+      addMsg('bot', '⚠️ Vui lòng nhập <strong>Groq API Key</strong> ở trên hoặc bật <strong>AI Giả lập</strong> để dùng AI!');
       return;
     }
     const userText = text || '(Xem ảnh đính kèm)';
@@ -3121,7 +2924,9 @@ async function sendMsg() {
     return;
   }
 
-  aiMessageCount++;
+  if (!groqKey) { addMsg('bot', '⚠️ Vui lòng nhập <strong>Groq API Key</strong> ở trên để dùng AI!'); return; }
+  aiMessageCount++; // Tăng đếm để AI "mệt" dần
+
   const userText = text || '(Xem ảnh bill đính kèm)';
   addMsg('user', escHtml(userText));
   input.value = '';
@@ -3130,7 +2935,7 @@ async function sendMsg() {
   const imgData = chatImgData;
   clearChatImg();
 
-  // Build message content
+  // Build message content (Groq format)
   let userMsgContent;
   if (imgData) {
     userMsgContent = [
@@ -3141,6 +2946,7 @@ async function sendMsg() {
     userMsgContent = text;
   }
 
+  // Save to history
   chatHistory.push({ role:'user', content: userText });
   if (chatHistory.length > 8) chatHistory.splice(0, chatHistory.length - 8);
 
@@ -3148,6 +2954,7 @@ async function sendMsg() {
   document.getElementById('send-btn').disabled = true;
 
   try {
+    const useModel = imgData ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant';
     const historyMsgs = chatHistory.slice(0,-1).slice(-8).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : '[ảnh]' }));
     const messages = [
       { role:'system', content: buildContext() },
@@ -3155,20 +2962,50 @@ async function sendMsg() {
       { role:'user', content: userMsgContent }
     ];
 
-    let rawReply;
-    try {
-      rawReply = await callAI({ messages, max_tokens: 450, temperature: 0.7, useVision: !!imgData });
-    } catch(e) {
-      if (e.message === 'RATE_LIMIT') {
-        hideTyping();
-        addMsg('bot', '⏳ Đang bị giới hạn tốc độ, tự động thử lại sau 20 giây...');
-        await new Promise(r => setTimeout(r, 20000));
-        showTyping();
-        rawReply = await callAI({ messages, max_tokens: 450, temperature: 0.7, useVision: !!imgData });
-      } else throw e;
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + groqKey },
+      body: JSON.stringify({
+        model: useModel,
+        max_tokens:450,
+        temperature: 0.7,
+        messages
+      })
+    });
+
+    // Auto-retry nếu rate limit (429) — chờ 20 giây
+    if (res.status === 429) {
+      hideTyping();
+      addMsg('bot', '⏳ Đang bị giới hạn tốc độ, tự động thử lại sau 20 giây...');
+      await new Promise(r => setTimeout(r, 20000));
+      showTyping();
+      const retryOnRateLimit = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + groqKey },
+        body: JSON.stringify({ model: useModel, max_tokens:450, temperature: 0.7, messages })
+      });
+      hideTyping();
+      if (!retryOnRateLimit.ok) {
+        const errData = await retryOnRateLimit.json();
+        throw new Error(errData.error?.message || 'Lỗi API ' + retryOnRateLimit.status);
+      }
+      const retryData = await retryOnRateLimit.json();
+      const retryReply = retryData.choices[0].message.content || '';
+      const retryClean = handleActions(retryReply);
+      const retryDisplay = retryClean.replace(/</g,'&lt;').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+      addMsg('bot', retryDisplay || '✅ Đã xử lý xong!');
+      chatHistory.push({ role:'assistant', content: retryClean });
+      localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
+      document.getElementById('send-btn').disabled = false;
+      return;
     }
 
     hideTyping();
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error?.message || 'Lỗi API ' + res.status);
+
+    const rawReply = data.choices[0].message.content || '';
 
     // ── Kiểm tra: nếu người dùng đang nhập liệu mà AI quên ACTION → retry ──
     const inputKeywords = /nhận máy|nhận đc|nhận được|sửa máy|bán máy|bán đc|bán được|thu tiền|chi tiền|nhập kho|xuất kho|ghi vào|ghi giúp|lưu giúp|thêm giúp|đã giao|đã xong|đã sửa/i;
@@ -3176,6 +3013,7 @@ async function sendMsg() {
     const looksLikeDataEntry = inputKeywords.test(text) || inputKeywords.test(rawReply);
 
     if (looksLikeDataEntry && !hasAction) {
+      // AI quên ACTION — thử lại với prompt nhắc thẳng
       showTyping();
       const retryMessages = [
         { role:'system', content: buildContext() },
@@ -3184,9 +3022,15 @@ async function sendMsg() {
         { role:'assistant', content: rawReply },
         { role:'user', content: 'Bạn vừa quên đính kèm [ACTION:...]. Hãy gửi lại ĐÚNG FORMAT với ACTION để dữ liệu được lưu. Chỉ cần 1 dòng xác nhận + ACTION, không giải thích thêm.' }
       ];
-      try {
-        const retryRaw = await callAI({ messages: retryMessages, max_tokens: 450, temperature: 0.3, useVision: false });
-        hideTyping();
+      const retryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + groqKey },
+        body: JSON.stringify({ model: useModel, max_tokens:450, temperature:0.3, messages: retryMessages })
+      });
+      hideTyping();
+      if (retryRes.ok) {
+        const retryData = await retryRes.json();
+        const retryRaw = retryData.choices[0].message.content || '';
         const cleanReply = handleActions(retryRaw);
         const displayReply = cleanReply.replace(/</g,'&lt;').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
         addMsg('bot', displayReply || '✅ Đã lưu!');
@@ -3194,10 +3038,12 @@ async function sendMsg() {
         localStorage.setItem(SK_CHAT, JSON.stringify(chatHistory));
         document.getElementById('send-btn').disabled = false;
         return;
-      } catch(_) { hideTyping(); }
+      }
     }
 
     const cleanReply = handleActions(rawReply);
+
+    // Format for display
     const displayReply = cleanReply
       .replace(/</g,'&lt;')
       .replace(/\n/g,'<br>')
@@ -3209,7 +3055,7 @@ async function sendMsg() {
 
   } catch(err) {
     hideTyping();
-    addMsg('bot', `❌ <strong>Lỗi ${PROVIDER_META[currentProvider]?.badge || ''}:</strong> ${escHtml(err.message)}`);
+    addMsg('bot', `❌ <strong>Lỗi:</strong> ${escHtml(err.message)}`);
   }
 
   document.getElementById('send-btn').disabled = false;
@@ -3329,7 +3175,7 @@ function clearImg(type, e) {
 async function scanBillImage(type) {
   const dataUrl = scanImgData[type];
   if (!dataUrl) return;
-  if (!groqKey) { document.getElementById(type+'-scan-status').textContent = '⚠️ Cần nhập API Key trước! Chọn provider và lưu key ở trên.'; return; }
+  if (!groqKey) { document.getElementById(type+'-scan-status').textContent = '⚠️ Cần nhập Groq API Key trước!'; return; }
 
   const btn = document.getElementById(type+'-scan-btn');
   const statusEl = document.getElementById(type+'-scan-status');
@@ -3348,11 +3194,24 @@ Nếu không đọc được: {"found":false,"note":"lý do"}`
 Nếu không đọc được: {"found":false,"note":"lý do"}`;
 
   try {
-    const messages = [{ role:'user', content:[
-      { type:'text', text: prompt },
-      { type:'image_url', image_url: { url: dataUrl } }
-    ]}];
-    let raw = await callAI({ messages, max_tokens: 600, temperature: 0.1, useVision: true });
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization': 'Bearer ' + groqKey },
+      body: JSON.stringify({
+        model:'meta-llama/llama-4-scout-17b-16e-instruct',
+        max_tokens:600,
+        temperature: 0.1,
+        messages:[{ role:'user', content:[
+          { type:'text', text: prompt },
+          { type:'image_url', image_url: { url: dataUrl } }
+        ]}]
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'Lỗi API');
+
+    let raw = data.choices[0].message.content || '';
     raw = raw.replace(/```json\s*/i,'').replace(/```\s*/,'').replace(/\s*```$/,'').trim();
     const parsed = JSON.parse(raw);
 
@@ -3427,178 +3286,9 @@ function checkOverdue() {
     badge.style.display = total > 0 ? '' : 'none';
     badge.textContent = total;
   }
-  updateReminderPanel();
 }
 
-// ─── REMINDER & NOTIFICATION SYSTEM ─────────────────────────────────────────
-
-const SK_NOTIFY_DISMISSED = 'tt_notify_dismissed';
-const SK_NOTIFIED_IDS     = 'tt_notified_ids'; // set of repair IDs already notified today
-
-/** Phân loại một repair theo due date */
-function getRepairDueStatus(r) {
-  if (!r.due || r.status === 'da_giao') return null;
-  const now  = new Date();
-  const due  = new Date(r.due);
-  const days = Math.ceil((due - now) / 86400000);
-  if (days < 0)  return { type:'over',  days: Math.abs(days), label:`Quá hẹn ${Math.abs(days)} ngày` };
-  if (days === 0) return { type:'today', days: 0,              label:'Hôm nay là ngày hẹn!' };
-  if (days <= 2)  return { type:'soon',  days,                 label:`Còn ${days} ngày` };
-  return              { type:'ok',    days,                 label:`Còn ${days} ngày` };
-}
-
-/** Render reminder panel trong tab thống kê */
-function updateReminderPanel() {
-  const panel = document.getElementById('reminder-panel');
-  const list  = document.getElementById('reminder-list');
-  if (!panel || !list) return;
-
-  const now = new Date();
-  // Lấy máy cần nhắc: có due date hoặc quá 3 ngày chưa giao
-  const toRemind = REPAIRS
-    .filter(r => r.status !== 'da_giao')
-    .filter(r => {
-      const ds = getRepairDueStatus(r);
-      const daysSince = r.date ? Math.floor((now - new Date(r.date)) / 86400000) : 0;
-      return ds || daysSince >= 3;
-    })
-    .sort((a, b) => {
-      // Sort: quá hẹn → hôm nay → sắp hẹn → không có hẹn
-      const priority = r => {
-        const ds = getRepairDueStatus(r);
-        if (!ds) return 99;
-        if (ds.type === 'over')  return 0;
-        if (ds.type === 'today') return 1;
-        if (ds.type === 'soon')  return 2;
-        return 10;
-      };
-      return priority(a) - priority(b);
-    });
-
-  if (toRemind.length === 0) { panel.style.display = 'none'; return; }
-  panel.style.display = '';
-
-  list.innerHTML = toRemind.map(r => {
-    const ds = getRepairDueStatus(r);
-    const daysSince = r.date ? Math.floor((now - new Date(r.date)) / 86400000) : 0;
-    const cardCls = !ds ? '' : ds.type === 'over' || ds.type === 'today' ? 'over' : ds.type === 'soon' ? 'soon' : '';
-    const dueText = ds
-      ? `<span class="remind-due badge ${ds.type==='over'||ds.type==='today'?'badge-due-over':ds.type==='soon'?'badge-due-soon':'badge-due-ok'}">${ds.label}</span>`
-      : `<span class="remind-due badge badge-red">⏰ ${daysSince} ngày không xử lý</span>`;
-    const icon = ds?.type === 'over' ? '🚨' : ds?.type === 'today' ? '🔔' : ds?.type === 'soon' ? '⏰' : '📋';
-    return `<div class="remind-card ${cardCls}">
-      <div class="remind-icon">${icon}</div>
-      <div class="remind-info">
-        <div class="remind-name">${escHtml(r.owner)} — ${escHtml(r.device)}</div>
-        <div class="remind-sub">${r.phone ? '📞 '+escHtml(r.phone)+' · ' : ''}${r.issue ? escHtml(r.issue) : 'Đang sửa'}${r.due ? ' · Hẹn: '+fmtDate(r.due) : ''}</div>
-      </div>
-      ${dueText}
-      ${r.phone ? `<button class="btn-zalo" style="flex-shrink:0;font-size:10px;padding:3px 8px;" onclick="sendZaloNotify(${r.id})" title="Nhắn Zalo báo khách">💬</button>` : ''}
-    </div>`;
-  }).join('');
-}
-
-/** Gửi push notification (nếu đã được cấp quyền) */
-function pushNotify(title, body, tag) {
-  if (Notification.permission !== 'granted') return;
-  try {
-    new Notification(title, { body, icon: '📱', tag: tag || 'tt-remind' });
-  } catch(e) { /* safari standalone may throw */ }
-}
-
-/** Xin quyền notification */
-async function requestNotifyPermission() {
-  if (!('Notification' in window)) {
-    alert('Trình duyệt này không hỗ trợ thông báo.');
-    dismissNotifyBar();
-    return;
-  }
-  const perm = await Notification.requestPermission();
-  dismissNotifyBar();
-  localStorage.setItem(SK_NOTIFY_DISMISSED, 'true');
-  if (perm === 'granted') {
-    pushNotify('🔔 Thông báo đã bật!', 'App sẽ nhắc bạn khi có máy hẹn giao hoặc chờ lâu.', 'tt-welcome');
-    runDailyReminders();
-  }
-}
-
-function dismissNotifyBar() {
-  const bar = document.getElementById('notify-bar');
-  if (bar) bar.style.display = 'none';
-  localStorage.setItem(SK_NOTIFY_DISMISSED, 'true');
-}
-
-/** Chạy kiểm tra nhắc hẹn khi mở app */
-function runDailyReminders() {
-  if (Notification.permission !== 'granted') return;
-  const notifiedRaw = localStorage.getItem(SK_NOTIFIED_IDS) || '{}';
-  let notified = {};
-  try { notified = JSON.parse(notifiedRaw); } catch(e) { notified = {}; }
-
-  const today = todayStr();
-  // Xoá lịch sử cũ hơn hôm nay
-  Object.keys(notified).forEach(k => { if (notified[k] !== today) delete notified[k]; });
-
-  const now = new Date();
-  let sent = 0;
-  REPAIRS.forEach(r => {
-    if (r.status === 'da_giao') return;
-    const ds = getRepairDueStatus(r);
-    const shouldNotify =
-      (ds && (ds.type === 'over' || ds.type === 'today' || ds.type === 'soon')) ||
-      (!r.due && r.date && Math.floor((now - new Date(r.date)) / 86400000) >= 3);
-
-    if (shouldNotify && !notified[r.id]) {
-      notified[r.id] = today;
-      sent++;
-      const msg = ds
-        ? ds.type === 'over'  ? `${r.owner} (${r.device}) — Đã quá hẹn ${ds.days} ngày! Liên hệ khách ngay.`
-          : ds.type === 'today' ? `${r.owner} (${r.device}) — Hôm nay là ngày hẹn giao máy!`
-          : `${r.owner} (${r.device}) — Còn ${ds.days} ngày đến hẹn giao.`
-        : `${r.owner} (${r.device}) — Máy chờ xử lý từ 3+ ngày.`;
-      setTimeout(() => pushNotify('🔔 Nhắc hẹn khách — ' + r.owner, msg, 'tt-remind-' + r.id), sent * 1500);
-    }
-  });
-
-  localStorage.setItem(SK_NOTIFIED_IDS, JSON.stringify(notified));
-}
-
-/** Hiện notification bar nếu chưa cấp quyền và chưa dismiss */
-function initNotifyBar() {
-  if (!('Notification' in window)) return;
-  const dismissed = localStorage.getItem(SK_NOTIFY_DISMISSED);
-  const bar = document.getElementById('notify-bar');
-  if (!bar) return;
-  if (Notification.permission === 'granted') {
-    bar.style.display = 'none';
-    runDailyReminders();
-  } else if (Notification.permission === 'default' && !dismissed) {
-    bar.style.display = 'flex';
-  } else {
-    bar.style.display = 'none';
-  }
-}
-
-// ─── END REMINDER SYSTEM ──────────────────────────────────────────────────────
-
-/** Nhắc thủ công 1 phiếu */
-function remindRepair(id) {
-  const r = REPAIRS.find(x => x.id === id);
-  if (!r) return;
-  if (Notification.permission !== 'granted') {
-    const bar = document.getElementById('notify-bar');
-    if (bar) bar.style.display = 'flex';
-    alert('Vui lòng bật thông báo trước để dùng tính năng này!');
-    return;
-  }
-  const ds = getRepairDueStatus(r);
-  const msg = ds
-    ? ds.type === 'over'  ? `Đã quá hẹn ${ds.days} ngày! Liên hệ ${r.owner} ngay.`
-      : ds.type === 'today' ? `Hôm nay là ngày hẹn giao máy cho ${r.owner}!`
-      : `Còn ${ds.days} ngày đến hẹn giao máy cho ${r.owner}.`
-    : `${r.owner} (${r.device}) đang chờ xử lý.`;
-  pushNotify('🔔 Nhắc hẹn — ' + r.owner, msg, 'tt-manual-' + r.id);
-}
+// ─── EDIT MODAL ──────────────────────────────────────────────────────────────
 function openEditRepair(id) {
   const r = REPAIRS.find(x => x.id === id);
   if (!r) return;
@@ -3615,7 +3305,6 @@ function openEditRepair(id) {
       <div class="field-wrap"><label class="field-label">Thu về (profit)</label><input class="field" type="number" id="em-profit" value="${r.profit||0}"/></div>
       <div class="field-wrap"><label class="field-label">Chi ra (cost)</label><input class="field" type="number" id="em-cost" value="${r.cost||0}"/></div>
       <div class="field-wrap"><label class="field-label">Ngày nhận</label><input class="field" type="date" id="em-date" value="${r.date||''}"/></div>
-      <div class="field-wrap"><label class="field-label">📅 Hẹn ngày trả</label><input class="field" type="date" id="em-due" value="${r.due||''}"/></div>
       <div class="field-wrap"><label class="field-label">Trạng thái</label>
         <select class="field" id="em-status">
           <option value="dang_sua" ${r.status==='dang_sua'?'selected':''}>🔧 Đang sửa</option>
@@ -3721,7 +3410,6 @@ function saveEdit() {
     r.profit = parseFloat(document.getElementById('em-profit').value) || 0;
     r.cost   = parseFloat(document.getElementById('em-cost').value) || 0;
     r.date   = document.getElementById('em-date').value;
-    r.due    = document.getElementById('em-due')?.value || '';
     r.status = document.getElementById('em-status').value;
     r.note   = document.getElementById('em-note').value.trim();
     r.paidAmount = parseFloat(document.getElementById('em-paid')?.value) || 0;
@@ -3996,16 +3684,7 @@ function sendZaloNotify(id) {
   const statusLabel = { dang_sua:'đang sửa', xong_chua_giao:'đã sửa xong, chờ bạn đến lấy 🎉', da_giao:'đã giao' }[r.status] || r.status;
   const priceNote = r.profit > 0 ? ` Phí sửa: ${fmtMoney(r.profit)}.` : '';
   const addrNote = sh.addr ? ` Địa chỉ: ${sh.addr}.` : '';
-  // Thêm thông tin hẹn ngày
-  const ds = getRepairDueStatus(r);
-  const dueNote = r.due && r.status !== 'da_giao'
-    ? ds?.type === 'over'
-      ? ` ⚠️ Đã quá hẹn — vui lòng đến lấy máy sớm nhé!`
-      : ds?.type === 'today'
-        ? ` 📅 Hôm nay là ngày hẹn lấy máy!`
-        : ` 📅 Ngày hẹn lấy máy: ${fmtDate(r.due)}.`
-    : '';
-  const msg = `Xin chào ${r.owner}! Máy ${r.device} của bạn ${statusLabel}.${priceNote}${dueNote}${addrNote} Liên hệ ${sh.name}${sh.phone?' — '+sh.phone:''} để biết thêm. Cảm ơn! 🙏`;
+  const msg = `Xin chào ${r.owner}! Máy ${r.device} của bạn ${statusLabel}.${priceNote}${addrNote} Liên hệ ${sh.name}${sh.phone?' — '+sh.phone:''} để biết thêm. Cảm ơn! 🙏`;
   const phone = r.phone.replace(/\D/g,'');
 
   // Hiện modal nội dung tin nhắn để copy
@@ -4632,7 +4311,7 @@ function toggleSimMode() {
   if (simModeEnabled) {
     addMsg('bot', `🤖 <strong>AI Giả lập đã bật!</strong><br>Bạn có thể trò chuyện mà không cần Groq API key. AI giả lập hiểu tiếng Việt và có thể nhập liệu cơ bản.<br><em style="font-size:11px;color:var(--text3)">Để trải nghiệm đầy đủ hơn, hãy thêm Groq API key miễn phí ở trên.</em>`);
   } else {
-    addMsg('bot', '✅ Đã tắt AI Giả lập. Đang dùng ' + (PROVIDER_META[currentProvider]?.name || currentProvider) + '.');
+    addMsg('bot', '✅ Đã tắt AI Giả lập. Đang dùng Groq API.');
   }
 }
 
