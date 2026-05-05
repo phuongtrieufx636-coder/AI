@@ -466,8 +466,8 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
       </div>
     </div>
     <div id="quick">
-      <button class="qbtn" onclick="qsend('Hôm nay nhận bao nhiêu máy sửa?')">🔧 Máy đang sửa</button>
-      <button class="qbtn" onclick="qsend('Danh sách máy đang chờ giao cho khách?')">✅ Chờ giao</button>
+      <button class="qbtn" onclick="qsend('Xem danh sách máy đang sửa')">🔧 Máy đang sửa</button>
+      <button class="qbtn" onclick="qsend('Xem danh sách máy chờ giao')">✅ Chờ giao</button>
       <button class="qbtn" onclick="qsend('Doanh thu hôm nay bao nhiêu?')">💰 Doanh thu hôm nay</button>
       <button class="qbtn" onclick="qsend('Tổng lợi nhuận tháng này?')">📊 Lợi nhuận tháng</button>
       <button class="qbtn" onclick="qsend('Thu chi tháng này thế nào?')">💳 Thu/Chi tháng</button>
@@ -4416,7 +4416,7 @@ async function sendSimMsg(text, imgData) {
   }
 
   // ── Phát hiện ý định ──────────────────────────────────────────────────────
-  const isUpdateRepair = /(?:đã giao|giao rồi|giao xong|giao cho|vừa giao|trả máy|trả cho|xong rồi|sửa xong|hoàn thành|done|đã xong|lấy máy rồi|khách lấy|cập nhật|update)\s+(?:máy|phiếu|cho)?\s*(?:anh|chị|em|bé|bạn|ông|bà|khách)?\s*\w*/i.test(t)
+  const isUpdateRepair = /(?:đã giao|giao rồi|giao xong|giao cho|vừa giao|giao máy|trả máy|trả cho|xong rồi|sửa xong|hoàn thành|done|đã xong|lấy máy rồi|khách lấy|cập nhật|update)\s*(?:máy|phiếu|cho)?\s*(?:anh|chị|em|bé|bạn|ông|bà|khách)?\s*\w*/i.test(t)
     && !/nhận|mới|thêm|nhập/.test(t)
     && !/(?:máy nào|cái nào|những máy|list|danh sách|bao nhiêu|thống kê|báo cáo)/.test(t)
     && !t.trim().endsWith('?');
@@ -4446,7 +4446,7 @@ async function sendSimMsg(text, imgData) {
 
   const isQueryStock = /(?:kho còn|tồn kho|còn bao nhiêu|kho có|danh sách kho|xem kho|kiểm kho|báo kho|trong kho)/.test(t);
 
-  const isQueryRepair = /(?:đang sửa|chưa giao|xong chưa giao|máy nào|cái nào|list máy|danh sách sửa|phiếu sửa|bao nhiêu máy|máy sửa|sửa xong chưa)/.test(t);
+  const isQueryRepair = /(?:đang sửa|chưa giao|chờ giao|xong chưa giao|danh sách máy|danh sách.*sửa|danh sách.*giao|list máy|phiếu sửa|bao nhiêu máy|máy sửa|sửa xong chưa|máy nào.*sửa|máy nào.*giao|hôm nay.*máy|nhận.*máy.*hôm)/.test(t);
 
   const isQuery = /(?:bao nhiêu|tổng|doanh thu|lợi nhuận|thống kê|hôm nay|tháng này|tuần này|báo cáo|tình hình|kết quả|lãi bao nhiêu|thu bao nhiêu)/.test(t);
 
@@ -4716,7 +4716,7 @@ async function sendSimMsg(text, imgData) {
     const repairing = REPAIRS.filter(r => r.status === 'dang_sua');
     const pending   = REPAIRS.filter(r => r.status === 'xong_chua_giao');
     // Nếu hỏi chuyên về "chờ giao" → chỉ hiện xong_chua_giao
-    const askingPending = /(?:chưa giao|chờ giao|xong chưa giao|sửa xong chưa|danh sách.*giao|chờ.*lấy)/.test(t);
+    const askingPending = /(?:chưa giao|chờ giao|xong chưa giao|sửa xong chưa|danh sách.*giao|chờ.*lấy|danh sách máy chờ|xem.*chờ giao)/.test(t);
     if (askingPending) {
       if (pending.length) {
         reply = `✅ <strong>Máy đã sửa xong, chưa giao (${pending.length} máy):</strong><br>`
