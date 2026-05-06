@@ -2597,8 +2597,8 @@ CÁCH MAP THÔNG TIN TỪ CÂU NÓI:
 - owner: từ "anh/chị/em/bé/bạn/ông/bà + Tên" → lấy Tên (VD: "anh Tuấn" → "Tuấn")
 - phone: số điện thoại nếu có, còn không thì để TRỐNG
 - device: tên máy (VD: iPhone 11 Pro, Samsung S24)
-- imei: CHỈ điền nếu người dùng nói rõ IMEI/serial. Không tự bịa. Để TRỐNG nếu không có.
-- pass: CHỈ điền nếu người dùng nói rõ mật khẩu/PIN. Không tự bịa. Để TRỐNG nếu không có.
+- imei: CHỈ điền nếu người dùng nói rõ số IMEI/serial. TUYỆT ĐỐI không tự bịa số. Để TRỐNG nếu không có. KHÔNG dùng 1234567890 hay số giả.
+- pass: CHỈ điền nếu người dùng nói rõ mật khẩu/PIN. TUYỆT ĐỐI không tự bịa. Để TRỐNG nếu không có.
 - issue: động từ sửa chữa → "ép cảm ứng", "thay màn", "sửa main", "thay pin"...
 - profit: giá nhận / thu về (VD: "thi 550k" → 550000)
 - cost: vốn / chi linh kiện (VD: "vốn 200k" → 200000)
@@ -4432,8 +4432,15 @@ async function sendSimMsg(text, imgData) {
 
   // ── Parse lỗi / vấn đề máy ────────────────────────────────────────────────
   function findIssue(s) {
-    const m = s.match(/(?:lỗi|vấn đề|hỏng|vỡ|bể|sửa|ép|thay|cảm ứng|màn|pin|sạc|loa|camera|mic|ic|cổng|nút|home|main|nguồn|kính|mặt kính|nắp lưng|vỏ|tai nghe|rung|wifi|sim| 4g|5g|bluetooth|touch\s*id|face\s*id|lên nguồn|chết nguồn|chết máy|treo|đơ|lag|nóng máy|hao pin|không sạc|không lên|không rung|không nghe|không nói|không kết nối|không bắt sóng)[^\d,\.]{0,50}/i);
-    return m ? m[0].replace(/^(?:lỗi|vấn đề|sửa)\s*/i,'').trim().substring(0,80) : '';
+    // Bắt cụm từ mô tả lỗi: động từ + tối đa 3 từ tiếp theo, dừng trước số tiền/từ khoá giá
+    const VI_CHARS = 'a-zA-ZÀ-ỹáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ';
+    const ISSUE_STOP = /^(?:giá|thu|vốn|chi|tiền|màu|ngày|của|\d)/i;
+    const mArr = s.match(new RegExp('(?:ép|thay|sửa|vỡ|bể|hỏng|lỗi|vấn đề|cảm ứng|màn|pin|sạc|loa|camera|mic|ic|cổng|nút|home|main|nguồn|kính|mặt kính|nắp lưng|lưng|vỏ|tai nghe|rung|wifi|sim|bluetooth|touch id|face id|lên nguồn|chết nguồn|chết máy|treo|đơ|lag|nóng máy|hao pin|không sạc|không lên|không rung|không nghe|không nói|không kết nối|không bắt sóng)['+VI_CHARS+'\\s]*', 'i'));
+    if (!mArr) return '';
+    const words = mArr[0].trim().split(/\s+/);
+    const result = [];
+    for (const w of words) { if (ISSUE_STOP.test(w)) break; result.push(w); }
+    return result.join(' ').substring(0, 80);
   }
 
   // ── Phát hiện ý định ──────────────────────────────────────────────────────
@@ -4556,7 +4563,7 @@ async function sendSimMsg(text, imgData) {
 
     // Tìm tất cả số tiền rồi gán: số lớn hơn = thu, số nhỏ = chi
     const moneys  = findAllMoney(text);
-    const profitM = text.match(/(?:thu|giá nhận|giá sửa|tiền sửa|lãi|nhận)\s*[:\s]*([\d]+(?:[.,]\d+)?\s*(?:k|tr\d*|triệu)?)/i);
+    const profitM = text.match(/(?:thu|giá nhận|giá sửa|tiền sửa|lãi)\s*[:\s]*(\d+(?:[.,]\d+)?\s*(?:k|tr\d*|triệu))/i);
     const costM   = text.match(/(?:vốn|âm|chi|mua|linh kiện|lk|phụ kiện|tốn|bỏ ra)\s*[:\s]*([\d]+(?:[.,]\d+)?\s*(?:k|tr\d*|triệu)?)/i);
 
     let profit = profitM ? parseMoney(profitM[1]) : 0;
@@ -4579,7 +4586,15 @@ async function sendSimMsg(text, imgData) {
       const d = {
         owner, phone, device: device || 'Chưa rõ',
         imei, pass, issue, profit, cost,
-        date: todayStr(), status, note: '[AI Giả lập]'
+        date: todayStr(), status,
+        note: (()=>{
+          const mauM = text.match(/màu\s+([a-zA-ZÀ-ỹáàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđ]+)/i);
+          const ttM  = text.match(/(?:máy|tình trạng|tt)[:\s]+([^,\.\d]{3,40})/i);
+          const parts = [];
+          if (mauM) parts.push('màu ' + mauM[1]);
+          if (ttM && !mauM) parts.push(ttM[1].trim());
+          return parts.join(', ') || '';
+        })()
       };
       d.id = Date.now() + Math.floor(Math.random()*1000);
       d.createdAt = new Date().toLocaleString('vi-VN');
