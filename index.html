@@ -2522,67 +2522,100 @@ function hideTyping() { const t = document.getElementById('typing'); if(t) t.rem
 function qsend(text) { document.getElementById('msg-input').value = text; sendMsg(); }
 
 function buildContext() {
-  // Rút gọn dữ liệu: chỉ lấy 5 mục gần nhất, viết cực ngắn
-  const stMap = {dang_sua:'S',xong_chua_giao:'X',da_giao:'G'};
   const repLines = REPAIRS.length
-    ? REPAIRS.slice(0,5).map(r => `${stMap[r.status]||r.status} ${r.owner}/${r.device} ${(r.profit||0)/1000}k/${(r.cost||0)/1000}k ${r.date}`).join('\n')
-    : '-';
+    ? REPAIRS.slice(0,10).map(r => `- [${r.status}] ${r.owner}/${r.device} thu:${(r.profit||0)/1000}k chi:${(r.cost||0)/1000}k ${r.date}${r.status==='da_giao'?' (ĐÃ GIAO - KHÔNG phải đang sửa)':''}`).join('\n')
+    : '(Chưa có phiếu sửa nào)';
   const saleLines = SALES.length
-    ? SALES.slice(0,5).map(s => `${s.device}${s.imei?' '+s.imei:''} ${(s.price||0)/1000}k lãi:${(s.profit||0)/1000}k ${s.date}${s.returned?' [HT]':''}`).join('\n')
-    : '-';
+    ? SALES.slice(0,10).map(s => {
+        const ret = s.returned ? ` [HT:${(s.profit||0)/1000}k]` : '';
+        return `- ${s.device} IMEI:${s.imei||'?'} bán:${(s.price||0)/1000}k lãi:${(s.profit||0)/1000}k ${s.date}${ret}`;
+      }).join('\n')
+    : '(Chưa có giao dịch bán nào)';
   const finLines = FINANCE.length
-    ? FINANCE.slice(0,5).map(f => `${f.type==='thu'?'T':'C'} ${f.desc} ${(f.amount||0)/1000}k ${f.date}`).join('\n')
-    : '-';
+    ? FINANCE.slice(0,10).map(f => `- [${f.type==='thu'?'T':'C'}] ${f.desc} ${(f.amount||0)/1000}k ${f.date}`).join('\n')
+    : '(Chưa có thu/chi nào)';
   const whLines = WAREHOUSE.length
-    ? WAREHOUSE.slice(0,5).map(w => `${w.type==='nhap'?'N':'X'} ${w.name}${w.imei?' '+w.imei:''} ${w.quantity||1} ${(w.price||0)/1000}k ${w.date}`).join('\n')
-    : '-';
-  const stockSummary = getStockSummary().filter(s=>s.qty>0).map(s=>`${s.name}:${s.qty}`).join(',') || '-';
+    ? WAREHOUSE.slice(0,10).map(w => `- [${w.type==='nhap'?'N':'X'}] ${w.name}${w.imei?' '+w.imei:''} SL:${w.quantity||1} giá:${(w.price||0)/1000}k ${w.date}`).join('\n')
+    : '(Kho trống)';
+  const stockSummary = getStockSummary().filter(s=>s.qty>0).map(s=>`${s.name}: ${s.qty} ${s.unit||'cái'}`).join(', ') || '(Không có tồn kho)';
 
   const totalRepairNet = REPAIRS.reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
   const totalSaleNet   = SALES.filter(s=>!s.returned).reduce((s,x)=>s+(x.profit||0),0);
   const month = thisMonth();
   const todayForCtx = todayStr();
-  const todayNewRepairs = REPAIRS.filter(r=>r.date===todayForCtx);
-  const todayActiveRepairs = todayNewRepairs.filter(r=>r.status!=='da_giao');
-  const monthRepairNet = REPAIRS.filter(r=>r.date&&r.date.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
-  const monthSaleNet   = SALES.filter(s=>s.date&&s.date.startsWith(month)&&!s.returned).reduce((s,x)=>s+(x.profit||0),0);
-  const monthFinIn     = FINANCE.filter(f=>f.date&&f.date.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
-  const monthFinOut    = FINANCE.filter(f=>f.date&&f.date.startsWith(month)&&f.type==='chi').reduce((s,f)=>s+f.amount,0);
+  const todayNewRepairs = REPAIRS.filter(r=>r.date===todayForCtx); // tất cả phiếu nhận hôm nay (kể cả đã giao)
+  const todayActiveRepairs = todayNewRepairs.filter(r=>r.status!=='da_giao'); // chỉ chưa giao
+  const monthRepairNet = REPAIRS.filter(r=>r.date && r.date!=='undefined' && r.date.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
+  const monthSaleNet   = SALES.filter(s=>s.date && s.date!=='undefined' && s.date.startsWith(month) && !s.returned).reduce((s,x)=>s+(x.profit||0),0);
+  const monthFinIn     = FINANCE.filter(f=>f.date && f.date!=='undefined' && f.date.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
+  const monthFinOut    = FINANCE.filter(f=>f.date && f.date!=='undefined' && f.date.startsWith(month)&&f.type==='chi').reduce((s,f)=>s+f.amount,0);
 
   const sh = getShopInfo();
-  const shopName = sh.name || 'shop';
+  const shopName = sh.name || 'cửa hàng';
+  const shopCity = sh.addr || 'Việt Nam';
   const h = new Date().getHours();
-  const timeHint = h<9?'Sáng.':h>=21?'Khuya.':h>=12&&h<14?'Trưa.':'';
+  const timeHint = h < 9 ? 'Buổi sáng, chào vui vẻ.' : h >= 21 ? 'Khuya rồi, đôi khi nhắc nghỉ sớm.' : h >= 12 && h < 14 ? 'Giờ trưa.' : '';
+  return `Bạn là trợ lý AI cửa hàng điện thoại "${shopName}"${shopCity?' tại '+shopCity:''}. Thân thiện, ngắn gọn, dùng emoji vừa phải. ${timeHint}
+Tập trung: SỬA CHỮA, BÁN MÁY, THU/CHI, KHO HÀNG.
 
-  // S=đang_sửa, X=xong_chưa_giao, G=đã_giao
-  return `AI trợ lý "${shopName}". Ngắn gọn, emoji vừa. ${timeHint}
-Hôm nay:${todayForCtx} | Nhận:${todayNewRepairs.length} phiếu | Chưa giao:${todayActiveRepairs.length} | Đang sửa:${REPAIRS.filter(r=>r.status==='dang_sua').length} | Chờ giao:${REPAIRS.filter(r=>r.status==='xong_chua_giao').length}
-
-SỬA (${REPAIRS.length}):
+DỮ LIỆU CỬA HÀNG HIỆN TẠI (ĐÂY LÀ DỮ LIỆU MỚI NHẤT — bỏ qua mọi thông tin từ lịch sử chat nếu mâu thuẫn):
+─ PHIẾU SỬA CHỮA (${REPAIRS.length} phiếu tổng | Đang sửa: ${REPAIRS.filter(r=>r.status==='dang_sua').length} | Chờ giao: ${REPAIRS.filter(r=>r.status==='xong_chua_giao').length} | Đã giao: ${REPAIRS.filter(r=>r.status==='da_giao').length}):
+LƯU Ý QUAN TRỌNG: Hôm nay (${todayForCtx}) nhận ${todayNewRepairs.length} phiếu MỚI, trong đó ${todayActiveRepairs.length} phiếu CHƯA giao (đang sửa/xong chưa giao) và ${todayNewRepairs.length - todayActiveRepairs.length} phiếu đã giao xong hôm nay. Khi người dùng hỏi "hôm nay nhận bao nhiêu máy" thì báo ${todayNewRepairs.length} phiếu. Khi hỏi "đang sửa bao nhiêu" thì CHỈ đếm status=dang_sua.
 ${repLines}
 
-BÁN (${SALES.length}):
+─ BÁN HÀNG (${SALES.length} giao dịch):
 ${saleLines}
 
-THU/CHI (${FINANCE.length}):
+─ THU/CHI TỰ DO (${FINANCE.length} giao dịch gần nhất):
 ${finLines}
 
-KHO (${WAREHOUSE.length})|Tồn:${stockSummary}:
+─ KHO HÀNG (${WAREHOUSE.length} giao dịch gần nhất):
 ${whLines}
+Tồn kho hiện tại: ${stockSummary}
 
-Tháng: sửa:${fmtMoney(monthRepairNet)} bán:${fmtMoney(monthSaleNet)} thu:${fmtMoney(monthFinIn)} chi:${fmtMoney(monthFinOut)}
-Tổng: sửa:${fmtMoney(totalRepairNet)} bán:${fmtMoney(totalSaleNet)}
+─ TÀI CHÍNH THÁNG NÀY (đã tính đúng cả sale hoàn trả với phí %):
+Lãi sửa: ${fmtMoney(monthRepairNet)} | Lãi bán: ${fmtMoney(monthSaleNet)}
+Thu ngoài: ${fmtMoney(monthFinIn)} | Chi ngoài: ${fmtMoney(monthFinOut)}
+Tổng lãi sửa: ${fmtMoney(totalRepairNet)} | Tổng lãi bán: ${fmtMoney(totalSaleNet)}
+LƯU Ý: Lãi bán đã bao gồm cả phí giữ lại từ các máy hoàn trả. Đây là con số CHÍNH XÁC, không được tự điều chỉnh.
 
-ACTION bắt buộc khi nhập dữ liệu (fields cách bởi |):
-ADD_REPAIR: [ACTION:ADD_REPAIR|tên|sdt|máy|imei|pass|lỗi|thu|chi|ngày|status|note] status=dang_sua/xong_chua_giao/da_giao, VD:[ACTION:ADD_REPAIR|Toán||iPhone 11|101184||ép kính|500000|120000|${todayForCtx}|dang_sua|]
-UPDATE_REPAIR: [ACTION:UPDATE_REPAIR|tên_máy|gợi_ý|status|thu|chi|note]
-ADD_SALE: [ACTION:ADD_SALE|máy|imei|tình_trạng|giá|lãi|ngày|khách|nguồn|note] tình_trạng=moi/like_new/99/97/cu_dep/cu_thuong
-UPDATE_SALE: [ACTION:UPDATE_SALE|imei|máy|tình_trạng|giá|lãi|ngày|khách|nguồn|note]
-ADD_INCOME: [ACTION:ADD_INCOME|tiền|mô_tả|ngày|danh_mục|note]
-ADD_EXPENSE: [ACTION:ADD_EXPENSE|tiền|mô_tả|ngày|danh_mục|note]
-ADD_WAREHOUSE_IN: [ACTION:ADD_WAREHOUSE_IN|tên|sl|đvt|giá|nhà_cc|ngày|loại|note|imei]
-ADD_WAREHOUSE_OUT: [ACTION:ADD_WAREHOUSE_OUT|tên|sl|đvt|giá|nhà_cc|ngày|loại|note|imei]
-Thống kê/hỏi → không cần ACTION. Thiếu info → dùng mặc định, chỉ hỏi khi thiếu tên+máy. Bán theo IMEI: profit=giá_bán-giá_nhập_kho.`;
+NHIỆM VỤ — khi người dùng mô tả nhập dữ liệu, BẮT BUỘC có [ACTION:...] trong reply, không có thì dữ liệu không lưu được:
+- Nhận máy sửa mới → ADD_REPAIR | Cập nhật phiếu cũ → UPDATE_REPAIR
+- Bán máy → ADD_SALE | Sửa bán → UPDATE_SALE
+- Thu tiền → ADD_INCOME | Chi tiền → ADD_EXPENSE
+- Nhập kho → ADD_WAREHOUSE_IN | Xuất kho → ADD_WAREHOUSE_OUT | Sửa kho → UPDATE_WAREHOUSE
+- Câu hỏi thống kê/tra cứu → trả lời từ dữ liệu, KHÔNG cần ACTION
+
+Bán máy theo IMEI: tra kho tìm giá nhập → profit = giá_bán - giá_nhập.
+Khi nhận ảnh: tự phân tích, trích xuất, thêm ACTION ngay, báo ngắn gọn.
+
+FORMAT ACTIONS — field phân cách bởi |, để trống nếu không có:
+
+[ACTION:ADD_REPAIR|owner|phone|device|imei|pass|issue|profit|cost|date|status|note]
+⚠️ Thứ tự field: [4]=imei (số thuần), [5]=pass (PIN), [6]=issue (mô tả lỗi bằng CHỮ). KHÔNG đặt mô tả lỗi vào imei hay pass!
+VD: [ACTION:ADD_REPAIR|Toán||iPhone 11 Pro|101184||ép cảm ứng|500000|120000|2026-05-04|dang_sua|]
+profit=tiền THU, cost=tiền CHI linh kiện. Đơn vị VND đầy đủ (500k=500000). status: dang_sua|xong_chua_giao|da_giao
+
+[ACTION:UPDATE_REPAIR|owner_or_device|device_hint|new_status|profit|cost|note]
+VD "máy hoàng gia đã giao": [ACTION:UPDATE_REPAIR|hoàng gia||da_giao||]
+
+[ACTION:ADD_SALE|device|imei|condition|price|profit|date|buyer|source|note]
+condition: moi|like_new|99|97|cu_dep|cu_thuong. price,profit: VND đầy đủ. profit âm nếu lỗ.
+
+[ACTION:UPDATE_SALE|imei|device_hint|condition|price|profit|date|buyer|source|note]
+
+[ACTION:ADD_INCOME|amount|desc|date|cat|note]
+[ACTION:ADD_EXPENSE|amount|desc|date|cat|note]
+[ACTION:ADD_WAREHOUSE_IN|name|quantity|unit|price|supplier|date|category|note|imei]
+[ACTION:ADD_WAREHOUSE_OUT|name|quantity|unit|price|supplier|date|category|note|imei]
+[ACTION:UPDATE_WAREHOUSE|name_hint|date_hint|type|quantity|unit|price|supplier|date_new|category|note]
+
+QUY TẮC:
+- Nhận máy mới → ADD_REPAIR. Cập nhật phiếu cũ → UPDATE_REPAIR. Không tạo lại phiếu đã xóa.
+- "Khách trả lại máy/back" → hướng dẫn nhấn nút "Đánh dấu hoàn trả" trong tab Bán máy.
+- Dữ liệu trong system prompt là nguồn chính xác — bỏ qua lịch sử chat nếu mâu thuẫn.
+- Thiếu info → dùng mặc định, KHÔNG hỏi lại trừ khi thiếu tên + tên máy.
+- Xác nhận ngắn gọn. Chỉ trả lời về chủ đề quản lý cửa hàng.`;
 }
 
 // Handle AI actions
@@ -2915,7 +2948,7 @@ async function sendMsg() {
   let userMsgContent;
   if (imgData) {
     userMsgContent = [
-      { type:'text', text: text || 'Phân tích ảnh, xác định loại (phiếu sửa/bill bán/thu/chi), trích xuất và thêm ACTION tương ứng, báo ngắn gọn.' },
+      { type:'text', text: text || 'Đây là ảnh từ cửa hàng. Hãy phân tích ảnh, xác định loại (phiếu sửa máy / bill bán hàng / hoá đơn chi tiền / biên lai thu tiền / ảnh khác), trích xuất thông tin và tự động nhập vào đúng mục. Không hỏi lại, cứ nhập những gì đọc được và báo ngắn gọn.' },
       { type:'image_url', image_url: { url: imgData } }
     ];
   } else {
@@ -2924,14 +2957,14 @@ async function sendMsg() {
 
   // Save to history
   chatHistory.push({ role:'user', content: userText });
-  if (chatHistory.length > 6) chatHistory.splice(0, chatHistory.length - 6);
+  if (chatHistory.length > 8) chatHistory.splice(0, chatHistory.length - 8);
 
   showTyping();
   document.getElementById('send-btn').disabled = true;
 
   try {
     const useModel = imgData ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant';
-    const historyMsgs = chatHistory.slice(0,-1).slice(-6).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : '[ảnh]' }));
+    const historyMsgs = chatHistory.slice(0,-1).slice(-8).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : '[ảnh]' }));
     const messages = [
       { role:'system', content: buildContext() },
       ...historyMsgs,
