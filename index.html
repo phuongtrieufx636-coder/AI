@@ -2622,11 +2622,10 @@ condition: moi|like_new|99|97|cu_dep|cu_thuong. price,profit: VND đầy đủ. 
 
 [ACTION:ADD_INCOME|amount|desc|date|cat|note]
 [ACTION:ADD_EXPENSE|amount|desc|date|cat|note]
-[ACTION:ADD_WAREHOUSE_IN|name|quantity|unit|price|supplier|date|category|note|imei]
-⚠️ imei field (vị trí cuối): điền bất kỳ số serial/IMEI nào người dùng đề cập (dù chỉ 4-5 số). Đây là số định danh máy trong kho, KHÔNG phải IMEI 15 số đầy đủ.
-VD "nhập kho iphone 16pro max bạc 256gb, giá nhập 17tr, imei 8890":
-[ACTION:ADD_WAREHOUSE_IN|iPhone 16 Pro Max bạc 256GB|1|tên|17000000||2026-05-06|Kho||8890]
-[ACTION:ADD_WAREHOUSE_OUT|name|quantity|unit|price|supplier|date|category|note|imei]
+[ACTION:ADD_WAREHOUSE_IN|name|quantity|unit|price|supplier|date|category|imei|note]
+VD nhap kho: [ACTION:ADD_WAREHOUSE_IN|iPhone 16 Pro Max bac 256GB|1|ten|17000000|Thuan Trieu|2026-05-06|Kho|8890|dep 99% pin new 100%]
+imei=so serial nguoi dung noi (co the chi 4-5 so). note=mo ta tinh trang, ghi chu.
+[ACTION:ADD_WAREHOUSE_OUT|name|quantity|unit|price|supplier|date|category|imei|note]
 [ACTION:UPDATE_WAREHOUSE|name_hint|date_hint|type|quantity|unit|price|supplier|date_new|category|note]
 
 QUY TẮC:
@@ -2904,7 +2903,15 @@ function handleActions(reply) {
   const whInMatches = [...clean.matchAll(/\[\w+:ADD_WAREHOUSE_IN\|([^\]]+)\]/g)];
   whInMatches.forEach(m => {
     const p = m[1].split('|');
-    const d = { type:'nhap', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', note: p[7]||'', imei: p[8]||'' };
+    // Format: name|quantity|unit|price|supplier|date|category|imei|note
+    let imeiVal = p[7]||'';
+    let noteVal = p[8]||'';
+    // Auto-fix: nếu imei chứa chữ cái nhiều (là note bị lệch) thì swap
+    const imeiHasLetters = (imeiVal.match(/[a-zA-ZÀ-ỹ%]/g)||[]).length >= 3;
+    const noteIsNumeric  = /^\d{3,}$/.test(noteVal.trim());
+    if (imeiHasLetters && noteIsNumeric) { [imeiVal, noteVal] = [noteVal, imeiVal]; }
+    else if (imeiHasLetters && !noteVal) { noteVal = imeiVal; imeiVal = ''; }
+    const d = { type:'nhap', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', imei: imeiVal, note: noteVal };
     if (d.name) {
       d.id = Date.now() + Math.random();
       d.createdAt = new Date().toLocaleString('vi-VN');
@@ -2918,7 +2925,14 @@ function handleActions(reply) {
   const whOutMatches = [...clean.matchAll(/\[\w+:ADD_WAREHOUSE_OUT\|([^\]]+)\]/g)];
   whOutMatches.forEach(m => {
     const p = m[1].split('|');
-    const d = { type:'xuat', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', note: p[7]||'', imei: p[8]||'' };
+    // Format: name|quantity|unit|price|supplier|date|category|imei|note
+    let imeiVal = p[7]||'';
+    let noteVal = p[8]||'';
+    const imeiHasLetters = (imeiVal.match(/[a-zA-ZÀ-ỹ%]/g)||[]).length >= 3;
+    const noteIsNumeric  = /^\d{3,}$/.test(noteVal.trim());
+    if (imeiHasLetters && noteIsNumeric) { [imeiVal, noteVal] = [noteVal, imeiVal]; }
+    else if (imeiHasLetters && !noteVal) { noteVal = imeiVal; imeiVal = ''; }
+    const d = { type:'xuat', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', imei: imeiVal, note: noteVal };
     if (d.name) {
       d.id = Date.now() + Math.random();
       d.createdAt = new Date().toLocaleString('vi-VN');
@@ -4724,15 +4738,9 @@ async function sendSimMsg(text, imgData) {
   } else if (isAddWarehouseIn || isAddWarehouseOut) {
     const kwRe = /nhập kho|thêm kho|nhập hàng|thêm hàng|nhập linh kiện|thêm linh kiện|mua vào kho|nhập vào kho|nhập thêm|bổ sung kho|mua về kho|xuất kho|xuất hàng|lấy kho|dùng linh kiện|xuất linh kiện/gi;
     let nameStr = text.replace(kwRe,'').trim();
-    // Lấy tên: ưu tiên đến dấu phẩy đầu tiên; nếu không có phẩy thì dừng trước từ khoá phụ/đơn vị tiền
-    let name = '';
-    const _ci = nameStr.indexOf(',');
-    if (_ci > 0) {
-      name = nameStr.substring(0, _ci).trim().replace(/\s+/g,' ').substring(0, 80);
-    } else {
-      const nameM = nameStr.match(/^(.+?)(?=\s+(?:giá\s|vốn\s|sl\s|số lượng|imei\b|seri\b|từ\s|ncc|nhà cung|mua từ)|\s+\d+\s*(?:cái|chiếc|máy|cây|bộ|hộp|k\b|tr\b|triệu)|$)/i);
-      name = nameM ? nameM[1].trim().replace(/\s+/g,' ').substring(0, 80) : nameStr.trim().substring(0, 80);
-    }
+    // Lấy tên: từ đầu đến dấu phẩy hoặc đến số/từ khoá phụ
+    const nameM = nameStr.match(/^([^,\d]+?)(?=,|\s+\d|\s+(?:giá|vốn|sl|số lượng|imei|seri|từ|ncc|nhà|mua từ)|$)/i);
+    const name  = nameM ? nameM[1].trim().replace(/\s+/g,' ').substring(0,80) : '';
 
     const qtyM  = text.match(/(?:sl|số lượng|,)\s*(\d+(?:[.,]\d+)?)\s*(cái|chiếc|máy|cây|bộ|hộp|cặp|cuộn)?/i)
                 || text.match(/(\d+)\s*(cái|chiếc|máy|cây|bộ|hộp|cặp|cuộn)/i);
