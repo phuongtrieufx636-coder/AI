@@ -2625,7 +2625,7 @@ function handleActions(reply) {
   let anyAction = false;
 
   // UPDATE_REPAIR_STATUS — phải xử lý TRƯỚC ADD_REPAIR để tránh tạo bản ghi mới
-  const updMatches = [...clean.matchAll(/\[(?:ACTION|BANTAI):UPDATE_REPAIR\|([^\]]+)\]/g)];
+  const updMatches = [...clean.matchAll(/\[\w+:UPDATE_REPAIR\|([^\]]+)\]/g)];
   updMatches.forEach(m => {
     const p = m[1].split('|');
     const ownerKey = (p[0]||'').toLowerCase().trim();
@@ -2652,7 +2652,7 @@ function handleActions(reply) {
   });
 
   // ADD_REPAIR
-  const repMatches = [...clean.matchAll(/\[(?:ACTION|BANTAI):ADD_REPAIR\|([^\]]+)\]/g)];
+  const repMatches = [...clean.matchAll(/\[\w+:ADD_REPAIR\|([^\]]+)\]/g)];
   repMatches.forEach(m => {
     const p = m[1].split('|');
 
@@ -2753,7 +2753,7 @@ function handleActions(reply) {
   });
 
   // UPDATE_SALE — sửa phiếu bán đã có
-  const updSaleMatches = [...clean.matchAll(/\[(?:ACTION|BANTAI):UPDATE_SALE\|([^\]]+)\]/g)];
+  const updSaleMatches = [...clean.matchAll(/\[\w+:UPDATE_SALE\|([^\]]+)\]/g)];
   updSaleMatches.forEach(m => {
     const p = m[1].split('|');
     const imeiKey   = (p[0]||'').trim();
@@ -2805,7 +2805,7 @@ function handleActions(reply) {
   });
 
   // ADD_SALE
-  const saleMatches = [...clean.matchAll(/\[(?:ACTION|BANTAI):ADD_SALE\|([^\]]+)\]/g)];
+  const saleMatches = [...clean.matchAll(/\[\w+:ADD_SALE\|([^\]]+)\]/g)];
   saleMatches.forEach(m => {
     const p = m[1].split('|');
     const condMap = { moi:'Mới 100%', like_new:'Like New', '99':'99%', '97':'97%', cu_dep:'Cũ đẹp', cu_thuong:'Cũ thường' };
@@ -2855,7 +2855,7 @@ function handleActions(reply) {
   });
 
   // ADD_INCOME
-  const incMatches = [...clean.matchAll(/\[(?:ACTION|BANTAI):ADD_INCOME\|([^\]]+)\]/g)];
+  const incMatches = [...clean.matchAll(/\[\w+:ADD_INCOME\|([^\]]+)\]/g)];
   incMatches.forEach(m => {
     const p = m[1].split('|');
     const d = { type:'thu', amount: parseFloat(p[0])||0, desc: p[1]||'Thu tiền', date: p[2]||todayStr(), cat: p[3]||'', note: p[4]||'' };
@@ -2869,7 +2869,7 @@ function handleActions(reply) {
   });
 
   // ADD_EXPENSE
-  const expMatches = [...clean.matchAll(/\[(?:ACTION|BANTAI):ADD_EXPENSE\|([^\]]+)\]/g)];
+  const expMatches = [...clean.matchAll(/\[\w+:ADD_EXPENSE\|([^\]]+)\]/g)];
   expMatches.forEach(m => {
     const p = m[1].split('|');
     const d = { type:'chi', amount: parseFloat(p[0])||0, desc: p[1]||'Chi tiền', date: p[2]||todayStr(), cat: p[3]||'', note: p[4]||'' };
@@ -2883,7 +2883,7 @@ function handleActions(reply) {
   });
 
   // ADD_WAREHOUSE_IN
-  const whInMatches = [...clean.matchAll(/\[(?:ACTION|BANTAI):ADD_WAREHOUSE_IN\|([^\]]+)\]/g)];
+  const whInMatches = [...clean.matchAll(/\[\w+:ADD_WAREHOUSE_IN\|([^\]]+)\]/g)];
   whInMatches.forEach(m => {
     const p = m[1].split('|');
     const d = { type:'nhap', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', note: p[7]||'', imei: p[8]||'' };
@@ -2897,7 +2897,7 @@ function handleActions(reply) {
   });
 
   // ADD_WAREHOUSE_OUT
-  const whOutMatches = [...clean.matchAll(/\[(?:ACTION|BANTAI):ADD_WAREHOUSE_OUT\|([^\]]+)\]/g)];
+  const whOutMatches = [...clean.matchAll(/\[\w+:ADD_WAREHOUSE_OUT\|([^\]]+)\]/g)];
   whOutMatches.forEach(m => {
     const p = m[1].split('|');
     const d = { type:'xuat', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', note: p[7]||'', imei: p[8]||'' };
@@ -3029,7 +3029,7 @@ async function sendMsg() {
 
     // ── Kiểm tra: nếu người dùng đang nhập liệu mà AI quên ACTION → retry ──
     const inputKeywords = /nhận máy|nhận đc|nhận được|sửa máy|bán máy|bán đc|bán được|thu tiền|chi tiền|nhập kho|xuất kho|ghi vào|ghi giúp|lưu giúp|thêm giúp|đã giao|đã xong|đã sửa/i;
-    const hasAction = /\[(?:ACTION|BANTAI):(ADD_REPAIR|UPDATE_REPAIR|ADD_SALE|UPDATE_SALE|ADD_INCOME|ADD_EXPENSE|ADD_WAREHOUSE_IN|ADD_WAREHOUSE_OUT|UPDATE_WAREHOUSE)\|/.test(rawReply);
+    const hasAction = /\[\w+:(ADD_REPAIR|UPDATE_REPAIR|ADD_SALE|UPDATE_SALE|ADD_INCOME|ADD_EXPENSE|ADD_WAREHOUSE_IN|ADD_WAREHOUSE_OUT|UPDATE_WAREHOUSE)\|/.test(rawReply);
     const looksLikeDataEntry = inputKeywords.test(text) || inputKeywords.test(rawReply);
 
     if (looksLikeDataEntry && !hasAction) {
