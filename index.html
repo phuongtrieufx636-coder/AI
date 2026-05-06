@@ -2592,9 +2592,19 @@ Khi nhận ảnh: tự phân tích, trích xuất, thêm ACTION ngay, báo ngắ
 FORMAT ACTIONS — field phân cách bởi |, để trống nếu không có:
 
 [ACTION:ADD_REPAIR|owner|phone|device|imei|pass|issue|profit|cost|date|status|note]
-⚠️ QUAN TRỌNG: Dùng đúng prefix ACTION (không phải BANTAI hay tên khác).
-⚠️ Thứ tự field: [0]=owner, [1]=phone (SĐT hoặc TRỐNG), [2]=device (tên máy), [3]=imei (số thuần), [4]=pass (PIN), [5]=issue (mô tả lỗi CHỮ), [6]=profit (thu), [7]=cost (chi). KHÔNG bỏ qua field phone!
-VD: [ACTION:ADD_REPAIR|Toán||iPhone 11 Pro|101184||ép cảm ứng|500000|120000|2026-05-04|dang_sua|]
+⚠️ QUAN TRỌNG: Dùng đúng prefix ACTION. KHÔNG bỏ qua bất kỳ field nào dù trống.
+CÁCH MAP THÔNG TIN TỪ CÂU NÓI:
+- owner: từ "anh/chị/em/bé/bạn/ông/bà + Tên" → lấy Tên (VD: "anh Tuấn" → "Tuấn")
+- phone: số điện thoại nếu có, còn không thì để TRỐNG
+- device: tên máy (VD: iPhone 11 Pro, Samsung S24)
+- imei: CHỈ điền nếu người dùng nói rõ IMEI/serial. Không tự bịa. Để TRỐNG nếu không có.
+- pass: CHỈ điền nếu người dùng nói rõ mật khẩu/PIN. Không tự bịa. Để TRỐNG nếu không có.
+- issue: động từ sửa chữa → "ép cảm ứng", "thay màn", "sửa main", "thay pin"...
+- profit: giá nhận / thu về (VD: "thi 550k" → 550000)
+- cost: vốn / chi linh kiện (VD: "vốn 200k" → 200000)
+- note: màu máy, tình trạng máy lúc nhận, ghi chú thêm (VD: "màu đen", "màn vỡ góc")
+VD: "nhận máy anh Tuấn iPhone 11pro ép cảm ứng thu 500k vốn 120k màu vàng":
+[ACTION:ADD_REPAIR|Tuấn||iPhone 11 Pro||ép cảm ứng||500000|120000|2026-05-04|dang_sua|màu vàng]
 profit=tiền THU, cost=tiền CHI linh kiện. Đơn vị VND đầy đủ (500k=500000). status: dang_sua|xong_chua_giao|da_giao
 
 [ACTION:UPDATE_REPAIR|owner_or_device|device_hint|new_status|profit|cost|note]
