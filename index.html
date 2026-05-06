@@ -1070,6 +1070,8 @@ function doGet(e) {
             <button class="filter-btn active" onclick="setWarehouseFilter('all',this)">Tất cả</button>
             <button class="filter-btn" onclick="setWarehouseFilter('nhap',this)">📦 Nhập kho</button>
             <button class="filter-btn" onclick="setWarehouseFilter('xuat',this)">📤 Xuất kho</button>
+            <button class="filter-btn" onclick="setWarehouseFilter('sold',this)">✅ Đã bán</button>
+            <button class="filter-btn" onclick="setWarehouseFilter('available',this)">🟢 Còn hàng</button>
           </div>
         </div>
         <div style="margin-bottom:10px;font-size:12.5px;" id="wh-summary"></div>
@@ -1965,6 +1967,14 @@ function markSaleReturned(id) {
   s._originalProfit = s.profit;
   s.returned = true;
 
+  // Bỏ đánh dấu sold trên record kho gốc khi hoàn trả
+  if (s.imei || s.device) {
+    const whItem = s.imei
+      ? WAREHOUSE.find(w => w.type==='nhap' && w.imei && w.imei===s.imei)
+      : WAREHOUSE.find(w => w.type==='nhap' && w.sold && w._soldBySaleId===s.id);
+    if (whItem) { delete whItem.sold; delete whItem._soldBySaleId; saveWarehouse(); }
+  }
+
   // Hoàn trả: lãi bán luôn về 0, phí % ghi vào Thu ngoài riêng
   s.profit = 0;
   if (pct === 0) {
@@ -2309,7 +2319,7 @@ function setWarehouseFilter(f, btn) {
 }
 
 function getStockSummary() {
-  // Tính tồn kho: nhập - xuất - đã bán qua SALES (chưa hoàn trả, chưa có record xuat kho)
+  // Tính tồn kho: nhập - xuất - đã bán (SALES chưa hoàn trả)
   const stock = {};
   WAREHOUSE.forEach(w => {
     const key = w.name.toLowerCase().trim();
@@ -2317,29 +2327,18 @@ function getStockSummary() {
     if (w.type === 'nhap') stock[key].qty += (w.quantity || 1);
     else stock[key].qty -= (w.quantity || 1);
   });
-
-  // Trừ thêm các máy đã bán (SALES) chưa có record xuat kho tương ứng
+  // Trừ thêm máy đã bán trong SALES chưa có record xuat kho
   SALES.filter(s => !s.returned).forEach(sale => {
     if (!sale.device) return;
-    const saleDevice = sale.device.toLowerCase().trim();
-    const saleImei   = (sale.imei || '').trim();
-
-    // Đã có record xuat kho khớp IMEI → đã trừ rồi, bỏ qua
-    const alreadyExited = saleImei && WAREHOUSE.some(w =>
-      w.type === 'xuat' && w.imei && w.imei === saleImei
-    );
+    const saleImei = (sale.imei || '').trim();
+    const alreadyExited = saleImei && WAREHOUSE.some(w => w.type === 'xuat' && w.imei && w.imei === saleImei);
     if (alreadyExited) return;
-
-    // Khớp IMEI chính xác với nhập kho
-    const whMatch = saleImei
-      ? WAREHOUSE.find(w => w.type === 'nhap' && w.imei && w.imei === saleImei)
-      : null;
-
+    const whMatch = saleImei ? WAREHOUSE.find(w => w.type === 'nhap' && w.imei && w.imei === saleImei) : null;
     if (whMatch) {
       const key = whMatch.name.toLowerCase().trim();
       if (stock[key]) stock[key].qty -= 1;
     } else if (!saleImei) {
-      // Không có IMEI → khớp tên gần đúng, trừ 1 đơn vị
+      const saleDevice = sale.device.toLowerCase().trim();
       for (const key of Object.keys(stock)) {
         if ((saleDevice.includes(key) || key.includes(saleDevice)) && stock[key].qty > 0) {
           stock[key].qty -= 1; break;
@@ -2347,8 +2346,24 @@ function getStockSummary() {
       }
     }
   });
-
   return Object.values(stock);
+}
+
+// Đánh dấu sold=true trên record nhập kho gốc khi bán máy
+function markWarehouseItemSold(imei, deviceName, saleId) {
+  let changed = false;
+  // Khớp IMEI chính xác
+  if (imei) {
+    const w = WAREHOUSE.find(w => w.type === 'nhap' && w.imei && w.imei === imei && !w.sold);
+    if (w) { w.sold = true; w._soldBySaleId = saleId; changed = true; }
+  }
+  // Fallback: khớp tên nếu không có IMEI
+  if (!changed && deviceName) {
+    const w = WAREHOUSE.find(w => w.type === 'nhap' && !w.sold &&
+      w.name.toLowerCase().trim() === deviceName.toLowerCase().trim());
+    if (w) { w.sold = true; w._soldBySaleId = saleId; changed = true; }
+  }
+  if (changed) saveWarehouse();
 }
 
 function buildWarehouseList() {
@@ -2356,8 +2371,10 @@ function buildWarehouseList() {
   if (!list) return;
 
   let filtered = WAREHOUSE;
-  if (warehouseFilter === 'nhap') filtered = WAREHOUSE.filter(w => w.type === 'nhap');
+  if (warehouseFilter === 'nhap')      filtered = WAREHOUSE.filter(w => w.type === 'nhap');
   else if (warehouseFilter === 'xuat') filtered = WAREHOUSE.filter(w => w.type === 'xuat');
+  else if (warehouseFilter === 'sold') filtered = WAREHOUSE.filter(w => w.type === 'nhap' && w.sold);
+  else if (warehouseFilter === 'available') filtered = WAREHOUSE.filter(w => w.type === 'nhap' && !w.sold);
 
   const totalNhap = WAREHOUSE.filter(w=>w.type==='nhap').reduce((s,w)=>s+(w.price||0)*(w.quantity||1),0);
   const totalXuat = WAREHOUSE.filter(w=>w.type==='xuat').reduce((s,w)=>s+(w.price||0)*(w.quantity||1),0);
@@ -2383,15 +2400,22 @@ function buildWarehouseList() {
   list.innerHTML = filtered.map(w => {
     const isIn = w.type === 'nhap';
     const total = (w.price||0) * (w.quantity||1);
-    return `<div class="sale-card" style="border-left:3px solid ${isIn?'var(--green)':'var(--amber)'};">
+    const soldBadge = (isIn && w.sold)
+      ? `<span style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#ff4d4f22;color:#ff4d4f;border:1px solid #ff4d4f55;">✅ Đã bán</span>`
+      : '';
+    const borderColor = isIn ? (w.sold ? '#ff4d4f' : 'var(--green)') : 'var(--amber)';
+    const iconBg      = isIn ? (w.sold ? '#ff4d4f18' : 'var(--green-dim)') : 'var(--amber-dim)';
+    const iconBorder  = isIn ? (w.sold ? 'rgba(255,77,79,0.2)' : 'rgba(52,200,122,0.2)') : 'rgba(240,160,48,0.2)';
+    const priceColor  = isIn ? (w.sold ? '#ff4d4f' : 'var(--green)') : 'var(--amber)';
+    return `<div class="sale-card" style="border-left:3px solid ${borderColor};${w.sold?'opacity:0.75;':''}">
       <div class="card-top">
-        <div class="card-icon" style="background:${isIn?'var(--green-dim)':'var(--amber-dim)'};border:1px solid ${isIn?'rgba(52,200,122,0.2)':'rgba(240,160,48,0.2)'};">${isIn?'📦':'📤'}</div>
+        <div class="card-icon" style="background:${iconBg};border:1px solid ${iconBorder};">${isIn?(w.sold?'📤':'📦'):'📤'}</div>
         <div class="card-info">
-          <div class="card-title">${isIn?'Nhập kho':'Xuất kho'}: ${escHtml(w.name)}</div>
+          <div class="card-title">${isIn?'Nhập kho':'Xuất kho'}: ${escHtml(w.name)}${soldBadge}</div>
           <div class="card-sub">SL: <strong>${w.quantity||1} ${w.unit||'cái'}</strong>${w.supplier?' · '+escHtml(w.supplier):''}${w.category?' · 🏷 '+escHtml(w.category):''}</div>
-          <div class="card-meta">📅 ${fmtDate(w.date)}${w.note?' · '+escHtml(w.note):''}</div>
+          <div class="card-meta">📅 ${fmtDate(w.date)}${w.imei?' · IMEI: '+escHtml(w.imei):''}${w.note?' · '+escHtml(w.note):''}</div>
         </div>
-        <div style="font-size:15px;font-weight:700;color:${isIn?'var(--green)':'var(--amber)'};white-space:nowrap;text-align:right;">
+        <div style="font-size:15px;font-weight:700;color:${priceColor};white-space:nowrap;text-align:right;">
           ${total>0?fmtMoney(total):''}
           <div style="font-size:10px;font-weight:400;color:var(--text3);">${w.price>0?fmtMoney(w.price)+'/cái':''}</div>
         </div>
@@ -2896,34 +2920,23 @@ function handleActions(reply) {
       SALES.unshift(d);
       saveSales();
       anyAction = true;
-
-      // Tự động tạo record XUẤT KHO khi bán máy có trong kho
-      const whSrc = d.imei
+      // Tạo record xuất kho + đánh dấu máy đã bán
+      const _whSrc = d.imei
         ? WAREHOUSE.find(w => w.type === 'nhap' && w.imei && w.imei === d.imei)
-        : WAREHOUSE.find(w => w.type === 'nhap' && w.name.toLowerCase().trim() === d.device.toLowerCase().trim() && (w.quantity||1) > 0);
-      if (whSrc) {
-        // Kiểm tra chưa có record xuat kho cho IMEI này
-        const dupXuat = d.imei && WAREHOUSE.some(w => w.type === 'xuat' && w.imei && w.imei === d.imei);
-        if (!dupXuat) {
-          const xuat = {
-            id: Date.now() + Math.floor(Math.random() * 999) + 1,
-            type: 'xuat',
-            name: whSrc.name,
-            quantity: 1,
-            unit: whSrc.unit || 'tên',
-            price: d.price || 0,
-            supplier: d.buyer || '',
-            category: whSrc.category || 'Kho',
-            imei: d.imei || '',
-            note: 'Xuất bán - ' + (d.buyer ? 'KH: ' + d.buyer + ' - ' : '') + 'Lãi: ' + (d.profit||0) + 'đ',
-            date: d.date,
-            createdAt: new Date().toLocaleString('vi-VN'),
-            _fromSaleId: d.id
-          };
-          WAREHOUSE.unshift(xuat);
-          saveWarehouse();
+        : WAREHOUSE.find(w => w.type === 'nhap' && !w.sold && w.name.toLowerCase().trim() === d.device.toLowerCase().trim());
+      if (_whSrc) {
+        const _dupXuat = d.imei && WAREHOUSE.some(w => w.type === 'xuat' && w.imei && w.imei === d.imei);
+        if (!_dupXuat) {
+          WAREHOUSE.unshift({
+            id: Date.now() + Math.floor(Math.random()*997)+3, type:'xuat',
+            name: _whSrc.name, quantity:1, unit: _whSrc.unit||'tên',
+            price: d.price||0, supplier: d.buyer||'', category: _whSrc.category||'Kho',
+            imei: d.imei||'', note: 'Xuất bán' + (d.buyer?' - KH: '+d.buyer:''),
+            date: d.date, createdAt: new Date().toLocaleString('vi-VN'), _fromSaleId: d.id
+          });
         }
       }
+      markWarehouseItemSold(d.imei, d.device, d.id);
     }
     clean = clean.replace(m[0], '');
   });
@@ -4738,26 +4751,23 @@ async function sendSimMsg(text, imgData) {
       d.createdAt = new Date().toLocaleString('vi-VN');
       SALES.unshift(d);
       saveSales();
-
-      // Tự động tạo record XUẤT KHO khi bán máy có trong kho
-      const _whSrc = imei
-        ? WAREHOUSE.find(w => w.type === 'nhap' && w.imei && w.imei === imei)
-        : WAREHOUSE.find(w => w.type === 'nhap' && w.name.toLowerCase().trim() === (device||'').toLowerCase().trim());
-      if (_whSrc) {
-        const _dupXuat = imei && WAREHOUSE.some(w => w.type === 'xuat' && w.imei && w.imei === imei);
-        if (!_dupXuat) {
-          const _xuat = {
-            id: Date.now() + Math.floor(Math.random()*998) + 2,
-            type: 'xuat', name: _whSrc.name, quantity: 1, unit: _whSrc.unit || 'tên',
-            price: price || 0, supplier: buyer || '', category: _whSrc.category || 'Kho',
-            imei: imei || '', note: 'Xuất bán (AI)' + (buyer ? ' - KH: ' + buyer : ''),
-            date: todayStr(), createdAt: new Date().toLocaleString('vi-VN'), _fromSaleId: d.id
-          };
-          WAREHOUSE.unshift(_xuat);
-          saveWarehouse();
+      // Tạo record xuất kho + đánh dấu máy đã bán
+      const _whs = imei
+        ? WAREHOUSE.find(w => w.type==='nhap' && w.imei && w.imei===imei)
+        : WAREHOUSE.find(w => w.type==='nhap' && !w.sold && w.name.toLowerCase().trim()===(device||'').toLowerCase().trim());
+      if (_whs) {
+        const _dup = imei && WAREHOUSE.some(w => w.type==='xuat' && w.imei && w.imei===imei);
+        if (!_dup) {
+          WAREHOUSE.unshift({
+            id: Date.now()+Math.floor(Math.random()*996)+4, type:'xuat',
+            name:_whs.name, quantity:1, unit:_whs.unit||'tên',
+            price:price||0, supplier:buyer||'', category:_whs.category||'Kho',
+            imei:imei||'', note:'Xuất bán (AI)'+(buyer?' - KH:'+buyer:''),
+            date:todayStr(), createdAt:new Date().toLocaleString('vi-VN'), _fromSaleId:d.id
+          });
         }
       }
-
+      markWarehouseItemSold(imei, device, d.id);
       buildSaleList(); buildWarehouseList(); updateStats();
       reply = `✅ <strong>Đã ghi bán máy!</strong><br>`
         + `📱 ${escHtml(d.device)}${imei?' · IMEI: '+imei:''}`
