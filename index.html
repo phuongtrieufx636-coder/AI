@@ -1219,6 +1219,11 @@ function doGet(e) {
 <div id="print-size-modal">
   <div class="psm-box">
     <h3>📄 Xuất phiếu / Hóa đơn</h3>
+    <div style="display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;">
+      <label style="font-size:12px;color:var(--text2);white-space:nowrap;font-weight:600;">🛡️ Bảo hành:</label>
+      <input id="bh-months" type="number" min="0" max="24" value="3" style="width:52px;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:6px;padding:5px 8px;font-size:13px;font-weight:700;text-align:center;outline:none;font-family:inherit;">
+      <span style="font-size:12px;color:var(--text2);">tháng</span>
+    </div>
     <div class="psm-options">
       <button class="psm-btn" onclick="downloadPrintAsImage()">
         <span class="psm-icon">🖼️</span>
@@ -3491,6 +3496,7 @@ function getShopInfo() {
 }
 
 let _pendingPrintHtml = '';
+let _pendingRepairId = null;
 
 function closePrintModal() {
   document.getElementById('print-size-modal').style.display = 'none';
@@ -3511,7 +3517,8 @@ function executePrint(size) {
   }, 120);
 }
 
-function buildRepairHtml(r) {
+function buildRepairHtml(r, bhMonths) {
+  if (bhMonths === undefined) bhMonths = parseInt(document.getElementById('bh-months')?.value || '3');
   const sh = getShopInfo();
   const ticketNo = String(r.id).slice(-6);
   const statusLabel = { dang_sua:'Dang sua', xong_chua_giao:'Xong, chua giao', da_giao:'Da giao khach' }[r.status] || r.status;
@@ -3553,6 +3560,9 @@ function buildRepairHtml(r) {
       <span class="tk-price" style="font-size:22px;font-weight:900;">${r.profit>0?fmtMoney(r.profit):'TBD'}</span>
     </div>
     ${r.note?`<div style="font-size:10px;color:#555;margin-top:4px;">Ghi chu: ${escHtml(r.note)}</div>`:''}
+    <div style="border-top:1px dashed #000;margin:6px 0;"></div>
+    <!-- BAO HANH -->
+    ${bhMonths > 0 ? `<div style="margin:4px 0;"><div style="font-size:10px;font-weight:900;letter-spacing:0.5px;margin-bottom:3px;">CHẾ ĐỘ BẢO HÀNH:</div><div style="font-size:10px;line-height:1.7;"><div>- Bảo hành lỗi đã sửa: <strong>${bhMonths} THÁNG</strong></div><div>- Không bảo hành: rơi vỡ, vô nước, cong máy hoặc tác động ngoại lực.</div><div>- Hỗ trợ kiểm tra miễn phí trong thời gian bảo hành.</div></div></div>` : ''}
     <div style="border-top:1px dashed #000;margin:8px 0;"></div>
     <!-- CHU KY -->
     <div class="tk-sig" style="display:flex;justify-content:space-between;margin-bottom:10px;">
@@ -3652,6 +3662,12 @@ function buildSaleHtml(s) {
 }
 
 function downloadPrintAsImage() {
+  // Rebuild html với số tháng bảo hành mới nhất từ input
+  if (_pendingRepairId) {
+    const r = REPAIRS.find(x => x.id === _pendingRepairId);
+    const bhMonths = parseInt(document.getElementById('bh-months')?.value || '3');
+    if (r) _pendingPrintHtml = buildRepairHtml(r, bhMonths);
+  }
   document.getElementById('print-size-modal').style.display = 'none';
   const printArea = document.getElementById('print-area');
   printArea.innerHTML = _pendingPrintHtml;
@@ -3696,8 +3712,13 @@ function downloadPrintAsImage() {
 function printRepairTicket(id) {
   const r = REPAIRS.find(x => x.id === id);
   if (!r) return;
-  _pendingPrintHtml = buildRepairHtml(r);
+  _pendingRepairId = id;
   document.getElementById('print-size-modal').style.display = 'flex';
+  // Build html sau khi modal mở (để lấy giá trị input bảo hành)
+  setTimeout(() => {
+    const bhMonths = parseInt(document.getElementById('bh-months')?.value || '3');
+    _pendingPrintHtml = buildRepairHtml(r, bhMonths);
+  }, 50);
 }
 
 function printSaleInvoice(id) {
