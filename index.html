@@ -2591,7 +2591,6 @@ NHIỆM VỤ — khi người dùng mô tả nhập dữ liệu, BẮT BUỘC c�
 - Nhập kho → ADD_WAREHOUSE_IN | Xuất kho → ADD_WAREHOUSE_OUT | Sửa kho → UPDATE_WAREHOUSE
 - Câu hỏi thống kê/tra cứu → trả lời từ dữ liệu, KHÔNG cần ACTION
 
-Bán máy theo IMEI: tra kho tìm giá nhập → profit = giá_bán - giá_nhập.
 Khi nhận ảnh: tự phân tích, trích xuất, thêm ACTION ngay, báo ngắn gọn.
 
 FORMAT ACTIONS — field phân cách bởi |, để trống nếu không có:
@@ -2616,16 +2615,18 @@ profit=tiền THU, cost=tiền CHI linh kiện. Đơn vị VND đầy đủ (500
 VD "máy hoàng gia đã giao": [ACTION:UPDATE_REPAIR|hoàng gia||da_giao||]
 
 [ACTION:ADD_SALE|device|imei|condition|price|profit|date|buyer|source|note]
-condition: moi|like_new|99|97|cu_dep|cu_thuong. price,profit: VND đầy đủ. profit âm nếu lỗ.
+condition: moi|like_new|99|97|cu_dep|cu_thuong. price=giá bán, profit=lãi (âm nếu lỗ). Đơn vị VND đầy đủ.
+⚠️ QUAN TRỌNG profit: Nếu người dùng nói rõ "lãi Xtr" → profit=X*1000000. KHÔNG tự tra kho tính lại.
+VD "bán iPhone 17 Pro Max giá 30tr lãi 2tr cho anh Minh imei 338223":
+[ACTION:ADD_SALE|iPhone 17 Pro Max|338223|moi|30000000|2000000|2026-05-06|Minh|nhap_moi|]
+⚠️ Chỉ tạo ADD_SALE khi người dùng THỰC SỰ muốn ghi bán. Câu tranh luận/giải thích ("nhập 28tr bán 30tr lãi 2tr chứ" để phản bác AI) → KHÔNG tạo ACTION, chỉ xác nhận lại số liệu.
 
 [ACTION:UPDATE_SALE|imei|device_hint|condition|price|profit|date|buyer|source|note]
 
 [ACTION:ADD_INCOME|amount|desc|date|cat|note]
 [ACTION:ADD_EXPENSE|amount|desc|date|cat|note]
-[ACTION:ADD_WAREHOUSE_IN|name|quantity|unit|price|supplier|date|category|imei|note]
-VD nhap kho: [ACTION:ADD_WAREHOUSE_IN|iPhone 16 Pro Max bac 256GB|1|ten|17000000|Thuan Trieu|2026-05-06|Kho|8890|dep 99% pin new 100%]
-imei=so serial nguoi dung noi (co the chi 4-5 so). note=mo ta tinh trang, ghi chu.
-[ACTION:ADD_WAREHOUSE_OUT|name|quantity|unit|price|supplier|date|category|imei|note]
+[ACTION:ADD_WAREHOUSE_IN|name|quantity|unit|price|supplier|date|category|note|imei]
+[ACTION:ADD_WAREHOUSE_OUT|name|quantity|unit|price|supplier|date|category|note|imei]
 [ACTION:UPDATE_WAREHOUSE|name_hint|date_hint|type|quantity|unit|price|supplier|date_new|category|note]
 
 QUY TẮC:
@@ -2843,13 +2844,13 @@ function handleActions(reply) {
     };
     d.conditionLabel = condMap[d.condition] || d.condition;
 
-    // Tự động lấy giá nhập từ kho nếu có IMEI và profit chưa điền
-    if (d.imei && d.profit === 0) {
+    // Tự động lấy giá nhập từ kho nếu có IMEI và profit chưa điền (=0)
+    // KHÔNG tự tính lại nếu AI đã điền profit hợp lý
+    if (d.imei && d.profit === 0 && d.price > 0) {
       const whItem = WAREHOUSE.find(w => w.imei && w.imei === d.imei && w.type === 'nhap');
       if (whItem && whItem.price) {
-        d.costBasis = whItem.price; // lưu tham chiếu
-        // Tính lãi = giá bán - giá nhập
-        if (d.price > 0) d.profit = d.price - whItem.price;
+        d.costBasis = whItem.price;
+        d.profit = d.price - whItem.price;
       }
     }
 
@@ -2903,15 +2904,7 @@ function handleActions(reply) {
   const whInMatches = [...clean.matchAll(/\[\w+:ADD_WAREHOUSE_IN\|([^\]]+)\]/g)];
   whInMatches.forEach(m => {
     const p = m[1].split('|');
-    // Format: name|quantity|unit|price|supplier|date|category|imei|note
-    let imeiVal = p[7]||'';
-    let noteVal = p[8]||'';
-    // Auto-fix: nếu imei chứa chữ cái nhiều (là note bị lệch) thì swap
-    const imeiHasLetters = (imeiVal.match(/[a-zA-ZÀ-ỹ%]/g)||[]).length >= 3;
-    const noteIsNumeric  = /^\d{3,}$/.test(noteVal.trim());
-    if (imeiHasLetters && noteIsNumeric) { [imeiVal, noteVal] = [noteVal, imeiVal]; }
-    else if (imeiHasLetters && !noteVal) { noteVal = imeiVal; imeiVal = ''; }
-    const d = { type:'nhap', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', imei: imeiVal, note: noteVal };
+    const d = { type:'nhap', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', note: p[7]||'', imei: p[8]||'' };
     if (d.name) {
       d.id = Date.now() + Math.random();
       d.createdAt = new Date().toLocaleString('vi-VN');
@@ -2925,14 +2918,7 @@ function handleActions(reply) {
   const whOutMatches = [...clean.matchAll(/\[\w+:ADD_WAREHOUSE_OUT\|([^\]]+)\]/g)];
   whOutMatches.forEach(m => {
     const p = m[1].split('|');
-    // Format: name|quantity|unit|price|supplier|date|category|imei|note
-    let imeiVal = p[7]||'';
-    let noteVal = p[8]||'';
-    const imeiHasLetters = (imeiVal.match(/[a-zA-ZÀ-ỹ%]/g)||[]).length >= 3;
-    const noteIsNumeric  = /^\d{3,}$/.test(noteVal.trim());
-    if (imeiHasLetters && noteIsNumeric) { [imeiVal, noteVal] = [noteVal, imeiVal]; }
-    else if (imeiHasLetters && !noteVal) { noteVal = imeiVal; imeiVal = ''; }
-    const d = { type:'xuat', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', imei: imeiVal, note: noteVal };
+    const d = { type:'xuat', name: p[0]||'', quantity: parseFloat(p[1])||1, unit: p[2]||'cái', price: parseFloat(p[3])||0, supplier: p[4]||'', date: p[5]||todayStr(), category: p[6]||'', note: p[7]||'', imei: p[8]||'' };
     if (d.name) {
       d.id = Date.now() + Math.random();
       d.createdAt = new Date().toLocaleString('vi-VN');
@@ -4493,7 +4479,8 @@ async function sendSimMsg(text, imgData) {
     || (findDevice(t) !== '' && /thu|giá nhận|lãi|tiền sửa|ép|thay|sửa|vốn|linh kiện|lk|màn|pin|cảm ứng|cổng sạc|loa|camera|mic|kính|ic|main|nguồn/.test(t) && !isUpdateRepair)
     || (findOwner(t) !== '' && /(?:ép|thay|sửa|ic|cảm ứng|màn|pin|cổng|loa|camera|mic|kính|main|nguồn)/.test(t) && /\d+\s*(?:k|tr|triệu)/.test(t) && !isUpdateRepair);
 
-  const isAddSale = /(?:bán máy|bán đc|bán được|xuất máy|bán cho|vừa bán|đã bán|bán ra|bán hàng|ghi bán|thêm bán|bán với giá|ra đi|chốt máy|chốt đơn)/.test(t);
+  const isAddSale = /(?:bán máy|bán đc|bán được|xuất máy|bán cho|vừa bán|đã bán|bán ra|bán hàng|ghi bán|thêm bán|bán với giá|ra đi|chốt máy|chốt đơn)/.test(t)
+    && !/(?:nhập\s+\d|nhập\s+\w+\s+bán|mà\s+lỗ|sao\s+lỗ|lãi\s+\d+.*chứ|lời\s+\d+.*chứ|đúng\s+không|đúng\s+chứ|vậy\s+à|sao\s+vậy)/.test(t);
 
   const isUpdateSale = /(?:cập nhật bán|sửa phiếu bán|update bán|đổi giá bán|sửa giá bán|chỉnh phiếu bán)/.test(t);
 
