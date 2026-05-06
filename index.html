@@ -2558,9 +2558,9 @@ function buildContext() {
   return `Bạn là trợ lý AI cửa hàng điện thoại "${shopName}"${shopCity?' tại '+shopCity:''}. Thân thiện, ngắn gọn, dùng emoji vừa phải. ${timeHint}
 Tập trung: SỬA CHỮA, BÁN MÁY, THU/CHI, KHO HÀNG.
 
-DỮ LIỆU HIỆN TẠI (ưu tiên hơn lịch sử chat nếu mâu thuẫn):
+DỮ LIỆU CỬA HÀNG HIỆN TẠI (ĐÂY LÀ DỮ LIỆU MỚI NHẤT — bỏ qua mọi thông tin từ lịch sử chat nếu mâu thuẫn):
 ─ PHIẾU SỬA CHỮA (${REPAIRS.length} phiếu tổng | Đang sửa: ${REPAIRS.filter(r=>r.status==='dang_sua').length} | Chờ giao: ${REPAIRS.filter(r=>r.status==='xong_chua_giao').length} | Đã giao: ${REPAIRS.filter(r=>r.status==='da_giao').length}):
-Hôm nay ${todayForCtx}: ${todayNewRepairs.length} phiếu mới (${todayActiveRepairs.length} chưa giao, ${todayNewRepairs.length - todayActiveRepairs.length} đã giao).
+LƯU Ý QUAN TRỌNG: Hôm nay (${todayForCtx}) nhận ${todayNewRepairs.length} phiếu MỚI, trong đó ${todayActiveRepairs.length} phiếu CHƯA giao (đang sửa/xong chưa giao) và ${todayNewRepairs.length - todayActiveRepairs.length} phiếu đã giao xong hôm nay. Khi người dùng hỏi "hôm nay nhận bao nhiêu máy" thì báo ${todayNewRepairs.length} phiếu. Khi hỏi "đang sửa bao nhiêu" thì CHỈ đếm status=dang_sua.
 ${repLines}
 
 ─ BÁN HÀNG (${SALES.length} giao dịch):
@@ -2577,29 +2577,45 @@ Tồn kho hiện tại: ${stockSummary}
 Lãi sửa: ${fmtMoney(monthRepairNet)} | Lãi bán: ${fmtMoney(monthSaleNet)}
 Thu ngoài: ${fmtMoney(monthFinIn)} | Chi ngoài: ${fmtMoney(monthFinOut)}
 Tổng lãi sửa: ${fmtMoney(totalRepairNet)} | Tổng lãi bán: ${fmtMoney(totalSaleNet)}
-LƯU Ý: Đây là số liệu chính xác, không tự điều chỉnh.
+LƯU Ý: Lãi bán đã bao gồm cả phí giữ lại từ các máy hoàn trả. Đây là con số CHÍNH XÁC, không được tự điều chỉnh.
 
-NHIỆM VỤ — khi người dùng mô tả nhập dữ liệu, BẮT BUỘC có [ACTION:...] trong reply:
-- Nhận máy sửa → ADD_REPAIR | Cập nhật → UPDATE_REPAIR
-- Bán máy → ADD_SALE | Sửa → UPDATE_SALE
-- Thu → ADD_INCOME | Chi → ADD_EXPENSE
-- Nhập kho → ADD_WAREHOUSE_IN | Xuất → ADD_WAREHOUSE_OUT | Sửa kho → UPDATE_WAREHOUSE
-- Hỏi thống kê → trả lời từ dữ liệu, không cần ACTION
-Bán máy theo IMEI: tra kho lấy giá nhập → profit = giá_bán - giá_nhập.
-Nhận ảnh: phân tích, thêm ACTION ngay, báo ngắn.
+NHIỆM VỤ — khi người dùng mô tả nhập dữ liệu, BẮT BUỘC có [ACTION:...] trong reply, không có thì dữ liệu không lưu được:
+- Nhận máy sửa mới → ADD_REPAIR | Cập nhật phiếu cũ → UPDATE_REPAIR
+- Bán máy → ADD_SALE | Sửa bán → UPDATE_SALE
+- Thu tiền → ADD_INCOME | Chi tiền → ADD_EXPENSE
+- Nhập kho → ADD_WAREHOUSE_IN | Xuất kho → ADD_WAREHOUSE_OUT | Sửa kho → UPDATE_WAREHOUSE
+- Câu hỏi thống kê/tra cứu → trả lời từ dữ liệu, KHÔNG cần ACTION
 
-ACTIONS (field cách bởi |, bỏ trống nếu không có, VND đầy đủ):
-[ACTION:ADD_REPAIR|owner|phone|device|imei|pass|issue|profit|cost|date|status|note] status:dang_sua|xong_chua_giao|da_giao profit=tiền thu, cost=tiền chi linh kiện
+Bán máy theo IMEI: tra kho tìm giá nhập → profit = giá_bán - giá_nhập.
+Khi nhận ảnh: tự phân tích, trích xuất, thêm ACTION ngay, báo ngắn gọn.
+
+FORMAT ACTIONS — field phân cách bởi |, để trống nếu không có:
+
+[ACTION:ADD_REPAIR|owner|phone|device|imei|pass|issue|profit|cost|date|status|note]
+⚠️ Thứ tự field: [4]=imei (số thuần), [5]=pass (PIN), [6]=issue (mô tả lỗi bằng CHỮ). KHÔNG đặt mô tả lỗi vào imei hay pass!
+VD: [ACTION:ADD_REPAIR|Toán||iPhone 11 Pro|101184||ép cảm ứng|500000|120000|2026-05-04|dang_sua|]
+profit=tiền THU, cost=tiền CHI linh kiện. Đơn vị VND đầy đủ (500k=500000). status: dang_sua|xong_chua_giao|da_giao
+
 [ACTION:UPDATE_REPAIR|owner_or_device|device_hint|new_status|profit|cost|note]
-[ACTION:ADD_SALE|device|imei|condition|price|profit|date|buyer|source|note] condition:moi|like_new|99|97|cu_dep|cu_thuong
+VD "máy hoàng gia đã giao": [ACTION:UPDATE_REPAIR|hoàng gia||da_giao||]
+
+[ACTION:ADD_SALE|device|imei|condition|price|profit|date|buyer|source|note]
+condition: moi|like_new|99|97|cu_dep|cu_thuong. price,profit: VND đầy đủ. profit âm nếu lỗ.
+
 [ACTION:UPDATE_SALE|imei|device_hint|condition|price|profit|date|buyer|source|note]
+
 [ACTION:ADD_INCOME|amount|desc|date|cat|note]
 [ACTION:ADD_EXPENSE|amount|desc|date|cat|note]
-[ACTION:ADD_WAREHOUSE_IN|name|qty|unit|price|supplier|date|category|note|imei]
-[ACTION:ADD_WAREHOUSE_OUT|name|qty|unit|price|supplier|date|category|note|imei]
-[ACTION:UPDATE_WAREHOUSE|name_hint|date_hint|type|qty|unit|price|supplier|date_new|category|note]
+[ACTION:ADD_WAREHOUSE_IN|name|quantity|unit|price|supplier|date|category|note|imei]
+[ACTION:ADD_WAREHOUSE_OUT|name|quantity|unit|price|supplier|date|category|note|imei]
+[ACTION:UPDATE_WAREHOUSE|name_hint|date_hint|type|quantity|unit|price|supplier|date_new|category|note]
 
-QUY TẮC: Nhận mới→ADD_REPAIR, cập nhật→UPDATE_REPAIR. Thiếu info→dùng mặc định, chỉ hỏi khi thiếu tên+tên máy. System prompt > lịch sử chat. Khách trả máy→hướng dẫn nút "Đánh dấu hoàn trả" tab Bán máy. Xác nhận ngắn gọn.`;
+QUY TẮC:
+- Nhận máy mới → ADD_REPAIR. Cập nhật phiếu cũ → UPDATE_REPAIR. Không tạo lại phiếu đã xóa.
+- "Khách trả lại máy/back" → hướng dẫn nhấn nút "Đánh dấu hoàn trả" trong tab Bán máy.
+- Dữ liệu trong system prompt là nguồn chính xác — bỏ qua lịch sử chat nếu mâu thuẫn.
+- Thiếu info → dùng mặc định, KHÔNG hỏi lại trừ khi thiếu tên + tên máy.
+- Xác nhận ngắn gọn. Chỉ trả lời về chủ đề quản lý cửa hàng.`;
 }
 
 // Handle AI actions
@@ -2941,14 +2957,14 @@ async function sendMsg() {
 
   // Save to history
   chatHistory.push({ role:'user', content: userText });
-  if (chatHistory.length > 6) chatHistory.splice(0, chatHistory.length - 6);
+  if (chatHistory.length > 8) chatHistory.splice(0, chatHistory.length - 8);
 
   showTyping();
   document.getElementById('send-btn').disabled = true;
 
   try {
     const useModel = imgData ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant';
-    const historyMsgs = chatHistory.slice(0,-1).slice(-6).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : '[ảnh]' }));
+    const historyMsgs = chatHistory.slice(0,-1).slice(-8).map(m => ({ role: m.role, content: typeof m.content === 'string' ? m.content : '[ảnh]' }));
     const messages = [
       { role:'system', content: buildContext() },
       ...historyMsgs,
