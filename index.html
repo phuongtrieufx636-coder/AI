@@ -2309,14 +2309,45 @@ function setWarehouseFilter(f, btn) {
 }
 
 function getStockSummary() {
-  // Tính tồn kho theo tên hàng
+  // Tính tồn kho: nhập - xuất - đã bán qua SALES (chưa hoàn trả, chưa có record xuat kho)
   const stock = {};
   WAREHOUSE.forEach(w => {
-    const key = w.name.toLowerCase();
+    const key = w.name.toLowerCase().trim();
     if (!stock[key]) stock[key] = { name: w.name, qty: 0, unit: w.unit };
-    if (w.type === 'nhap') stock[key].qty += (w.quantity || 0);
-    else stock[key].qty -= (w.quantity || 0);
+    if (w.type === 'nhap') stock[key].qty += (w.quantity || 1);
+    else stock[key].qty -= (w.quantity || 1);
   });
+
+  // Trừ thêm các máy đã bán (SALES) chưa có record xuat kho tương ứng
+  SALES.filter(s => !s.returned).forEach(sale => {
+    if (!sale.device) return;
+    const saleDevice = sale.device.toLowerCase().trim();
+    const saleImei   = (sale.imei || '').trim();
+
+    // Đã có record xuat kho khớp IMEI → đã trừ rồi, bỏ qua
+    const alreadyExited = saleImei && WAREHOUSE.some(w =>
+      w.type === 'xuat' && w.imei && w.imei === saleImei
+    );
+    if (alreadyExited) return;
+
+    // Khớp IMEI chính xác với nhập kho
+    const whMatch = saleImei
+      ? WAREHOUSE.find(w => w.type === 'nhap' && w.imei && w.imei === saleImei)
+      : null;
+
+    if (whMatch) {
+      const key = whMatch.name.toLowerCase().trim();
+      if (stock[key]) stock[key].qty -= 1;
+    } else if (!saleImei) {
+      // Không có IMEI → khớp tên gần đúng, trừ 1 đơn vị
+      for (const key of Object.keys(stock)) {
+        if ((saleDevice.includes(key) || key.includes(saleDevice)) && stock[key].qty > 0) {
+          stock[key].qty -= 1; break;
+        }
+      }
+    }
+  });
+
   return Object.values(stock);
 }
 
@@ -2591,6 +2622,7 @@ NHIỆM VỤ — khi người dùng mô tả nhập dữ liệu, BẮT BUỘC c�
 - Nhập kho → ADD_WAREHOUSE_IN | Xuất kho → ADD_WAREHOUSE_OUT | Sửa kho → UPDATE_WAREHOUSE
 - Câu hỏi thống kê/tra cứu → trả lời từ dữ liệu, KHÔNG cần ACTION
 
+Bán máy theo IMEI: tra kho tìm giá nhập → profit = giá_bán - giá_nhập.
 Khi nhận ảnh: tự phân tích, trích xuất, thêm ACTION ngay, báo ngắn gọn.
 
 FORMAT ACTIONS — field phân cách bởi |, để trống nếu không có:
@@ -2615,11 +2647,7 @@ profit=tiền THU, cost=tiền CHI linh kiện. Đơn vị VND đầy đủ (500
 VD "máy hoàng gia đã giao": [ACTION:UPDATE_REPAIR|hoàng gia||da_giao||]
 
 [ACTION:ADD_SALE|device|imei|condition|price|profit|date|buyer|source|note]
-condition: moi|like_new|99|97|cu_dep|cu_thuong. price=giá bán, profit=lãi (âm nếu lỗ). Đơn vị VND đầy đủ.
-⚠️ QUAN TRỌNG profit: Nếu người dùng nói rõ "lãi Xtr" → profit=X*1000000. KHÔNG tự tra kho tính lại.
-VD "bán iPhone 17 Pro Max giá 30tr lãi 2tr cho anh Minh imei 338223":
-[ACTION:ADD_SALE|iPhone 17 Pro Max|338223|moi|30000000|2000000|2026-05-06|Minh|nhap_moi|]
-⚠️ Chỉ tạo ADD_SALE khi người dùng THỰC SỰ muốn ghi bán. Câu tranh luận/giải thích ("nhập 28tr bán 30tr lãi 2tr chứ" để phản bác AI) → KHÔNG tạo ACTION, chỉ xác nhận lại số liệu.
+condition: moi|like_new|99|97|cu_dep|cu_thuong. price,profit: VND đầy đủ. profit âm nếu lỗ.
 
 [ACTION:UPDATE_SALE|imei|device_hint|condition|price|profit|date|buyer|source|note]
 
@@ -2844,13 +2872,13 @@ function handleActions(reply) {
     };
     d.conditionLabel = condMap[d.condition] || d.condition;
 
-    // Tự động lấy giá nhập từ kho nếu có IMEI và profit chưa điền (=0)
-    // KHÔNG tự tính lại nếu AI đã điền profit hợp lý
-    if (d.imei && d.profit === 0 && d.price > 0) {
+    // Tự động lấy giá nhập từ kho nếu có IMEI và profit chưa điền
+    if (d.imei && d.profit === 0) {
       const whItem = WAREHOUSE.find(w => w.imei && w.imei === d.imei && w.type === 'nhap');
       if (whItem && whItem.price) {
-        d.costBasis = whItem.price;
-        d.profit = d.price - whItem.price;
+        d.costBasis = whItem.price; // lưu tham chiếu
+        // Tính lãi = giá bán - giá nhập
+        if (d.price > 0) d.profit = d.price - whItem.price;
       }
     }
 
@@ -2868,6 +2896,34 @@ function handleActions(reply) {
       SALES.unshift(d);
       saveSales();
       anyAction = true;
+
+      // Tự động tạo record XUẤT KHO khi bán máy có trong kho
+      const whSrc = d.imei
+        ? WAREHOUSE.find(w => w.type === 'nhap' && w.imei && w.imei === d.imei)
+        : WAREHOUSE.find(w => w.type === 'nhap' && w.name.toLowerCase().trim() === d.device.toLowerCase().trim() && (w.quantity||1) > 0);
+      if (whSrc) {
+        // Kiểm tra chưa có record xuat kho cho IMEI này
+        const dupXuat = d.imei && WAREHOUSE.some(w => w.type === 'xuat' && w.imei && w.imei === d.imei);
+        if (!dupXuat) {
+          const xuat = {
+            id: Date.now() + Math.floor(Math.random() * 999) + 1,
+            type: 'xuat',
+            name: whSrc.name,
+            quantity: 1,
+            unit: whSrc.unit || 'tên',
+            price: d.price || 0,
+            supplier: d.buyer || '',
+            category: whSrc.category || 'Kho',
+            imei: d.imei || '',
+            note: 'Xuất bán - ' + (d.buyer ? 'KH: ' + d.buyer + ' - ' : '') + 'Lãi: ' + (d.profit||0) + 'đ',
+            date: d.date,
+            createdAt: new Date().toLocaleString('vi-VN'),
+            _fromSaleId: d.id
+          };
+          WAREHOUSE.unshift(xuat);
+          saveWarehouse();
+        }
+      }
     }
     clean = clean.replace(m[0], '');
   });
@@ -4479,8 +4535,7 @@ async function sendSimMsg(text, imgData) {
     || (findDevice(t) !== '' && /thu|giá nhận|lãi|tiền sửa|ép|thay|sửa|vốn|linh kiện|lk|màn|pin|cảm ứng|cổng sạc|loa|camera|mic|kính|ic|main|nguồn/.test(t) && !isUpdateRepair)
     || (findOwner(t) !== '' && /(?:ép|thay|sửa|ic|cảm ứng|màn|pin|cổng|loa|camera|mic|kính|main|nguồn)/.test(t) && /\d+\s*(?:k|tr|triệu)/.test(t) && !isUpdateRepair);
 
-  const isAddSale = /(?:bán máy|bán đc|bán được|xuất máy|bán cho|vừa bán|đã bán|bán ra|bán hàng|ghi bán|thêm bán|bán với giá|ra đi|chốt máy|chốt đơn)/.test(t)
-    && !/(?:nhập\s+\d|nhập\s+\w+\s+bán|mà\s+lỗ|sao\s+lỗ|lãi\s+\d+.*chứ|lời\s+\d+.*chứ|đúng\s+không|đúng\s+chứ|vậy\s+à|sao\s+vậy)/.test(t);
+  const isAddSale = /(?:bán máy|bán đc|bán được|xuất máy|bán cho|vừa bán|đã bán|bán ra|bán hàng|ghi bán|thêm bán|bán với giá|ra đi|chốt máy|chốt đơn)/.test(t);
 
   const isUpdateSale = /(?:cập nhật bán|sửa phiếu bán|update bán|đổi giá bán|sửa giá bán|chỉnh phiếu bán)/.test(t);
 
@@ -4682,7 +4737,28 @@ async function sendSimMsg(text, imgData) {
       d.id = Date.now() + Math.floor(Math.random()*1000);
       d.createdAt = new Date().toLocaleString('vi-VN');
       SALES.unshift(d);
-      saveSales(); buildSaleList(); updateStats();
+      saveSales();
+
+      // Tự động tạo record XUẤT KHO khi bán máy có trong kho
+      const _whSrc = imei
+        ? WAREHOUSE.find(w => w.type === 'nhap' && w.imei && w.imei === imei)
+        : WAREHOUSE.find(w => w.type === 'nhap' && w.name.toLowerCase().trim() === (device||'').toLowerCase().trim());
+      if (_whSrc) {
+        const _dupXuat = imei && WAREHOUSE.some(w => w.type === 'xuat' && w.imei && w.imei === imei);
+        if (!_dupXuat) {
+          const _xuat = {
+            id: Date.now() + Math.floor(Math.random()*998) + 2,
+            type: 'xuat', name: _whSrc.name, quantity: 1, unit: _whSrc.unit || 'tên',
+            price: price || 0, supplier: buyer || '', category: _whSrc.category || 'Kho',
+            imei: imei || '', note: 'Xuất bán (AI)' + (buyer ? ' - KH: ' + buyer : ''),
+            date: todayStr(), createdAt: new Date().toLocaleString('vi-VN'), _fromSaleId: d.id
+          };
+          WAREHOUSE.unshift(_xuat);
+          saveWarehouse();
+        }
+      }
+
+      buildSaleList(); buildWarehouseList(); updateStats();
       reply = `✅ <strong>Đã ghi bán máy!</strong><br>`
         + `📱 ${escHtml(d.device)}${imei?' · IMEI: '+imei:''}`
         + (buyer ? `<br>👤 Khách: ${escHtml(buyer)}` : '')
