@@ -2538,9 +2538,6 @@ function buildContext() {
     ? WAREHOUSE.slice(0,10).map(w => `- [${w.type==='nhap'?'N':'X'}] ${w.name}${w.imei?' '+w.imei:''} SL:${w.quantity||1} giá:${(w.price||0)/1000}k ${w.date}`).join('\n')
     : '(Kho trống)';
   const stockSummary = getStockSummary().filter(s=>s.qty>0).map(s=>`${s.name}: ${s.qty} ${s.unit||'cái'}`).join(', ') || '(Không có tồn kho)';
-  const partsLines = PARTS.length
-    ? PARTS.slice(0,8).map(p => `- [${p.type==='nhap'?'N':'X'}] ${p.name}${p.category?' ('+p.category+')':''} SL:${p.quantity||1}${p.unit?' '+p.unit:''} ${(p.price||0)/1000}k ${p.date}`).join('\n')
-    : '(Chưa có dữ liệu linh kiện)';
 
   const totalRepairNet = REPAIRS.reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
   const totalSaleNet   = SALES.filter(s=>!s.returned).reduce((s,x)=>s+(x.profit||0),0);
@@ -2575,10 +2572,6 @@ ${finLines}
 ─ KHO HÀNG (${WAREHOUSE.length} giao dịch gần nhất):
 ${whLines}
 Tồn kho hiện tại: ${stockSummary}
-
-─ LINH KIỆN (${PARTS.length} giao dịch gần nhất):
-${partsLines}
-Tồn linh kiện: ${getPartsStockSummary().filter(s=>s.qty>0).map(s=>`${s.name}: ${s.qty} ${s.unit||'cái'}`).join(', ') || '(Trống)'}
 
 ─ TÀI CHÍNH THÁNG NÀY (đã tính đúng cả sale hoàn trả với phí %):
 Lãi sửa: ${fmtMoney(monthRepairNet)} | Lãi bán: ${fmtMoney(monthSaleNet)}
@@ -4457,17 +4450,6 @@ async function sendSimMsg(text, imgData) {
 
   const isQuery = /(?:bao nhiêu|tổng|doanh thu|lợi nhuận|thống kê|hôm nay|tháng này|tuần này|báo cáo|tình hình|kết quả|lãi bao nhiêu|thu bao nhiêu)/.test(t);
 
-  // Tra cứu theo tên khách
-  const custQueryName = findOwner(text) || (text.match(/(?:khách|máy của|phiếu của|tìm|tra|xem)\s+(\S+(?:\s+\S+)?)/i)||[])[1] || '';
-  const isQueryCustomer = /(?:khách|máy của|phiếu của|lịch sử|tra cứu|tìm khách|xem khách|thông tin khách)/.test(t) && custQueryName;
-
-  // Tra cứu theo IMEI
-  const imeiQuery = (text.match(/(?:imei|seri)[:\s]*(\d{5,15})/i)||[])[1] || (text.match(/\b(\d{15})\b/)||[])[1] || '';
-  const isQueryImei = !!imeiQuery;
-
-  // Tra cứu hôm nay
-  const isQueryToday = /hôm nay/.test(t) && !/nhận|thêm|ghi|lưu|bán|chi|thu/.test(t);
-
   // ══════════════════════════════════════════════════════════════════════════
   if (imgData) {
     reply = '📷 <strong>AI Giả lập</strong> chưa hỗ trợ đọc ảnh. Nhập Groq API key miễn phí để AI đọc ảnh tự động nhé!';
@@ -4754,60 +4736,6 @@ async function sendSimMsg(text, imgData) {
       reply = rep;
     }
 
-  // ── TRA CỨU THEO IMEI ─────────────────────────────────────────────────────
-  } else if (isQueryImei) {
-    const repFound  = REPAIRS.find(r => r.imei && r.imei === imeiQuery);
-    const saleFound = SALES.find(s => s.imei && s.imei === imeiQuery);
-    const whFound   = WAREHOUSE.find(w => w.imei && w.imei === imeiQuery);
-    if (repFound || saleFound || whFound) {
-      reply = `🔍 <strong>Tìm theo IMEI ${imeiQuery}:</strong><br>`;
-      if (repFound) reply += `🔧 Sửa: ${escHtml(repFound.owner)} — ${escHtml(repFound.device)} · ${escHtml({dang_sua:'Đang sửa',xong_chua_giao:'Chưa giao',da_giao:'Đã giao'}[repFound.status]||repFound.status)}<br>`;
-      if (saleFound) reply += `💰 Đã bán: ${escHtml(saleFound.device)}${saleFound.buyer?' → '+escHtml(saleFound.buyer):''} · ${fmtDate(saleFound.date)} · ${fmtMoney(saleFound.price)}<br>`;
-      if (whFound) reply += `📦 Kho: ${escHtml(whFound.type==='nhap'?'Nhập':'Xuất')} ${escHtml(whFound.name)} · ${fmtDate(whFound.date)}<br>`;
-    } else {
-      reply = `🔍 Không tìm thấy dữ liệu nào với IMEI <strong>${imeiQuery}</strong>.`;
-    }
-
-  // ── TRA CỨU THEO TÊN KHÁCH ───────────────────────────────────────────────
-  } else if (isQueryCustomer && custQueryName.length >= 2) {
-    const kw = custQueryName.toLowerCase();
-    const custRepairs = REPAIRS.filter(r => r.owner && r.owner.toLowerCase().includes(kw));
-    const custSales   = SALES.filter(s => s.buyer && s.buyer.toLowerCase().includes(kw));
-    if (!custRepairs.length && !custSales.length) {
-      reply = `🔍 Không tìm thấy khách hàng nào tên "<strong>${escHtml(custQueryName)}</strong>".`;
-    } else {
-      const totalSpend = custRepairs.reduce((s,r)=>s+(r.profit||0),0) + custSales.reduce((s,x)=>s+(x.price||0),0);
-      reply = `👤 <strong>Khách: ${escHtml(custQueryName)}</strong><br>`;
-      if (custRepairs.length) {
-        reply += `🔧 Sửa ${custRepairs.length} lần:<br>`;
-        reply += custRepairs.slice(0,4).map(r=>`  • ${escHtml(r.device)} · ${fmtDate(r.date)} · ${escHtml({dang_sua:'Đang sửa',xong_chua_giao:'Chưa giao',da_giao:'Đã giao'}[r.status]||r.status)} · Thu: ${fmtMoney(r.profit||0)}`).join('<br>') + '<br>';
-      }
-      if (custSales.length) {
-        reply += `💰 Mua ${custSales.length} lần:<br>`;
-        reply += custSales.slice(0,4).map(s=>`  • ${escHtml(s.device)} · ${fmtDate(s.date)} · ${fmtMoney(s.price)}`).join('<br>') + '<br>';
-      }
-      reply += `💵 Tổng chi tiêu: <strong style="color:var(--green)">${fmtMoney(totalSpend)}</strong>`;
-      if (custRepairs[0]?.phone) reply += `<br>📞 SĐT: ${escHtml(custRepairs[0].phone)}`;
-    }
-
-  // ── TRA CỨU HÔM NAY ───────────────────────────────────────────────────────
-  } else if (isQueryToday) {
-    const today = todayStr();
-    const todayReps  = REPAIRS.filter(r => r.date === today);
-    const todaySales = SALES.filter(s => s.date === today);
-    const todayFin   = FINANCE.filter(f => f.date === today);
-    const todayRNet  = todayReps.reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
-    const todaySNet  = todaySales.reduce((s,x)=>s+(x.profit||0),0);
-    const todayFIn   = todayFin.filter(f=>f.type==='thu').reduce((s,f)=>s+f.amount,0);
-    const todayFOut  = todayFin.filter(f=>f.type==='chi').reduce((s,f)=>s+f.amount,0);
-    reply = `📅 <strong>Hôm nay (${fmtDate(today)}):</strong><br>`;
-    reply += `🔧 Nhận ${todayReps.length} phiếu sửa · Lãi: <strong style="color:var(--${todayRNet>=0?'green':'red'})">${fmtMoney(todayRNet)}</strong><br>`;
-    if (todayReps.length) reply += todayReps.slice(0,4).map(r=>`  • ${escHtml(r.owner)} — ${escHtml(r.device)}`).join('<br>') + '<br>';
-    reply += `📱 Bán ${todaySales.length} máy · Lãi: <strong style="color:var(--${todaySNet>=0?'green':'red'})">${fmtMoney(todaySNet)}</strong><br>`;
-    if (todaySales.length) reply += todaySales.slice(0,4).map(s=>`  • ${escHtml(s.device)}${s.buyer?' → '+escHtml(s.buyer):''} · ${fmtMoney(s.price)}`).join('<br>') + '<br>';
-    if (todayFIn || todayFOut) reply += `💳 Thu: +${fmtMoney(todayFIn)} · Chi: -${fmtMoney(todayFOut)}<br>`;
-    reply += `🏆 Tổng lãi hôm nay: <strong style="color:var(--${(todayRNet+todaySNet)>=0?'green':'red'})">${fmtMoney(todayRNet+todaySNet)}</strong>`;
-
   // ── BÁO CÁO / THỐNG KÊ ────────────────────────────────────────────────────
   } else if (isQuery) {
     const month = thisMonth();
@@ -4817,24 +4745,18 @@ async function sendSimMsg(text, imgData) {
     const monthSNet  = SALES.filter(s=>s.date&&s.date.startsWith(month)&&!s.returned).reduce((s,x)=>s+(x.profit||0),0);
     const monthFIn   = FINANCE.filter(f=>f.date&&f.date.startsWith(month)&&f.type==='thu').reduce((s,f)=>s+f.amount,0);
     const monthFOut  = FINANCE.filter(f=>f.date&&f.date.startsWith(month)&&f.type==='chi').reduce((s,f)=>s+f.amount,0);
-    const totalRNet  = REPAIRS.reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
-    const totalSNet  = SALES.filter(s=>!s.returned).reduce((s,x)=>s+(x.profit||0),0);
-    reply = `📊 <strong>Báo cáo tháng ${month.slice(5)}/${month.slice(0,4)}:</strong><br>`
+    reply = `📊 <strong>Báo cáo tháng ${month.slice(5)}:</strong><br>`
       + `🔧 Đang sửa: <strong>${repairing}</strong> · Chờ giao: <strong>${pending}</strong><br>`
-      + `💰 Lãi sửa tháng: <strong style="color:var(--${monthRNet>=0?'green':'red'})">${fmtMoney(monthRNet)}</strong><br>`
-      + `📱 Lãi bán tháng: <strong style="color:var(--${monthSNet>=0?'green':'red'})">${fmtMoney(monthSNet)}</strong><br>`
-      + (monthFIn||monthFOut ? `💳 Thu: +${fmtMoney(monthFIn)} · Chi: -${fmtMoney(monthFOut)}<br>` : '')
-      + `🏆 Tổng lãi tháng: <strong style="color:var(--${(monthRNet+monthSNet)>=0?'green':'red'})">${fmtMoney(monthRNet+monthSNet)}</strong><br>`
-      + `<em style="font-size:11px;color:var(--text3)">Tổng lãi sửa all-time: ${fmtMoney(totalRNet)} · Tổng lãi bán: ${fmtMoney(totalSNet)}</em>`;
+      + `💰 Lãi sửa: <strong style="color:var(--${monthRNet>=0?'green':'red'})">${fmtMoney(monthRNet)}</strong><br>`
+      + `📱 Lãi bán: <strong style="color:var(--${monthSNet>=0?'green':'red'})">${fmtMoney(monthSNet)}</strong><br>`
+      + (monthFIn||monthFOut ? `💳 Thu/Chi: +${fmtMoney(monthFIn)} / -${fmtMoney(monthFOut)}<br>` : '')
+      + `🏆 Tổng lãi: <strong style="color:var(--${(monthRNet+monthSNet)>=0?'green':'red'})">${fmtMoney(monthRNet+monthSNet)}</strong>`;
 
   // ── FALLBACK ──────────────────────────────────────────────────────────────
   } else {
     const repairs = REPAIRS.filter(r=>r.status==='dang_sua').length;
     const pending = REPAIRS.filter(r=>r.status==='xong_chua_giao').length;
-    const month = thisMonth();
-    const monthRNet = REPAIRS.filter(r=>r.date&&r.date.startsWith(month)).reduce((s,r)=>s+(r.profit||0)-(r.cost||0),0);
-    const monthSNet = SALES.filter(s=>s.date&&s.date.startsWith(month)&&!s.returned).reduce((s,x)=>s+(x.profit||0),0);
-    reply = `🤖 <strong>AI Giả lập</strong> — Shop đang có <strong>${repairs}</strong> máy sửa, <strong>${pending}</strong> chờ giao. Lãi tháng này: <strong style="color:var(--${(monthRNet+monthSNet)>=0?'green':'red'})">${fmtMoney(monthRNet+monthSNet)}</strong>.<br><br>`
+    reply = `🤖 <strong>AI Giả lập</strong> — Shop đang có <strong>${repairs}</strong> máy sửa, <strong>${pending}</strong> chờ giao.<br><br>`
       + `Mình hiểu các lệnh tự nhiên như:<br>`
       + `• <em>"nhận máy anh Tuấn iPhone 13, ép màn, thu 500k vốn 150k"</em><br>`
       + `• <em>"bán iPhone 14 Pro giá 22tr lãi 1.5tr"</em><br>`
@@ -4842,9 +4764,7 @@ async function sendSimMsg(text, imgData) {
       + `• <em>"chi 80k mua ốc vít"</em><br>`
       + `• <em>"nhập kho màn iPhone 11, 3 cái, giá 250k"</em><br>`
       + `• <em>"giao máy anh Hùng rồi"</em><br>`
-      + `• <em>"tháng này lãi bao nhiêu?"</em><br>`
-      + `• <em>"tra cứu khách anh Tuấn"</em><br>`
-      + `• <em>"tìm IMEI 123456789012345"</em>`;
+      + `• <em>"tháng này lãi bao nhiêu?"</em>`;
   }
 
   hideTyping();
