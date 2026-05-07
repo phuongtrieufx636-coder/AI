@@ -2602,15 +2602,15 @@ CÁCH MAP THÔNG TIN TỪ CÂU NÓI:
 - owner: từ "anh/chị/em/bé/bạn/ông/bà + Tên" → lấy Tên (VD: "anh Tuấn" → "Tuấn")
 - phone: số điện thoại nếu có, còn không thì để TRỐNG
 - device: tên máy (VD: iPhone 11 Pro, Samsung S24)
-- imei: CHỈ điền nếu người dùng nói rõ số IMEI/serial. TUYỆT ĐỐI không tự bịa số. Để TRỐNG nếu không có. KHÔNG dùng 1234567890 hay số giả.
-- pass: CHỈ điền nếu người dùng nói rõ mật khẩu/PIN. TUYỆT ĐỐI không tự bịa. Để TRỐNG nếu không có.
+- imei: CHỈ điền nếu người dùng nói rõ "imei" hoặc "serial" + số. Để TRỐNG nếu không có. KHÔNG tự bịa.
+- pass: CHỈ điền nếu người dùng nói "mật khẩu"/"pass"/"PIN" + số. Để TRỐNG nếu không có. KHÔNG tự bịa.
+⚠️ IMEI ≠ pass: "imei 1122" → imei=1122, pass trống. "pass 1234" → pass=1234, imei trống.
 - issue: động từ sửa chữa → "ép cảm ứng", "thay màn", "sửa main", "thay pin"...
 - profit: giá nhận / thu về (VD: "thi 550k" → 550000)
 - cost: vốn / chi linh kiện (VD: "vốn 200k" → 200000)
 - note: màu máy, tình trạng máy lúc nhận, ghi chú thêm (VD: "màu đen", "màn vỡ góc")
 VD: "nhận máy anh Tuấn iPhone 11pro ép cảm ứng thu 500k vốn 120k màu vàng":
 [ACTION:ADD_REPAIR|Tuấn||iPhone 11 Pro|||ép cảm ứng|500000|120000|2026-05-04|dang_sua|màu vàng]
-⚠️ THỨ TỰ FIELD BẮT BUỘC: owner|phone|device|imei|pass|issue|profit|cost|date|status|note (11 field, dùng || cho field trống)
 profit=tiền THU, cost=tiền CHI linh kiện. Đơn vị VND đầy đủ (500k=500000). status: dang_sua|xong_chua_giao|da_giao
 
 [ACTION:UPDATE_REPAIR|owner_or_device|device_hint|new_status|profit|cost|note]
@@ -2632,6 +2632,8 @@ QUY TẮC:
 - "Khách trả lại máy/back" → hướng dẫn nhấn nút "Đánh dấu hoàn trả" trong tab Bán máy.
 - Dữ liệu trong system prompt là nguồn chính xác — bỏ qua lịch sử chat nếu mâu thuẫn.
 - Thiếu info → dùng mặc định, KHÔNG hỏi lại trừ khi thiếu tên + tên máy.
+- IMEI là TÙY CHỌN, KHÔNG bắt buộc. TUYỆT ĐỐI không hỏi IMEI, không yêu cầu cung cấp IMEI. Nếu không có IMEI → để trống, vẫn lưu bình thường.
+- Khi user nói "imei XXXX" hay "serial XXXX" → điền vào field imei, KHÔNG điền vào pass.
 - Xác nhận ngắn gọn. Chỉ trả lời về chủ đề quản lý cửa hàng.`;
 }
 
@@ -2714,6 +2716,15 @@ function handleActions(reply) {
       }
     }
 
+    // Fix 2b: pass chứa số thuần dài ≥4 chữ số mà imei trống → đây là IMEI bị nhầm sang pass
+    // Xảy ra khi AI đặt imei vào vị trí pass (lệch 1 field)
+    // IMEI hợp lệ: 4-15 chữ số. Pass thực sự thường 4-6 số nhưng AI thường để trống nếu không có.
+    // Heuristic: nếu imei rỗng VÀ pass là số thuần ≥ 4 chữ số VÀ profitVal > 0 (có đủ data khác) → pass là imei
+    if (!imeiVal && passVal && /^\d{4,15}$/.test(passVal.replace(/\s/g,'')) && profitVal > 0) {
+      imeiVal = passVal.replace(/\s/g,'');
+      passVal = '';
+    }
+
     // Fix 3: issue là số thuần → AI nhầm, chuyển sang profit
     if (issueVal && /^\d[\d.,\s]*$/.test(issueVal.trim())) {
       const numVal = parseFloat(issueVal.replace(/[.,\s]/g,''))||0;
@@ -2734,29 +2745,6 @@ function handleActions(reply) {
     const noteVal = p[10]||'';
     if (!profitVal && noteVal && /^\d[\d.,\s]*$/.test(noteVal.trim())) {
       profitVal = parseFloat(noteVal.replace(/[.,\s]/g,''))||0;
-    }
-
-    // Fix 6: phát hiện lệch field — cost bị nhầm là năm (VD: 2024, 2025, 2026)
-    // Xảy ra khi AI thiếu field pass/imei → các field sau bị dịch trái 1
-    const isYearValue = (v) => v >= 2020 && v <= 2035 && v === Math.floor(v);
-    if (isYearValue(costVal)) {
-      // cost là năm → field bị lệch: issue=p[4], profit=p[5], cost=p[6]
-      const shiftedIssue  = p[4]||'';
-      const shiftedProfit = parseFloat(p[5])||0;
-      const shiftedCost   = parseFloat(p[6])||0;
-      const shiftedDate   = p[7]||todayStr();
-      if (shiftedProfit > 0 || shiftedCost > 0) {
-        if (!issueVal && shiftedIssue) issueVal = shiftedIssue;
-        profitVal = shiftedProfit;
-        costVal   = shiftedCost;
-        p[8] = shiftedDate;
-      } else {
-        costVal = 0;
-      }
-    }
-    // Fix 6b: profit là năm (lệch thêm 1 field nữa)
-    if (isYearValue(profitVal)) {
-      profitVal = 0;
     }
 
     const d = {
