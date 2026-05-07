@@ -2609,7 +2609,8 @@ CÁCH MAP THÔNG TIN TỪ CÂU NÓI:
 - cost: vốn / chi linh kiện (VD: "vốn 200k" → 200000)
 - note: màu máy, tình trạng máy lúc nhận, ghi chú thêm (VD: "màu đen", "màn vỡ góc")
 VD: "nhận máy anh Tuấn iPhone 11pro ép cảm ứng thu 500k vốn 120k màu vàng":
-[ACTION:ADD_REPAIR|Tuấn||iPhone 11 Pro||ép cảm ứng||500000|120000|2026-05-04|dang_sua|màu vàng]
+[ACTION:ADD_REPAIR|Tuấn||iPhone 11 Pro|||ép cảm ứng|500000|120000|2026-05-04|dang_sua|màu vàng]
+⚠️ THỨ TỰ FIELD BẮT BUỘC: owner|phone|device|imei|pass|issue|profit|cost|date|status|note (11 field, dùng || cho field trống)
 profit=tiền THU, cost=tiền CHI linh kiện. Đơn vị VND đầy đủ (500k=500000). status: dang_sua|xong_chua_giao|da_giao
 
 [ACTION:UPDATE_REPAIR|owner_or_device|device_hint|new_status|profit|cost|note]
@@ -2733,6 +2734,29 @@ function handleActions(reply) {
     const noteVal = p[10]||'';
     if (!profitVal && noteVal && /^\d[\d.,\s]*$/.test(noteVal.trim())) {
       profitVal = parseFloat(noteVal.replace(/[.,\s]/g,''))||0;
+    }
+
+    // Fix 6: phát hiện lệch field — cost bị nhầm là năm (VD: 2024, 2025, 2026)
+    // Xảy ra khi AI thiếu field pass/imei → các field sau bị dịch trái 1
+    const isYearValue = (v) => v >= 2020 && v <= 2035 && v === Math.floor(v);
+    if (isYearValue(costVal)) {
+      // cost là năm → field bị lệch: issue=p[4], profit=p[5], cost=p[6]
+      const shiftedIssue  = p[4]||'';
+      const shiftedProfit = parseFloat(p[5])||0;
+      const shiftedCost   = parseFloat(p[6])||0;
+      const shiftedDate   = p[7]||todayStr();
+      if (shiftedProfit > 0 || shiftedCost > 0) {
+        if (!issueVal && shiftedIssue) issueVal = shiftedIssue;
+        profitVal = shiftedProfit;
+        costVal   = shiftedCost;
+        p[8] = shiftedDate;
+      } else {
+        costVal = 0;
+      }
+    }
+    // Fix 6b: profit là năm (lệch thêm 1 field nữa)
+    if (isYearValue(profitVal)) {
+      profitVal = 0;
     }
 
     const d = {
