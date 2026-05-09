@@ -2609,9 +2609,18 @@ CÁCH MAP THÔNG TIN TỪ CÂU NÓI:
 - profit: giá nhận / thu về (VD: "thi 550k" → 550000)
 - cost: vốn / chi linh kiện (VD: "vốn 200k" → 200000)
 - note: màu máy, tình trạng máy lúc nhận, ghi chú thêm (VD: "màu đen", "màn vỡ góc")
-VD: "nhận máy anh Tuấn iPhone 11pro ép cảm ứng thu 500k vốn 120k màu vàng":
+⚠️ BẮT BUỘC đủ 10 dấu | (11 field). Field trống dùng ||.
+owner|phone|device|imei|pass|issue|profit|cost|date|status|note
+Khi không có phone/imei/pass → vẫn phải có || cho từng field.
+
+VD1: "nhận máy anh Tuấn iPhone 11pro ép cảm ứng thu 500k vốn 120k màu vàng":
 [ACTION:ADD_REPAIR|Tuấn||iPhone 11 Pro|||ép cảm ứng|500000|120000|2026-05-04|dang_sua|màu vàng]
-profit=tiền THU, cost=tiền CHI linh kiện. Đơn vị VND đầy đủ (500k=500000). status: dang_sua|xong_chua_giao|da_giao
+
+VD2: "ép cảm ứng XS cho Khai giá thu 400k vốn 150k":
+[ACTION:ADD_REPAIR|Khai||iPhone XS|||ép cảm ứng|400000|150000|2026-05-09|dang_sua|]
+→ Đếm dấu |: Khai | (phone) | iPhone XS | (imei) | (pass) | ép cảm ứng | 400000 | 150000 | date | status | note = 10 dấu |
+
+profit=tiền THU về, cost=tiền CHI linh kiện. Đơn vị VND đầy đủ (500k=500000). status: dang_sua|xong_chua_giao|da_giao
 
 [ACTION:UPDATE_REPAIR|owner_or_device|device_hint|new_status|profit|cost|note]
 VD "máy hoàng gia đã giao": [ACTION:UPDATE_REPAIR|hoàng gia||da_giao||]
@@ -2674,13 +2683,34 @@ function handleActions(reply) {
   repMatches.forEach(m => {
     const p = m[1].split('|');
 
-    // ── PRE-FIX: phát hiện AI bỏ qua field phone → shift lệch 1 ─────────────
-    // Nếu p[1] (phone) chứa tên máy (iphone/samsung/...) thay vì số điện thoại
-    // → chèn '' vào vị trí phone để các field sau khớp đúng
-    const isDeviceName = /iphone|samsung|oppo|xiaomi|vivo|realme|nokia|pixel|huawei|redmi|poco/i.test(p[1]||'');
-    const isPhoneNum   = /^0\d{9}$/.test((p[1]||'').replace(/\s/g,''));
-    if (isDeviceName && !isPhoneNum) {
-      p.splice(1, 0, ''); // chèn phone trống để fix lệch field
+    // ── PRE-FIX: chuẩn hoá field count về đúng 11 field ────────────────────────
+    // Format đúng: owner|phone|device|imei|pass|issue|profit|cost|date|status|note
+    // AI hay bỏ phone, imei, pass → gây lệch. Ta phát hiện bằng nội dung field.
+
+    const _isDevice  = v => /iphone|ipad|samsung|oppo|xiaomi|vivo|realme|nokia|pixel|huawei|redmi|poco|macbook|laptop/i.test(v||'');
+    const _isPhone   = v => /^0\d{9}$/.test((v||'').replace(/\s/g,''));
+    const _isImei    = v => /^\d{5,15}$/.test((v||'').replace(/\s/g,''));
+    const _isPass    = v => /^\d{4,6}$/.test((v||'').trim()) || /^[a-zA-Z0-9]{4,10}$/.test((v||'').trim());
+    const _isIssue   = v => (v||'').match(/[a-zA-ZÀ-ỹ]/g)?.length >= 2;
+    const _isMoney   = v => { const n = parseFloat((v||'').replace(/[.,\s]/g,'')); return n > 1000 && n < 100000000; };
+    const _isYear    = v => { const n = parseFloat(v||''); return n >= 2020 && n <= 2035 && n === Math.floor(n); };
+
+    // Đếm field thực tế AI sinh ra
+    // Nếu thiếu field → chèn '' vào đúng chỗ theo logic nội dung
+    // p[0]=owner (luôn đúng), p[1] nên là phone
+    // Bước 1: fix phone bị bỏ (p[1] là device name)
+    if (_isDevice(p[1]) && !_isPhone(p[1])) {
+      p.splice(1, 0, ''); // chèn phone='' trước device
+    }
+    // Bây giờ p[2] nên là device
+    // Bước 2: fix imei bị bỏ (p[3] chứa chữ → issue hoặc pass)
+    // Nếu p[3] là issue text (chứa chữ tiếng Việt >= 2) hoặc là số tiền → imei bị skip
+    if (_isIssue(p[3]) || _isMoney(p[3])) {
+      p.splice(3, 0, ''); // chèn imei=''
+    }
+    // Bước 3: fix pass bị bỏ (p[4] là issue text)
+    if (_isIssue(p[4]) && !_isPass(p[4])) {
+      p.splice(4, 0, ''); // chèn pass=''
     }
 
     let ownerVal  = p[0]||'';
