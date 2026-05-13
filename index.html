@@ -401,7 +401,7 @@ canvas#revenue-chart{width:100%!important;max-height:220px;}
     <button class="nav-btn" onclick="switchTab('sales')" id="nav-sales"><span class="ni">💰</span> Bán máy</button>
     <button class="nav-btn" onclick="switchTab('finance')" id="nav-finance"><span class="ni">💳</span> Thu / Chi</button>
     <button class="nav-btn" onclick="switchTab('warehouse')" id="nav-warehouse"><span class="ni">📦</span> Kho máy</button>
-    <button class="nav-btn" onclick="switchTab('parts')" id="nav-parts"><span class="ni">🔩</span> Linh kiện</button>
+    <button class="nav-btn" onclick="switchTab('debt')" id="nav-debt"><span class="ni">💸</span> Ghi nợ</button>
     <button class="nav-btn" onclick="switchTab('customers')" id="nav-customers"><span class="ni">🏷️</span> Khách hàng</button>
     <button class="nav-btn" onclick="switchTab('stats')" id="nav-stats"><span class="ni">📊</span> Thống kê</button>
     <button class="nav-btn" onclick="switchTab('settings')" id="nav-settings"><span class="ni">⚙️</span> Cài đặt</button>
@@ -1083,94 +1083,67 @@ function doGet(e) {
   </div>
 
   <!-- ── LINH KIỆN TAB ── -->
-  <div class="tab hidden" id="tab-parts">
+  
+  <!-- ── GHI NỢ TAB ── -->
+  <div class="tab hidden" id="tab-debt">
     <div class="tab-body">
       <div class="add-form">
-        <h4>🔩 Nhập / Xuất linh kiện</h4>
+        <h4>💸 Ghi nợ mới</h4>
         <div class="form-grid col2">
           <div class="field-wrap">
-            <label class="field-label">Loại giao dịch</label>
-            <select class="field" id="pt-type">
-              <option value="nhap">📥 Nhập kho</option>
-              <option value="xuat">📤 Xuất / Dùng</option>
-            </select>
+            <label class="field-label">Tên khách *</label>
+            <input class="field" id="debt-name" placeholder="VD: Anh Hùng, Chị Mai..." />
           </div>
           <div class="field-wrap">
-            <label class="field-label">Tên linh kiện *</label>
-            <input class="field" id="pt-name" placeholder="VD: Màn iPhone 13, Pin S24..." />
+            <label class="field-label">Số điện thoại</label>
+            <input class="field" id="debt-phone" placeholder="0901..." />
           </div>
           <div class="field-wrap">
-            <label class="field-label">Danh mục</label>
-            <select class="field" id="pt-category">
-              <option value="">-- Chọn danh mục --</option>
-              <option value="Màn hình">📱 Màn hình</option>
-              <option value="Pin">🔋 Pin</option>
-              <option value="Vỏ / Nắp lưng">🛡️ Vỏ / Nắp lưng</option>
-              <option value="Bo mạch">🔌 Bo mạch</option>
-              <option value="Camera">📷 Camera</option>
-              <option value="Loa / Mic">🔊 Loa / Mic</option>
-              <option value="Nút / Phím">🎮 Nút / Phím</option>
-              <option value="Cáp / Sạc">⚡ Cáp / Sạc</option>
-              <option value="Keo / Dụng cụ">🧰 Keo / Dụng cụ</option>
-              <option value="Khác">📦 Khác</option>
-            </select>
+            <label class="field-label">Số tiền nợ (VND) *</label>
+            <input class="field" type="number" id="debt-amount" placeholder="VD: 500000" min="0" />
           </div>
           <div class="field-wrap">
-            <label class="field-label">Số lượng</label>
-            <input class="field" type="number" id="pt-qty" placeholder="1" min="0.01" step="any" value="1" />
+            <label class="field-label">Ngày ghi nợ</label>
+            <input class="field" type="date" id="debt-date" />
           </div>
           <div class="field-wrap">
-            <label class="field-label">Đơn vị</label>
-            <input class="field" id="pt-unit" placeholder="cái / bộ / cuộn..." value="cái" />
+            <label class="field-label">Hạn trả</label>
+            <input class="field" type="date" id="debt-due" />
           </div>
           <div class="field-wrap">
-            <label class="field-label">Đơn giá (VND)</label>
-            <input class="field" type="number" id="pt-price" placeholder="VD: 250000" min="0" />
-          </div>
-          <div class="field-wrap">
-            <label class="field-label">Nhà cung cấp</label>
-            <input class="field" id="pt-supplier" placeholder="Tên NCC / nguồn hàng..." />
-          </div>
-          <div class="field-wrap">
-            <label class="field-label">Dùng cho máy</label>
-            <input class="field" id="pt-usedfor" placeholder="VD: iPhone 13 của anh Quang..." />
-          </div>
-          <div class="field-wrap">
-            <label class="field-label">Ngày</label>
-            <input class="field" type="date" id="pt-date" />
+            <label class="field-label">Lý do / Dịch vụ</label>
+            <input class="field" id="debt-reason" placeholder="VD: Sửa iPhone 13, mua máy Samsung..." />
           </div>
         </div>
         <div class="field-wrap">
           <label class="field-label">Ghi chú</label>
-          <textarea class="field" id="pt-note" placeholder="Ghi chú thêm..." style="min-height:48px;"></textarea>
+          <textarea class="field" id="debt-note" placeholder="Ghi chú thêm..." style="min-height:48px;"></textarea>
         </div>
         <div class="btn-row">
-          <button class="btn-add" onclick="addPartItem()">➕ Lưu linh kiện</button>
+          <button class="btn-add" onclick="addDebt()">➕ Ghi nợ</button>
         </div>
       </div>
 
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-          <div class="section-hd" style="margin:0;padding:0;border:none;" id="pt-hd">Linh kiện (0)</div>
-          <div class="filter-bar" id="pt-filter-bar">
-            <button class="filter-btn active" onclick="setPartsFilter('all',this)">Tất cả</button>
-            <button class="filter-btn" onclick="setPartsFilter('nhap',this)">📥 Nhập</button>
-            <button class="filter-btn" onclick="setPartsFilter('xuat',this)">📤 Xuất</button>
+          <div class="section-hd" style="margin:0;padding:0;border:none;" id="debt-hd">Danh sách nợ (0)</div>
+          <div class="filter-bar" id="debt-filter-bar">
+            <button class="filter-btn active" onclick="setDebtFilter('all',this)">Tất cả</button>
+            <button class="filter-btn" onclick="setDebtFilter('con_no',this)">🔴 Còn nợ</button>
+            <button class="filter-btn" onclick="setDebtFilter('da_tra',this)">✅ Đã trả</button>
+            <button class="filter-btn" onclick="setDebtFilter('qua_han',this)">⚠️ Quá hạn</button>
           </div>
         </div>
-        <div style="margin-bottom:10px;font-size:12.5px;" id="pt-summary"></div>
-        <div style="margin-bottom:10px;">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">📊 Tồn kho linh kiện</div>
-          <div id="pt-stock-list" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
-        </div>
+        <div style="margin-bottom:10px;font-size:12.5px;" id="debt-summary"></div>
         <div class="search-bar-wrap">
-          <input class="search-input" id="pt-search" placeholder="🔍 Tìm tên linh kiện, danh mục..." oninput="buildPartsList()" />
-          <button class="search-clear" onclick="document.getElementById('pt-search').value='';buildPartsList()">✕ Xóa</button>
+          <input class="search-input" id="debt-search" placeholder="🔍 Tìm theo tên, số điện thoại, lý do..." oninput="buildDebtList()" />
+          <button class="search-clear" onclick="document.getElementById('debt-search').value='';buildDebtList()">✕ Xóa</button>
         </div>
-        <div class="card-list" id="parts-list"></div>
+        <div class="card-list" id="debt-list"></div>
       </div>
     </div>
   </div>
+
 
   <!-- ── KHÁCH HÀNG TAB ── -->
   <div class="tab hidden" id="tab-customers">
@@ -1240,7 +1213,7 @@ function doGet(e) {
   <button class="bnav-btn" onclick="switchTab('repair')" id="bnav-repair"><span class="bnav-icon">🔧</span><span class="bnav-label">Sửa máy</span></button>
   <button class="bnav-btn" onclick="switchTab('sales')" id="bnav-sales"><span class="bnav-icon">💰</span><span class="bnav-label">Bán máy</span></button>
   <button class="bnav-btn" onclick="switchTab('warehouse')" id="bnav-warehouse"><span class="bnav-icon">📦</span><span class="bnav-label">Kho máy</span></button>
-  <button class="bnav-btn" onclick="switchTab('parts')" id="bnav-parts"><span class="bnav-icon">🔩</span><span class="bnav-label">Linh kiện</span></button>
+  <button class="bnav-btn" onclick="switchTab('debt')" id="bnav-debt"><span class="bnav-icon">💸</span><span class="bnav-label">Ghi nợ</span></button>
   <button class="bnav-btn" onclick="switchTab('customers')" id="bnav-customers"><span class="bnav-icon">🏷️</span><span class="bnav-label">KH</span></button>
   <button class="bnav-btn" onclick="switchTab('finance')" id="bnav-finance"><span class="bnav-icon">💳</span><span class="bnav-label">Thu/Chi</span></button>
   <button class="bnav-btn" onclick="switchTab('stats')" id="bnav-stats"><span class="bnav-icon">📊</span><span class="bnav-label">Thống kê</span></button>
@@ -1256,6 +1229,7 @@ const SK_CHAT      = 'tt_chat_history';
 const SK_FINANCE   = 'tt_finance';
 const SK_WAREHOUSE = 'tt_warehouse';
 const SK_PARTS     = 'tt_parts';
+const SK_DEBTS     = 'tt_debts';
 const SK_CUSTOMERS = 'tt_customers';
 
 let groqKey = '';
@@ -1264,12 +1238,14 @@ let SALES = [];
 let FINANCE = [];
 let WAREHOUSE = [];
 let PARTS = [];
+let DEBTS = [];
 let CUSTOMERS = []; // khách hàng thân thiết
 let chatHistory = [];
 let repairFilter = 'all';
 let saleFilter = 'all';
 let warehouseFilter = 'all';
 let partsFilter = 'all';
+let debtFilter  = 'all';
 let customerFilter = 'all';
 let chatImgData = null;
 let editingId = null;
@@ -1311,6 +1287,7 @@ function init() {
   FINANCE = JSON.parse(localStorage.getItem(SK_FINANCE) || '[]');
   WAREHOUSE = JSON.parse(localStorage.getItem(SK_WAREHOUSE) || '[]');
   PARTS     = JSON.parse(localStorage.getItem(SK_PARTS)     || '[]');
+  DEBTS     = JSON.parse(localStorage.getItem(SK_DEBTS)     || '[]');
   CUSTOMERS = JSON.parse(localStorage.getItem(SK_CUSTOMERS) || '[]');
 
   // Set today's date on forms
@@ -1338,6 +1315,7 @@ function init() {
   buildSaleList();
   buildFinanceList();
   buildWarehouseList();
+  const _dd = document.getElementById('debt-date'); if(_dd) _dd.value = todayStr();
   buildCustomerList();
   updateStats();
   checkOverdue();
@@ -1391,7 +1369,7 @@ function updateSettingsStatus() {
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
 function switchTab(tab) {
-  ['chat','repair','sales','finance','stats','settings','warehouse','parts','customers'].forEach(t => {
+  ['chat','repair','sales','finance','stats','settings','warehouse','debt','customers'].forEach(t => {
     document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
     const nb = document.getElementById('nav-'+t);
     if (nb) nb.classList.toggle('active', t === tab);
@@ -1406,7 +1384,7 @@ function switchTab(tab) {
     stats:'Thống kê & Báo cáo',
     settings:'Cài đặt',
     warehouse:'Kho máy',
-    parts:'Linh kiện',
+    debt:'Ghi nợ',
     customers:'Khách hàng thân thiết'
   };
   document.getElementById('tab-title').textContent = titles[tab] || tab;
@@ -1415,7 +1393,7 @@ function switchTab(tab) {
   if (tab === 'sales') buildSaleList();
   if (tab === 'finance') buildFinanceList();
   if (tab === 'warehouse') buildWarehouseList();
-  if (tab === 'parts') buildPartsList();
+  if (tab === 'debt') buildDebtList();
   if (tab === 'customers') buildCustomerList();
 }
 
@@ -1889,6 +1867,141 @@ function buildPartsList() {
 }
 
 
+// ─── DEBTS (GHI NỢ) CRUD ──────────────────────────────────────────────────────
+function saveDebts() { localStorage.setItem(SK_DEBTS, JSON.stringify(DEBTS)); }
+
+function addDebt(data) {
+  const d = data || {
+    name:   document.getElementById('debt-name').value.trim(),
+    phone:  document.getElementById('debt-phone').value.trim(),
+    amount: parseFloat(document.getElementById('debt-amount').value) || 0,
+    date:   document.getElementById('debt-date').value || todayStr(),
+    due:    document.getElementById('debt-due').value || '',
+    reason: document.getElementById('debt-reason').value.trim(),
+    note:   document.getElementById('debt-note').value.trim()
+  };
+  if (!d.name) { alert('Vui lòng nhập tên khách!'); return false; }
+  if (!d.amount) { alert('Vui lòng nhập số tiền nợ!'); return false; }
+  d.id = Date.now() + Math.random();
+  d.paid = 0;
+  d.status = 'con_no';
+  d.createdAt = new Date().toLocaleString('vi-VN');
+  DEBTS.unshift(d);
+  saveDebts(); buildDebtList();
+  if (!data) {
+    ['debt-name','debt-phone','debt-amount','debt-due','debt-reason','debt-note'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    document.getElementById('debt-date').value = todayStr();
+  }
+  return true;
+}
+
+function deleteDebt(id) {
+  if (!confirm('Xóa khoản nợ này?')) return;
+  DEBTS = DEBTS.filter(x => x.id !== id);
+  saveDebts(); buildDebtList();
+}
+
+function markDebtPaid(id) {
+  const d = DEBTS.find(x => x.id === id);
+  if (!d) return;
+  const val = prompt('Nhập số tiền thanh toán (VND):', d.amount - (d.paid||0));
+  if (val === null) return;
+  const pay = parseFloat(val) || 0;
+  d.paid = (d.paid || 0) + pay;
+  if (d.paid >= d.amount) { d.paid = d.amount; d.status = 'da_tra'; }
+  else d.status = 'con_no';
+  saveDebts(); buildDebtList();
+}
+
+function setDebtFilter(f, btn) {
+  debtFilter = f;
+  document.querySelectorAll('#debt-filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildDebtList();
+}
+
+function buildDebtList() {
+  const list = document.getElementById('debt-list');
+  if (!list) return;
+  const q = (document.getElementById('debt-search')?.value || '').toLowerCase();
+  const today = todayStr();
+
+  let filtered = DEBTS.map(d => {
+    const isOverdue = d.status !== 'da_tra' && d.due && d.due < today;
+    return { ...d, isOverdue };
+  });
+
+  if (debtFilter === 'con_no')  filtered = filtered.filter(d => d.status === 'con_no' && !d.isOverdue);
+  else if (debtFilter === 'da_tra')  filtered = filtered.filter(d => d.status === 'da_tra');
+  else if (debtFilter === 'qua_han') filtered = filtered.filter(d => d.isOverdue);
+
+  if (q) filtered = filtered.filter(d => (d.name+d.phone+d.reason+d.note).toLowerCase().includes(q));
+
+  const totalDebt    = DEBTS.filter(d=>d.status!=='da_tra').reduce((s,d)=>s+(d.amount-(d.paid||0)),0);
+  const totalPaid    = DEBTS.reduce((s,d)=>s+(d.paid||0),0);
+  const countOverdue = DEBTS.filter(d=>d.status!=='da_tra'&&d.due&&d.due<today).length;
+
+  const hdEl = document.getElementById('debt-hd');
+  if (hdEl) hdEl.textContent = `Danh sách nợ (${filtered.length}/${DEBTS.length})`;
+  const sumEl = document.getElementById('debt-summary');
+  if (sumEl) sumEl.innerHTML =
+    `<span style="color:var(--red)">💸 Còn nợ: ${fmtMoney(totalDebt)}</span> &nbsp;|&nbsp; ` +
+    `<span style="color:var(--green)">✅ Đã thu: ${fmtMoney(totalPaid)}</span>` +
+    (countOverdue ? ` &nbsp;|&nbsp; <span style="color:var(--amber)">⚠️ Quá hạn: ${countOverdue}</span>` : '');
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">💸</div>Không có khoản nợ nào.</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(d => {
+    const remaining = d.amount - (d.paid || 0);
+    const isPaid    = d.status === 'da_tra';
+    const isOverdue = d.isOverdue;
+    const borderColor = isPaid ? 'var(--green)' : isOverdue ? 'var(--amber)' : 'var(--red)';
+    const pct = d.amount > 0 ? Math.min(100, Math.round((d.paid||0)/d.amount*100)) : 0;
+    return `<div class="sale-card" style="border-left:3px solid ${borderColor};">
+      <div class="card-top">
+        <div class="card-icon" style="background:${isPaid?'var(--green-dim)':isOverdue?'var(--amber-dim)':'var(--red-dim)'};border:1px solid ${isPaid?'rgba(52,200,122,0.2)':isOverdue?'rgba(240,160,48,0.2)':'rgba(255,90,90,0.2)'};">
+          ${isPaid?'✅':isOverdue?'⚠️':'💸'}
+        </div>
+        <div class="card-info">
+          <div class="card-title">${escHtml(d.name)}${d.phone?' · <span style="font-weight:400;color:var(--text3)">${escHtml(d.phone)}</span>':''}</div>
+          <div class="card-sub">
+            ${d.reason?escHtml(d.reason)+' · ':''}
+            <span style="color:${isPaid?'var(--green)':isOverdue?'var(--amber)':'var(--red)'};font-weight:700;">
+              ${isPaid?'Đã trả đủ':isOverdue?'Quá hạn':'Còn nợ'}
+            </span>
+          </div>
+          <div class="card-meta">
+            📅 ${fmtDate(d.date)}
+            ${d.due?' · Hạn: '+fmtDate(d.due):''}
+            ${d.note?' · '+escHtml(d.note):''}
+          </div>
+          ${d.amount>0?`<div style="margin-top:6px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:3px;">
+              <span>Đã trả: ${fmtMoney(d.paid||0)}</span><span>Còn: ${fmtMoney(remaining)}</span>
+            </div>
+            <div style="height:5px;background:var(--bg3);border-radius:4px;overflow:hidden;">
+              <div style="height:100%;width:${pct}%;background:${isPaid?'var(--green)':'var(--accent)'};border-radius:4px;transition:width 0.3s;"></div>
+            </div>
+          </div>`:''}
+        </div>
+        <div style="font-size:15px;font-weight:700;color:${isPaid?'var(--green)':isOverdue?'var(--amber)':'var(--red)'};white-space:nowrap;text-align:right;">
+          ${fmtMoney(d.amount)}
+          <div style="font-size:10px;font-weight:400;color:var(--text3);">${pct}% đã trả</div>
+        </div>
+      </div>
+      <div class="card-actions">
+        ${!isPaid?`<button class="btn-edit" onclick="markDebtPaid(${d.id})" style="background:var(--green-dim);color:var(--green);border-color:rgba(52,200,122,0.3);">💰 Thu tiền</button>`:''}
+        <button class="btn-del" onclick="deleteDebt(${d.id})">🗑 Xóa</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function saveSales() { localStorage.setItem(SK_SALES, JSON.stringify(SALES)); autoSyncToGsheet('sales'); }
 
 function addSale(data) {
@@ -2253,7 +2366,7 @@ function confirmClear(type) {
   if (type === 'sales'     || type === 'all') { SALES   = [];   localStorage.removeItem(SK_SALES);     buildSaleList();  }
   if (type === 'finance'   || type === 'all') { FINANCE = [];   localStorage.removeItem(SK_FINANCE);   buildFinanceList(); }
   if (type === 'warehouse' || type === 'all') { WAREHOUSE = []; localStorage.removeItem(SK_WAREHOUSE); buildWarehouseList(); }
-  if (type === 'parts'     || type === 'all') { PARTS = [];     localStorage.removeItem(SK_PARTS);     buildPartsList(); }
+  if (type === 'debts'     || type === 'all') { DEBTS = [];     localStorage.removeItem(SK_DEBTS);     buildDebtList(); }
   if (type === 'all') { chatHistory = []; localStorage.removeItem(SK_CHAT); document.getElementById('messages').innerHTML = ''; }
   updateStats();
 }
@@ -2376,7 +2489,7 @@ function buildWarehouseList() {
 
 // ─── EXPORT / IMPORT ──────────────────────────────────────────────────────────
 function exportData() {
-  const blob = new Blob([JSON.stringify({ version:4, exportedAt: new Date().toLocaleString('vi-VN'), repairs:REPAIRS, sales:SALES, finance:FINANCE, warehouse:WAREHOUSE, parts:PARTS }, null, 2)], { type:'application/json' });
+  const blob = new Blob([JSON.stringify({ version:4, exportedAt: new Date().toLocaleString('vi-VN'), repairs:REPAIRS, sales:SALES, finance:FINANCE, warehouse:WAREHOUSE }, null, 2)], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `thuantieu-backup-${todayStr()}.json`;
@@ -2395,9 +2508,9 @@ function importData(ev) {
       if (d.sales)     { SALES     = d.sales;     saveSales();     buildSaleList();   }
       if (d.finance)   { FINANCE   = d.finance;   saveFinance();   buildFinanceList(); }
       if (d.warehouse) { WAREHOUSE = d.warehouse; saveWarehouse(); buildWarehouseList(); }
-      if (d.parts)     { PARTS     = d.parts;     saveParts();     buildPartsList(); }
+      if (d.debts)     { DEBTS     = d.debts;     saveDebts();     buildDebtList(); }
       updateStats();
-      addMsg('bot', `✅ Nhập thành công từ <strong>${f.name}</strong>!<br>🔧 ${REPAIRS.length} phiếu sửa · 💰 ${SALES.length} bán hàng · 📦 ${WAREHOUSE.length} kho máy · 🔩 ${PARTS.length} linh kiện`);
+      addMsg('bot', `✅ Nhập thành công từ <strong>${f.name}</strong>!<br>🔧 ${REPAIRS.length} phiếu sửa · 💰 ${SALES.length} bán hàng · 📦 ${WAREHOUSE.length} kho máy · 💸 ${DEBTS.length} ghi nợ`);
       switchTab('chat');
     } catch(err) { alert('Lỗi đọc file: '+err.message); }
     ev.target.value = '';
@@ -2609,18 +2722,9 @@ CÁCH MAP THÔNG TIN TỪ CÂU NÓI:
 - profit: giá nhận / thu về (VD: "thi 550k" → 550000)
 - cost: vốn / chi linh kiện (VD: "vốn 200k" → 200000)
 - note: màu máy, tình trạng máy lúc nhận, ghi chú thêm (VD: "màu đen", "màn vỡ góc")
-⚠️ BẮT BUỘC đủ 10 dấu | (11 field). Field trống dùng ||.
-owner|phone|device|imei|pass|issue|profit|cost|date|status|note
-Khi không có phone/imei/pass → vẫn phải có || cho từng field.
-
-VD1: "nhận máy anh Tuấn iPhone 11pro ép cảm ứng thu 500k vốn 120k màu vàng":
+VD: "nhận máy anh Tuấn iPhone 11pro ép cảm ứng thu 500k vốn 120k màu vàng":
 [ACTION:ADD_REPAIR|Tuấn||iPhone 11 Pro|||ép cảm ứng|500000|120000|2026-05-04|dang_sua|màu vàng]
-
-VD2: "ép cảm ứng XS cho Khai giá thu 400k vốn 150k":
-[ACTION:ADD_REPAIR|Khai||iPhone XS|||ép cảm ứng|400000|150000|2026-05-09|dang_sua|]
-→ Đếm dấu |: Khai | (phone) | iPhone XS | (imei) | (pass) | ép cảm ứng | 400000 | 150000 | date | status | note = 10 dấu |
-
-profit=tiền THU về, cost=tiền CHI linh kiện. Đơn vị VND đầy đủ (500k=500000). status: dang_sua|xong_chua_giao|da_giao
+profit=tiền THU, cost=tiền CHI linh kiện. Đơn vị VND đầy đủ (500k=500000). status: dang_sua|xong_chua_giao|da_giao
 
 [ACTION:UPDATE_REPAIR|owner_or_device|device_hint|new_status|profit|cost|note]
 VD "máy hoàng gia đã giao": [ACTION:UPDATE_REPAIR|hoàng gia||da_giao||]
@@ -2683,34 +2787,13 @@ function handleActions(reply) {
   repMatches.forEach(m => {
     const p = m[1].split('|');
 
-    // ── PRE-FIX: chuẩn hoá field count về đúng 11 field ────────────────────────
-    // Format đúng: owner|phone|device|imei|pass|issue|profit|cost|date|status|note
-    // AI hay bỏ phone, imei, pass → gây lệch. Ta phát hiện bằng nội dung field.
-
-    const _isDevice  = v => /iphone|ipad|samsung|oppo|xiaomi|vivo|realme|nokia|pixel|huawei|redmi|poco|macbook|laptop/i.test(v||'');
-    const _isPhone   = v => /^0\d{9}$/.test((v||'').replace(/\s/g,''));
-    const _isImei    = v => /^\d{5,15}$/.test((v||'').replace(/\s/g,''));
-    const _isPass    = v => /^\d{4,6}$/.test((v||'').trim()) || /^[a-zA-Z0-9]{4,10}$/.test((v||'').trim());
-    const _isIssue   = v => (v||'').match(/[a-zA-ZÀ-ỹ]/g)?.length >= 2;
-    const _isMoney   = v => { const n = parseFloat((v||'').replace(/[.,\s]/g,'')); return n > 1000 && n < 100000000; };
-    const _isYear    = v => { const n = parseFloat(v||''); return n >= 2020 && n <= 2035 && n === Math.floor(n); };
-
-    // Đếm field thực tế AI sinh ra
-    // Nếu thiếu field → chèn '' vào đúng chỗ theo logic nội dung
-    // p[0]=owner (luôn đúng), p[1] nên là phone
-    // Bước 1: fix phone bị bỏ (p[1] là device name)
-    if (_isDevice(p[1]) && !_isPhone(p[1])) {
-      p.splice(1, 0, ''); // chèn phone='' trước device
-    }
-    // Bây giờ p[2] nên là device
-    // Bước 2: fix imei bị bỏ (p[3] chứa chữ → issue hoặc pass)
-    // Nếu p[3] là issue text (chứa chữ tiếng Việt >= 2) hoặc là số tiền → imei bị skip
-    if (_isIssue(p[3]) || _isMoney(p[3])) {
-      p.splice(3, 0, ''); // chèn imei=''
-    }
-    // Bước 3: fix pass bị bỏ (p[4] là issue text)
-    if (_isIssue(p[4]) && !_isPass(p[4])) {
-      p.splice(4, 0, ''); // chèn pass=''
+    // ── PRE-FIX: phát hiện AI bỏ qua field phone → shift lệch 1 ─────────────
+    // Nếu p[1] (phone) chứa tên máy (iphone/samsung/...) thay vì số điện thoại
+    // → chèn '' vào vị trí phone để các field sau khớp đúng
+    const isDeviceName = /iphone|samsung|oppo|xiaomi|vivo|realme|nokia|pixel|huawei|redmi|poco/i.test(p[1]||'');
+    const isPhoneNum   = /^0\d{9}$/.test((p[1]||'').replace(/\s/g,''));
+    if (isDeviceName && !isPhoneNum) {
+      p.splice(1, 0, ''); // chèn phone trống để fix lệch field
     }
 
     let ownerVal  = p[0]||'';
@@ -4920,9 +5003,9 @@ function _doGlobalSearch(q) {
     const txt = [w.name,w.imei,w.supplier,w.category,w.note].join(' ').toLowerCase();
     if (txt.includes(kw)) results.push({ type:'warehouse', icon: w.type==='nhap'?'📦':'📤', title:`${w.type==='nhap'?'Nhập':'Xuất'} kho: ${w.name}`, sub:`${fmtDate(w.date)} · ${w.quantity||1} ${w.unit||'cái'}${w.price?' · '+fmtMoney(w.price):''}`, action:`switchTab('warehouse')` });
   });
-  PARTS.forEach(p => {
-    const txt = [p.name,p.category,p.supplier,p.usedfor,p.note].join(' ').toLowerCase();
-    if (txt.includes(kw)) results.push({ type:'parts', icon: p.type==='nhap'?'🔩':'📤', title:`${p.type==='nhap'?'Nhập':'Xuất'} linh kiện: ${p.name}`, sub:`${fmtDate(p.date)} · ${p.quantity||1} ${p.unit||'cái'}${p.price?' · '+fmtMoney(p.price):''}`, action:`switchTab('parts')` });
+  DEBTS.forEach(d => {
+    const txt = [d.name,d.phone,d.reason,d.note].join(' ').toLowerCase();
+    if (txt.includes(kw)) results.push({ type:'debt', icon:'💸', title:`${d.name} — ${fmtMoney(d.amount)}`, sub:`${fmtDate(d.date)}${d.reason?' · '+d.reason:''} · ${d.status==='da_tra'?'Đã trả':'Còn nợ '+fmtMoney(d.amount-(d.paid||0))}`, action:`switchTab('debt')` });
   });
   // Also search customers dynamically from repairs+sales
   const custMap2 = {};
