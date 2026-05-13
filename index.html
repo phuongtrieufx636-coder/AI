@@ -1169,6 +1169,9 @@ function doGet(e) {
           <button onclick="openDebtPayTx()" style="flex:1;background:var(--green-dim);color:var(--green);border:1px solid rgba(52,200,122,0.3);border-radius:8px;padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer;">💰 Thanh toán</button>
         </div>
 
+        <!-- Inline form thêm nợ / thanh toán -->
+        <div id="ddm-inline-form" style="display:none;background:var(--bg3);border-radius:12px;padding:14px;margin-bottom:14px;"></div>
+
         <!-- Lịch sử giao dịch -->
         <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Lịch sử giao dịch</div>
         <div id="ddm-tx-list"></div>
@@ -2107,27 +2110,94 @@ function closeDebtDetail() {
   _debtDetailKey = null;
 }
 
-function openDebtAddTx() {
+function _showDdmForm(type) {
+  const box = document.getElementById('ddm-inline-form');
+  if (!box) return;
+  const isDebt = type === 'debt';
+  const today = todayStr();
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div style="font-size:13px;font-weight:700;color:${isDebt?'var(--red)':'var(--green)'};margin-bottom:10px;">
+      ${isDebt?'➕ Thêm khoản nợ':'💰 Ghi thanh toán'}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Số tiền (VND) *</div>
+        <input id="ddmf-amount" type="number" min="0" placeholder="VD: 500000"
+          style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;" />
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Ngày</div>
+        <input id="ddmf-date" type="date" value="${today}"
+          style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;" />
+      </div>
+    </div>
+    ${isDebt ? `<div style="margin-bottom:8px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Hạn trả</div>
+      <input id="ddmf-due" type="date"
+        style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;" />
+    </div>` : ''}
+    <div style="margin-bottom:8px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Lý do / Dịch vụ</div>
+      <input id="ddmf-reason" type="text" placeholder="${isDebt?'VD: Sửa iPhone 13, mua máy...':'VD: Trả nợ, chuyển khoản...'}"
+        style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;" />
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Ghi chú</div>
+      <input id="ddmf-note" type="text" placeholder="Ghi chú thêm..."
+        style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;" />
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="_saveDdmForm('${type}')"
+        style="flex:1;padding:9px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:${isDebt?'var(--red)':'var(--green)'};color:#fff;">
+        ✓ Lưu
+      </button>
+      <button onclick="_closeDdmForm()"
+        style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:600;cursor:pointer;background:var(--bg2);color:var(--text2);">
+        ✕ Huỷ
+      </button>
+    </div>`;
+  // Focus vào ô số tiền
+  setTimeout(() => { const el = document.getElementById('ddmf-amount'); if(el) el.focus(); }, 80);
+}
+
+function _closeDdmForm() {
+  const box = document.getElementById('ddm-inline-form');
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+}
+
+function _saveDdmForm(type) {
   if (!_debtDetailKey) return;
+  const amtEl = document.getElementById('ddmf-amount');
+  const amount = parseFloat((amtEl?.value||'').replace(/[^0-9.]/g,'')) || 0;
+  if (!amount) { amtEl?.focus(); return; }
+
+  const date   = document.getElementById('ddmf-date')?.value   || todayStr();
+  const due    = document.getElementById('ddmf-due')?.value    || '';
+  const reason = document.getElementById('ddmf-reason')?.value.trim() || (type==='pay'?'Thanh toán nợ':'');
+  const note   = document.getElementById('ddmf-note')?.value.trim()   || '';
+
   const custs = getDebtCustomers();
   const c = custs.find(x=>x.key===_debtDetailKey);
   if (!c) return;
 
-  // Tạo inline form trong modal
-  const amtStr = prompt(`Thêm nợ cho ${c.name}\nNhập số tiền (VND):`);
-  if (!amtStr) return;
-  const amount = parseFloat(amtStr.replace(/[^0-9.]/g,'')) || 0;
-  if (!amount) { alert('Số tiền không hợp lệ'); return; }
-  const reason = prompt('Lý do / dịch vụ (bỏ qua = Enter):') || '';
+  // Giới hạn thanh toán không vượt số còn nợ
+  const finalAmount = type==='pay' ? Math.min(amount, c.remaining) : amount;
 
   const tx = { id: Date.now()+Math.random(), custKey: c.key, name: c.name, phone: c.phone,
-    type: 'debt', amount, date: todayStr(), due:'', reason, note:'', createdAt: new Date().toLocaleString('vi-VN') };
+    type, amount: finalAmount, date, due, reason, note, createdAt: new Date().toLocaleString('vi-VN') };
   DEBTS.unshift(tx);
   saveDebts();
+  _closeDdmForm();
   const custs2 = getDebtCustomers();
   const c2 = custs2.find(x=>x.key===_debtDetailKey);
-  if (c2) renderDebtDetailModal(c2);
+  if (c2) renderDebtDetailModal(c2); else closeDebtDetail();
   buildDebtList();
+}
+
+function openDebtAddTx() {
+  if (!_debtDetailKey) return;
+  _showDdmForm('debt');
 }
 
 function openDebtPayTx() {
@@ -2136,20 +2206,7 @@ function openDebtPayTx() {
   const c = custs.find(x=>x.key===_debtDetailKey);
   if (!c) return;
   if (c.remaining <= 0) { alert('Khách đã trả hết nợ!'); return; }
-
-  const amtStr = prompt(`Thu tiền từ ${c.name}\nCòn nợ: ${fmtMoney(c.remaining)}\nNhập số tiền thanh toán:`);
-  if (!amtStr) return;
-  const amount = Math.min(parseFloat(amtStr.replace(/[^0-9.]/g,''))||0, c.remaining);
-  if (!amount) { alert('Số tiền không hợp lệ'); return; }
-
-  const tx = { id: Date.now()+Math.random(), custKey: c.key, name: c.name, phone: c.phone,
-    type: 'pay', amount, date: todayStr(), reason:'Thanh toán nợ', note:'', createdAt: new Date().toLocaleString('vi-VN') };
-  DEBTS.unshift(tx);
-  saveDebts();
-  const custs2 = getDebtCustomers();
-  const c2 = custs2.find(x=>x.key===_debtDetailKey);
-  if (c2) renderDebtDetailModal(c2); else closeDebtDetail();
-  buildDebtList();
+  _showDdmForm('pay');
 }
 
 // Đóng modal khi bấm ngoài
