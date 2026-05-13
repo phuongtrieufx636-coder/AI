@@ -1087,8 +1087,9 @@ function doGet(e) {
   <!-- ── GHI NỢ TAB ── -->
   <div class="tab hidden" id="tab-debt">
     <div class="tab-body">
+      <!-- Thêm khách nợ nhanh -->
       <div class="add-form">
-        <h4>💸 Ghi nợ mới</h4>
+        <h4>💸 Thêm khách nợ</h4>
         <div class="form-grid col2">
           <div class="field-wrap">
             <label class="field-label">Tên khách *</label>
@@ -1103,6 +1104,10 @@ function doGet(e) {
             <input class="field" type="number" id="debt-amount" placeholder="VD: 500000" min="0" />
           </div>
           <div class="field-wrap">
+            <label class="field-label">Lý do / Dịch vụ</label>
+            <input class="field" id="debt-reason" placeholder="VD: Sửa iPhone 13..." />
+          </div>
+          <div class="field-wrap">
             <label class="field-label">Ngày ghi nợ</label>
             <input class="field" type="date" id="debt-date" />
           </div>
@@ -1110,36 +1115,63 @@ function doGet(e) {
             <label class="field-label">Hạn trả</label>
             <input class="field" type="date" id="debt-due" />
           </div>
-          <div class="field-wrap">
-            <label class="field-label">Lý do / Dịch vụ</label>
-            <input class="field" id="debt-reason" placeholder="VD: Sửa iPhone 13, mua máy Samsung..." />
-          </div>
         </div>
         <div class="field-wrap">
           <label class="field-label">Ghi chú</label>
-          <textarea class="field" id="debt-note" placeholder="Ghi chú thêm..." style="min-height:48px;"></textarea>
+          <textarea class="field" id="debt-note" placeholder="Ghi chú thêm..." style="min-height:44px;"></textarea>
         </div>
         <div class="btn-row">
           <button class="btn-add" onclick="addDebt()">➕ Ghi nợ</button>
         </div>
       </div>
 
+      <!-- Danh sách theo khách -->
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-          <div class="section-hd" style="margin:0;padding:0;border:none;" id="debt-hd">Danh sách nợ (0)</div>
+          <div class="section-hd" style="margin:0;padding:0;border:none;" id="debt-hd">Khách nợ (0)</div>
           <div class="filter-bar" id="debt-filter-bar">
             <button class="filter-btn active" onclick="setDebtFilter('all',this)">Tất cả</button>
             <button class="filter-btn" onclick="setDebtFilter('con_no',this)">🔴 Còn nợ</button>
-            <button class="filter-btn" onclick="setDebtFilter('da_tra',this)">✅ Đã trả</button>
+            <button class="filter-btn" onclick="setDebtFilter('da_tra',this)">✅ Sạch nợ</button>
             <button class="filter-btn" onclick="setDebtFilter('qua_han',this)">⚠️ Quá hạn</button>
           </div>
         </div>
         <div style="margin-bottom:10px;font-size:12.5px;" id="debt-summary"></div>
         <div class="search-bar-wrap">
-          <input class="search-input" id="debt-search" placeholder="🔍 Tìm theo tên, số điện thoại, lý do..." oninput="buildDebtList()" />
+          <input class="search-input" id="debt-search" placeholder="🔍 Tìm theo tên, số điện thoại..." oninput="buildDebtList()" />
           <button class="search-clear" onclick="document.getElementById('debt-search').value='';buildDebtList()">✕ Xóa</button>
         </div>
         <div class="card-list" id="debt-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL CHI TIẾT NỢ KHÁCH ── -->
+  <div id="debt-detail-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);overflow-y:auto;">
+    <div style="background:var(--bg2);border-radius:16px 16px 0 0;position:absolute;bottom:0;left:0;right:0;max-height:92vh;overflow-y:auto;padding:0 0 32px;">
+      <!-- Header -->
+      <div style="position:sticky;top:0;background:var(--bg2);z-index:2;padding:16px 16px 12px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div id="ddm-name" style="font-size:17px;font-weight:700;color:var(--text);"></div>
+            <div id="ddm-phone" style="font-size:12px;color:var(--text3);margin-top:2px;"></div>
+          </div>
+          <button onclick="closeDebtDetail()" style="background:var(--bg3);border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+        <!-- Tổng nợ nổi bật -->
+        <div id="ddm-total-bar" style="margin-top:12px;background:var(--bg3);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;"></div>
+      </div>
+
+      <div style="padding:14px 16px 0;">
+        <!-- Nút hành động -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <button onclick="openDebtAddTx()" style="flex:1;background:var(--red-dim);color:var(--red);border:1px solid rgba(255,90,90,0.3);border-radius:8px;padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer;">➕ Thêm nợ</button>
+          <button onclick="openDebtPayTx()" style="flex:1;background:var(--green-dim);color:var(--green);border:1px solid rgba(52,200,122,0.3);border-radius:8px;padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer;">💰 Thanh toán</button>
+        </div>
+
+        <!-- Lịch sử giao dịch -->
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Lịch sử giao dịch</div>
+        <div id="ddm-tx-list"></div>
       </div>
     </div>
   </div>
@@ -1867,52 +1899,78 @@ function buildPartsList() {
 }
 
 
-// ─── DEBTS (GHI NỢ) CRUD ──────────────────────────────────────────────────────
+
+// ─── DEBTS (GHI NỢ) — theo khách hàng ───────────────────────────────────────
+// Cấu trúc DEBTS: mỗi item là 1 giao dịch (nợ thêm hoặc thanh toán) gắn với khách
+// { id, custKey, name, phone, type:'debt'|'pay', amount, date, reason, note, createdAt }
+
 function saveDebts() { localStorage.setItem(SK_DEBTS, JSON.stringify(DEBTS)); }
 
+// Lấy danh sách khách (gộp theo tên+phone)
+function getDebtCustomers() {
+  const map = {};
+  DEBTS.forEach(tx => {
+    const key = tx.custKey || (tx.name.trim().toLowerCase() + '|' + (tx.phone||'').trim());
+    if (!map[key]) map[key] = { key, name: tx.name, phone: tx.phone||'', totalDebt:0, totalPaid:0, txs:[], lastDate: tx.date };
+    if (tx.type === 'debt') map[key].totalDebt += (tx.amount||0);
+    else map[key].totalPaid += (tx.amount||0);
+    map[key].txs.push(tx);
+    if (tx.date > map[key].lastDate) map[key].lastDate = tx.date;
+  });
+  return Object.values(map).map(c => ({
+    ...c,
+    remaining: Math.max(0, c.totalDebt - c.totalPaid),
+    isPaid: c.totalDebt <= c.totalPaid,
+    pct: c.totalDebt > 0 ? Math.min(100, Math.round(c.totalPaid / c.totalDebt * 100)) : 100
+  })).sort((a,b) => b.lastDate.localeCompare(a.lastDate));
+}
+
 function addDebt(data) {
-  const d = data || {
-    name:   document.getElementById('debt-name').value.trim(),
-    phone:  document.getElementById('debt-phone').value.trim(),
-    amount: parseFloat(document.getElementById('debt-amount').value) || 0,
-    date:   document.getElementById('debt-date').value || todayStr(),
-    due:    document.getElementById('debt-due').value || '',
-    reason: document.getElementById('debt-reason').value.trim(),
-    note:   document.getElementById('debt-note').value.trim()
-  };
-  if (!d.name) { alert('Vui lòng nhập tên khách!'); return false; }
-  if (!d.amount) { alert('Vui lòng nhập số tiền nợ!'); return false; }
-  d.id = Date.now() + Math.random();
-  d.paid = 0;
-  d.status = 'con_no';
-  d.createdAt = new Date().toLocaleString('vi-VN');
-  DEBTS.unshift(d);
+  const today = todayStr();
+  const name   = data ? data.name   : document.getElementById('debt-name').value.trim();
+  const phone  = data ? data.phone  : document.getElementById('debt-phone').value.trim();
+  const amount = data ? data.amount : parseFloat(document.getElementById('debt-amount').value) || 0;
+  const reason = data ? data.reason : document.getElementById('debt-reason').value.trim();
+  const date   = data ? data.date   : document.getElementById('debt-date').value || today;
+  const due    = data ? data.due    : document.getElementById('debt-due').value || '';
+  const note   = data ? data.note   : document.getElementById('debt-note').value.trim();
+
+  if (!name) { alert('Vui lòng nhập tên khách!'); return false; }
+  if (!amount) { alert('Vui lòng nhập số tiền nợ!'); return false; }
+
+  const custKey = name.trim().toLowerCase() + '|' + phone.trim();
+  const tx = { id: Date.now() + Math.random(), custKey, name, phone, type:'debt', amount, date, due, reason, note, createdAt: new Date().toLocaleString('vi-VN') };
+  DEBTS.unshift(tx);
   saveDebts(); buildDebtList();
+
   if (!data) {
-    ['debt-name','debt-phone','debt-amount','debt-due','debt-reason','debt-note'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value = '';
-    });
-    document.getElementById('debt-date').value = todayStr();
+    ['debt-name','debt-phone','debt-amount','debt-due','debt-reason','debt-note'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('debt-date').value = today;
   }
   return true;
 }
 
-function deleteDebt(id) {
-  if (!confirm('Xóa khoản nợ này?')) return;
-  DEBTS = DEBTS.filter(x => x.id !== id);
-  saveDebts(); buildDebtList();
+// Xoá toàn bộ giao dịch của 1 khách
+function deleteDebtCustomer(key) {
+  if (!confirm('Xóa tất cả nợ của khách này?')) return;
+  DEBTS = DEBTS.filter(tx => (tx.custKey || (tx.name.trim().toLowerCase()+'|'+(tx.phone||'').trim())) !== key);
+  saveDebts(); buildDebtList(); closeDebtDetail();
 }
 
-function markDebtPaid(id) {
-  const d = DEBTS.find(x => x.id === id);
-  if (!d) return;
-  const val = prompt('Nhập số tiền thanh toán (VND):', d.amount - (d.paid||0));
-  if (val === null) return;
-  const pay = parseFloat(val) || 0;
-  d.paid = (d.paid || 0) + pay;
-  if (d.paid >= d.amount) { d.paid = d.amount; d.status = 'da_tra'; }
-  else d.status = 'con_no';
-  saveDebts(); buildDebtList();
+// Xoá 1 giao dịch cụ thể
+function deleteDebtTx(id) {
+  if (!confirm('Xóa giao dịch này?')) return;
+  DEBTS = DEBTS.filter(tx => tx.id !== id);
+  saveDebts();
+  // Refresh modal nếu đang mở
+  const modal = document.getElementById('debt-detail-modal');
+  if (modal && modal.style.display !== 'none') {
+    const key = modal.dataset.custKey;
+    const custs = getDebtCustomers();
+    const c = custs.find(x=>x.key===key);
+    if (c) renderDebtDetailModal(c); else closeDebtDetail();
+  }
+  buildDebtList();
 }
 
 function setDebtFilter(f, btn) {
@@ -1925,82 +1983,183 @@ function setDebtFilter(f, btn) {
 function buildDebtList() {
   const list = document.getElementById('debt-list');
   if (!list) return;
-  const q = (document.getElementById('debt-search')?.value || '').toLowerCase();
+  const q = (document.getElementById('debt-search')?.value||'').toLowerCase();
   const today = todayStr();
+  let custs = getDebtCustomers();
 
-  let filtered = DEBTS.map(d => {
-    const isOverdue = d.status !== 'da_tra' && d.due && d.due < today;
-    return { ...d, isOverdue };
+  if (debtFilter==='con_no')  custs = custs.filter(c=>!c.isPaid);
+  else if (debtFilter==='da_tra')  custs = custs.filter(c=>c.isPaid);
+  else if (debtFilter==='qua_han') custs = custs.filter(c=>{
+    if (c.isPaid) return false;
+    return c.txs.some(tx=>tx.type==='debt'&&tx.due&&tx.due<today);
   });
+  if (q) custs = custs.filter(c=>(c.name+c.phone).toLowerCase().includes(q));
 
-  if (debtFilter === 'con_no')  filtered = filtered.filter(d => d.status === 'con_no' && !d.isOverdue);
-  else if (debtFilter === 'da_tra')  filtered = filtered.filter(d => d.status === 'da_tra');
-  else if (debtFilter === 'qua_han') filtered = filtered.filter(d => d.isOverdue);
-
-  if (q) filtered = filtered.filter(d => (d.name+d.phone+d.reason+d.note).toLowerCase().includes(q));
-
-  const totalDebt    = DEBTS.filter(d=>d.status!=='da_tra').reduce((s,d)=>s+(d.amount-(d.paid||0)),0);
-  const totalPaid    = DEBTS.reduce((s,d)=>s+(d.paid||0),0);
-  const countOverdue = DEBTS.filter(d=>d.status!=='da_tra'&&d.due&&d.due<today).length;
+  const allCusts = getDebtCustomers();
+  const totalRemaining = allCusts.filter(c=>!c.isPaid).reduce((s,c)=>s+c.remaining,0);
+  const totalPaid      = allCusts.reduce((s,c)=>s+c.totalPaid,0);
+  const countOverdue   = allCusts.filter(c=>{
+    if(c.isPaid) return false;
+    return c.txs.some(tx=>tx.type==='debt'&&tx.due&&tx.due<today);
+  }).length;
 
   const hdEl = document.getElementById('debt-hd');
-  if (hdEl) hdEl.textContent = `Danh sách nợ (${filtered.length}/${DEBTS.length})`;
+  if (hdEl) hdEl.textContent = `Khách nợ (${custs.length})`;
   const sumEl = document.getElementById('debt-summary');
   if (sumEl) sumEl.innerHTML =
-    `<span style="color:var(--red)">💸 Còn nợ: ${fmtMoney(totalDebt)}</span> &nbsp;|&nbsp; ` +
-    `<span style="color:var(--green)">✅ Đã thu: ${fmtMoney(totalPaid)}</span>` +
-    (countOverdue ? ` &nbsp;|&nbsp; <span style="color:var(--amber)">⚠️ Quá hạn: ${countOverdue}</span>` : '');
+    `<span style="color:var(--red)">💸 Tổng còn nợ: <strong>${fmtMoney(totalRemaining)}</strong></span> &nbsp;|&nbsp; ` +
+    `<span style="color:var(--green)">✅ Đã thu: <strong>${fmtMoney(totalPaid)}</strong></span>` +
+    (countOverdue?` &nbsp;|&nbsp; <span style="color:var(--amber)">⚠️ Quá hạn: ${countOverdue} khách</span>`:'');
 
-  if (filtered.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="empty-icon">💸</div>Không có khoản nợ nào.</div>';
+  if (custs.length===0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">💸</div>Không có khách nợ nào.</div>';
     return;
   }
 
-  list.innerHTML = filtered.map(d => {
-    const remaining = d.amount - (d.paid || 0);
-    const isPaid    = d.status === 'da_tra';
-    const isOverdue = d.isOverdue;
-    const borderColor = isPaid ? 'var(--green)' : isOverdue ? 'var(--amber)' : 'var(--red)';
-    const pct = d.amount > 0 ? Math.min(100, Math.round((d.paid||0)/d.amount*100)) : 0;
-    return `<div class="sale-card" style="border-left:3px solid ${borderColor};">
+  list.innerHTML = custs.map(c => {
+    const isOverdue = !c.isPaid && c.txs.some(tx=>tx.type==='debt'&&tx.due&&tx.due<today);
+    const borderColor = c.isPaid?'var(--green)':isOverdue?'var(--amber)':'var(--red)';
+    const statusLabel = c.isPaid?'✅ Sạch nợ':isOverdue?'⚠️ Quá hạn':'🔴 Còn nợ';
+    const statusColor = c.isPaid?'var(--green)':isOverdue?'var(--amber)':'var(--red)';
+    return `<div class="sale-card" style="border-left:3px solid ${borderColor};cursor:pointer;" onmousedown="openDebtDetail('${c.key.replace(/'/g,"\\'")}')">
       <div class="card-top">
-        <div class="card-icon" style="background:${isPaid?'var(--green-dim)':isOverdue?'var(--amber-dim)':'var(--red-dim)'};border:1px solid ${isPaid?'rgba(52,200,122,0.2)':isOverdue?'rgba(240,160,48,0.2)':'rgba(255,90,90,0.2)'};">
-          ${isPaid?'✅':isOverdue?'⚠️':'💸'}
+        <div class="card-icon" style="background:${c.isPaid?'var(--green-dim)':isOverdue?'var(--amber-dim)':'var(--red-dim)'};border:1px solid ${c.isPaid?'rgba(52,200,122,0.2)':isOverdue?'rgba(240,160,48,0.2)':'rgba(255,90,90,0.2)'};font-size:22px;">
+          ${c.isPaid?'✅':isOverdue?'⚠️':'💸'}
         </div>
         <div class="card-info">
-          <div class="card-title">${escHtml(d.name)}${d.phone?' · <span style="font-weight:400;color:var(--text3)">${escHtml(d.phone)}</span>':''}</div>
-          <div class="card-sub">
-            ${d.reason?escHtml(d.reason)+' · ':''}
-            <span style="color:${isPaid?'var(--green)':isOverdue?'var(--amber)':'var(--red)'};font-weight:700;">
-              ${isPaid?'Đã trả đủ':isOverdue?'Quá hạn':'Còn nợ'}
-            </span>
-          </div>
-          <div class="card-meta">
-            📅 ${fmtDate(d.date)}
-            ${d.due?' · Hạn: '+fmtDate(d.due):''}
-            ${d.note?' · '+escHtml(d.note):''}
-          </div>
-          ${d.amount>0?`<div style="margin-top:6px;">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:3px;">
-              <span>Đã trả: ${fmtMoney(d.paid||0)}</span><span>Còn: ${fmtMoney(remaining)}</span>
+          <div class="card-title" style="font-size:15px;">${escHtml(c.name)}${c.phone?` <span style="font-weight:400;font-size:12px;color:var(--text3);">${escHtml(c.phone)}</span>`:''}</div>
+          <div class="card-sub"><span style="color:${statusColor};font-weight:600;">${statusLabel}</span> · ${c.txs.filter(t=>t.type==='debt').length} khoản</div>
+          <div style="margin-top:6px;">
+            <div style="height:6px;background:var(--bg3);border-radius:4px;overflow:hidden;">
+              <div style="height:100%;width:${c.pct}%;background:${c.isPaid?'var(--green)':'var(--accent)'};border-radius:4px;"></div>
             </div>
-            <div style="height:5px;background:var(--bg3);border-radius:4px;overflow:hidden;">
-              <div style="height:100%;width:${pct}%;background:${isPaid?'var(--green)':'var(--accent)'};border-radius:4px;transition:width 0.3s;"></div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:3px;">
+              <span>Đã trả: ${fmtMoney(c.totalPaid)}</span><span>Còn: ${fmtMoney(c.remaining)}</span>
             </div>
-          </div>`:''}
+          </div>
         </div>
-        <div style="font-size:15px;font-weight:700;color:${isPaid?'var(--green)':isOverdue?'var(--amber)':'var(--red)'};white-space:nowrap;text-align:right;">
-          ${fmtMoney(d.amount)}
-          <div style="font-size:10px;font-weight:400;color:var(--text3);">${pct}% đã trả</div>
+        <div style="font-size:17px;font-weight:700;color:${c.isPaid?'var(--green)':'var(--red)'};white-space:nowrap;text-align:right;min-width:60px;">
+          ${fmtMoney(c.totalDebt)}
+          <div style="font-size:10px;font-weight:400;color:var(--text3);">tổng nợ</div>
         </div>
-      </div>
-      <div class="card-actions">
-        ${!isPaid?`<button class="btn-edit" onclick="markDebtPaid(${d.id})" style="background:var(--green-dim);color:var(--green);border-color:rgba(52,200,122,0.3);">💰 Thu tiền</button>`:''}
-        <button class="btn-del" onclick="deleteDebt(${d.id})">🗑 Xóa</button>
       </div>
     </div>`;
   }).join('');
 }
+
+// ── MODAL CHI TIẾT ──
+let _debtDetailKey = null;
+
+function openDebtDetail(key) {
+  const custs = getDebtCustomers();
+  const c = custs.find(x=>x.key===key);
+  if (!c) return;
+  _debtDetailKey = key;
+  const modal = document.getElementById('debt-detail-modal');
+  modal.style.display = 'block';
+  modal.dataset.custKey = key;
+  renderDebtDetailModal(c);
+}
+
+function renderDebtDetailModal(c) {
+  const today = todayStr();
+  document.getElementById('ddm-name').textContent = c.name;
+  document.getElementById('ddm-phone').textContent = c.phone || 'Chưa có SĐT';
+
+  // Tổng bar
+  const isOverdue = !c.isPaid && c.txs.some(tx=>tx.type==='debt'&&tx.due&&tx.due<today);
+  document.getElementById('ddm-total-bar').innerHTML = `
+    <div style="text-align:center;flex:1;">
+      <div style="font-size:11px;color:var(--text3);">Tổng nợ</div>
+      <div style="font-size:18px;font-weight:700;color:var(--red);">${fmtMoney(c.totalDebt)}</div>
+    </div>
+    <div style="text-align:center;flex:1;">
+      <div style="font-size:11px;color:var(--text3);">Đã trả</div>
+      <div style="font-size:18px;font-weight:700;color:var(--green);">${fmtMoney(c.totalPaid)}</div>
+    </div>
+    <div style="text-align:center;flex:1;">
+      <div style="font-size:11px;color:var(--text3);">Còn lại</div>
+      <div style="font-size:18px;font-weight:700;color:${c.isPaid?'var(--green)':isOverdue?'var(--amber)':'var(--red)'};">${fmtMoney(c.remaining)}</div>
+    </div>`;
+
+  // Lịch sử
+  const sorted = [...c.txs].sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt));
+  document.getElementById('ddm-tx-list').innerHTML = sorted.length === 0
+    ? '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px;">Chưa có giao dịch</div>'
+    : sorted.map(tx => {
+        const isDebt = tx.type==='debt';
+        return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:${isDebt?'var(--red-dim)':'var(--green-dim)'};">
+            ${isDebt?'💸':'💰'}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:${isDebt?'var(--red)':'var(--green)'};">${isDebt?'+ Nợ thêm':'− Thanh toán'}: ${fmtMoney(tx.amount)}</div>
+            ${tx.reason?`<div style="font-size:12px;color:var(--text2);margin-top:1px;">${escHtml(tx.reason)}</div>`:''}
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">📅 ${fmtDate(tx.date)}${tx.due?' · Hạn: '+fmtDate(tx.due):''}${tx.note?' · '+escHtml(tx.note):''}</div>
+          </div>
+          <button onmousedown="event.stopPropagation();deleteDebtTx(${tx.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;">🗑</button>
+        </div>`;
+      }).join('');
+}
+
+function closeDebtDetail() {
+  document.getElementById('debt-detail-modal').style.display = 'none';
+  _debtDetailKey = null;
+}
+
+function openDebtAddTx() {
+  if (!_debtDetailKey) return;
+  const custs = getDebtCustomers();
+  const c = custs.find(x=>x.key===_debtDetailKey);
+  if (!c) return;
+
+  // Tạo inline form trong modal
+  const amtStr = prompt(`Thêm nợ cho ${c.name}\nNhập số tiền (VND):`);
+  if (!amtStr) return;
+  const amount = parseFloat(amtStr.replace(/[^0-9.]/g,'')) || 0;
+  if (!amount) { alert('Số tiền không hợp lệ'); return; }
+  const reason = prompt('Lý do / dịch vụ (bỏ qua = Enter):') || '';
+
+  const tx = { id: Date.now()+Math.random(), custKey: c.key, name: c.name, phone: c.phone,
+    type: 'debt', amount, date: todayStr(), due:'', reason, note:'', createdAt: new Date().toLocaleString('vi-VN') };
+  DEBTS.unshift(tx);
+  saveDebts();
+  const custs2 = getDebtCustomers();
+  const c2 = custs2.find(x=>x.key===_debtDetailKey);
+  if (c2) renderDebtDetailModal(c2);
+  buildDebtList();
+}
+
+function openDebtPayTx() {
+  if (!_debtDetailKey) return;
+  const custs = getDebtCustomers();
+  const c = custs.find(x=>x.key===_debtDetailKey);
+  if (!c) return;
+  if (c.remaining <= 0) { alert('Khách đã trả hết nợ!'); return; }
+
+  const amtStr = prompt(`Thu tiền từ ${c.name}\nCòn nợ: ${fmtMoney(c.remaining)}\nNhập số tiền thanh toán:`);
+  if (!amtStr) return;
+  const amount = Math.min(parseFloat(amtStr.replace(/[^0-9.]/g,''))||0, c.remaining);
+  if (!amount) { alert('Số tiền không hợp lệ'); return; }
+
+  const tx = { id: Date.now()+Math.random(), custKey: c.key, name: c.name, phone: c.phone,
+    type: 'pay', amount, date: todayStr(), reason:'Thanh toán nợ', note:'', createdAt: new Date().toLocaleString('vi-VN') };
+  DEBTS.unshift(tx);
+  saveDebts();
+  const custs2 = getDebtCustomers();
+  const c2 = custs2.find(x=>x.key===_debtDetailKey);
+  if (c2) renderDebtDetailModal(c2); else closeDebtDetail();
+  buildDebtList();
+}
+
+// Đóng modal khi bấm ngoài
+document.addEventListener('click', e => {
+  const modal = document.getElementById('debt-detail-modal');
+  if (modal && modal.style.display !== 'none') {
+    if (e.target === modal) closeDebtDetail();
+  }
+});
+
 
 function saveSales() { localStorage.setItem(SK_SALES, JSON.stringify(SALES)); autoSyncToGsheet('sales'); }
 
