@@ -2009,6 +2009,78 @@ function deleteDebtCustomer(key) {
 }
 
 // Xoá 1 giao dịch cụ thể
+function editDebtTx(id) {
+  const tx = DEBTS.find(x => x.id === id);
+  if (!tx) return;
+  const box = document.getElementById('ddm-inline-form');
+  if (!box) return;
+  const isDebt = tx.type === 'debt';
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div style="font-size:13px;font-weight:700;color:${isDebt?'var(--red)':'var(--green)'};margin-bottom:10px;">
+      ✏️ Sửa ${isDebt?'khoản nợ':'thanh toán'}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Số tiền (VND) *</div>
+        <input id="ddmf-amount" type="number" min="0" value="${tx.amount}"
+          style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;" />
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Ngày</div>
+        <input id="ddmf-date" type="date" value="${tx.date||''}"
+          style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;" />
+      </div>
+    </div>
+    ${isDebt ? `<div style="margin-bottom:8px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Hạn trả</div>
+      <input id="ddmf-due" type="date" value="${tx.due||''}"
+        style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;" />
+    </div>` : ''}
+    <div style="margin-bottom:8px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Lý do / Dịch vụ</div>
+      <input id="ddmf-reason" type="text" value="${escHtml(tx.reason||'')}"
+        style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;" />
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Ghi chú</div>
+      <input id="ddmf-note" type="text" value="${escHtml(tx.note||'')}"
+        style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;" />
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="_saveEditDebtTx(${id})"
+        style="flex:1;padding:9px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;">
+        ✓ Lưu
+      </button>
+      <button onclick="_closeDdmForm()"
+        style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:600;cursor:pointer;background:var(--bg2);color:var(--text2);">
+        ✕ Huỷ
+      </button>
+    </div>`;
+  setTimeout(() => { const el = document.getElementById('ddmf-amount'); if(el){ el.focus(); el.select(); } }, 80);
+  // Scroll lên để thấy form
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function _saveEditDebtTx(id) {
+  const tx = DEBTS.find(x => x.id === id);
+  if (!tx) return;
+  const amtEl = document.getElementById('ddmf-amount');
+  const amount = parseFloat((amtEl?.value||'').replace(/[^0-9.]/g,'')) || 0;
+  if (!amount) { amtEl?.focus(); return; }
+  tx.amount = amount;
+  tx.date   = document.getElementById('ddmf-date')?.value   || tx.date;
+  tx.due    = document.getElementById('ddmf-due')?.value    || tx.due || '';
+  tx.reason = document.getElementById('ddmf-reason')?.value.trim() || tx.reason;
+  tx.note   = document.getElementById('ddmf-note')?.value.trim()   || '';
+  saveDebts();
+  _closeDdmForm();
+  const custs = getDebtCustomers();
+  const c = custs.find(x => x.key === _debtDetailKey);
+  if (c) renderDebtDetailModal(c);
+  buildDebtList();
+}
+
 function deleteDebtTx(id) {
   if (!confirm('Xóa giao dịch này?')) return;
   DEBTS = DEBTS.filter(tx => tx.id !== id);
@@ -2148,7 +2220,10 @@ function renderDebtDetailModal(c) {
             ${tx.reason?`<div style="font-size:12px;color:var(--text2);margin-top:1px;">${escHtml(tx.reason)}</div>`:''}
             <div style="font-size:11px;color:var(--text3);margin-top:2px;">📅 ${fmtDate(tx.date)}${tx.due?' · Hạn: '+fmtDate(tx.due):''}${tx.note?' · '+escHtml(tx.note):''}</div>
           </div>
-          <button onmousedown="event.stopPropagation();deleteDebtTx(${tx.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;">🗑</button>
+          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+            <button onmousedown="event.stopPropagation();editDebtTx(${tx.id})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:15px;padding:2px 4px;">✏️</button>
+            <button onmousedown="event.stopPropagation();deleteDebtTx(${tx.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;padding:2px 4px;">🗑</button>
+          </div>
         </div>`;
       }).join('');
 }
