@@ -1662,7 +1662,55 @@ function addRepair(data) {
 
 function updateRepairStatus(id, status) {
   const r = REPAIRS.find(x => x.id === id);
-  if (r) { r.status = status; saveRepairs(); buildRepairList(); updateStats(); }
+  if (!r) return;
+  r.status = status;
+  saveRepairs(); buildRepairList(); updateStats();
+
+  // Khi giao máy → kiểm tra còn nợ không, nếu có thì tự tạo khoản nợ
+  if (status === 'da_giao') {
+    const profit    = r.profit    || 0;
+    const paidAmt   = r.paidAmount|| 0;
+    const remaining = profit - paidAmt;
+    if (remaining > 0) {
+      const custKey = (r.owner||'').trim().toLowerCase() + '|' + (r.phone||'').trim();
+      // Kiểm tra đã có khoản nợ trùng chưa (tránh tạo 2 lần)
+      const alreadyExists = DEBTS.some(tx =>
+        tx.custKey === custKey && tx.type === 'debt' &&
+        tx.repairId === r.id
+      );
+      if (!alreadyExists) {
+        const tx = {
+          id: Date.now() + Math.random(),
+          custKey,
+          name:      r.owner || '',
+          phone:     r.phone || '',
+          type:      'debt',
+          amount:    remaining,
+          date:      todayStr(),
+          due:       '',
+          reason:    `Sửa ${r.device||'máy'}${r.issue?' - '+r.issue:''}`,
+          note:      'Tự động từ phiếu sửa',
+          repairId:  r.id,
+          createdAt: new Date().toLocaleString('vi-VN')
+        };
+        DEBTS.unshift(tx);
+        saveDebts();
+        buildDebtList();
+        // Thông báo nhỏ
+        const msg = `💸 Đã ghi nợ <strong>${fmtMoney(remaining)}</strong> cho <strong>${escHtml(r.owner||'khách')}</strong>`;
+        const toast = document.createElement('div');
+        toast.innerHTML = msg;
+        Object.assign(toast.style, {
+          position:'fixed', bottom:'80px', left:'50%', transform:'translateX(-50%)',
+          background:'var(--red)', color:'#fff', padding:'10px 18px', borderRadius:'10px',
+          fontSize:'13px', fontWeight:'600', zIndex:'9999', boxShadow:'0 4px 16px rgba(0,0,0,0.3)',
+          whiteSpace:'nowrap', pointerEvents:'none'
+        });
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+      }
+    }
+  }
 }
 function deleteRepair(id) {
   if (!confirm('Xóa phiếu sửa này?')) return;
@@ -2988,11 +3036,10 @@ function handleActions(reply) {
       (deviceKey && r.device.toLowerCase().includes(deviceKey))
     );
     if (found) {
-      found.status = newStatus;
       if (p[3]) found.profit = parseFloat(p[3]) || found.profit;
       if (p[4]) found.cost   = parseFloat(p[4]) || found.cost;
       if (p[5]) found.note   = p[5];
-      saveRepairs();
+      updateRepairStatus(found.id, newStatus); // dùng hàm này để tự tạo nợ nếu da_giao
       anyAction = true;
     }
     clean = clean.replace(m[0], '');
@@ -4884,9 +4931,8 @@ async function sendSimMsg(text, imgData) {
     });
 
     if (found) {
-      found.status = newStatus;
       found.updatedAt = new Date().toLocaleString('vi-VN');
-      saveRepairs(); buildRepairList(); updateStats();
+      updateRepairStatus(found.id, newStatus); // tự tạo nợ nếu da_giao + chưa thu tiền
       const stLabel = newStatus === 'da_giao' ? '📦 Đã giao' : '✅ Xong, chưa giao';
       reply = `✅ <strong>Cập nhật thành công!</strong><br>👤 ${escHtml(found.owner)} · 📱 ${escHtml(found.device)}<br>Trạng thái: <strong>${stLabel}</strong>`;
     } else {
@@ -4917,10 +4963,10 @@ async function sendSimMsg(text, imgData) {
     if (found) {
       if (newProfit > 0) found.profit = newProfit;
       if (newCost   > 0) found.cost   = newCost;
-      if (newStatus)     found.status  = newStatus;
       if (!newProfit && !newCost && !newStatus && moneys.length === 1) found.profit = moneys[0].val;
       found.updatedAt = new Date().toLocaleString('vi-VN');
-      saveRepairs(); buildRepairList(); updateStats();
+      if (newStatus) updateRepairStatus(found.id, newStatus); // tự tạo nợ nếu da_giao
+      else { saveRepairs(); buildRepairList(); updateStats(); }
       reply = `✅ <strong>Đã cập nhật phiếu!</strong><br>`
         + `👤 ${escHtml(found.owner)} · 📱 ${escHtml(found.device)}<br>`
         + (newProfit ? `💰 Thu: ${fmtMoney(found.profit)}<br>` : '')
