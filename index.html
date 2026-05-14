@@ -3503,14 +3503,22 @@ async function sendMsg() {
 
     if (!res.ok) throw new Error(data.error?.message || 'Lỗi API ' + res.status);
 
-    const rawReply = data.choices[0].message.content || '';
+    let rawReply = data.choices[0].message.content || '';
+    // Strip Llama/Groq artifact tokens bị lọt ra ngoài response
+    rawReply = rawReply
+      .replace(/<\|.*?\|>/g, '')          // <|end_header_id|>, <|eot_id|>, ...
+      .replace(/^\s*(assistant|user|system)\s*\n?/i, '') // dòng đầu chỉ có "assistant"
+      .replace(/^\s*\n/, '')              // xoá dòng trống đầu tiên nếu còn
+      .trim();
 
     // ── Kiểm tra: nếu người dùng đang nhập liệu mà AI quên ACTION → retry ──
     const inputKeywords = /nhận máy|nhận đc|nhận được|sửa máy|bán máy|bán đc|bán được|thu tiền|chi tiền|nhập kho|xuất kho|ghi vào|ghi giúp|lưu giúp|thêm giúp|đã giao|đã xong|đã sửa/i;
     const hasAction = /\[\w+:(ADD_REPAIR|UPDATE_REPAIR|ADD_SALE|UPDATE_SALE|ADD_INCOME|ADD_EXPENSE|ADD_WAREHOUSE_IN|ADD_WAREHOUSE_OUT|UPDATE_WAREHOUSE)\|/.test(rawReply);
     const looksLikeDataEntry = inputKeywords.test(text) || inputKeywords.test(rawReply);
+    // Cũng retry nếu reply rỗng hoặc quá ngắn (chỉ là artifact token)
+    const replyTooShort = rawReply.length < 5;
 
-    if (looksLikeDataEntry && !hasAction) {
+    if ((looksLikeDataEntry && !hasAction) || replyTooShort) {
       // AI quên ACTION — thử lại với prompt nhắc thẳng
       showTyping();
       const retryMessages = [
@@ -3528,7 +3536,8 @@ async function sendMsg() {
       hideTyping();
       if (retryRes.ok) {
         const retryData = await retryRes.json();
-        const retryRaw = retryData.choices[0].message.content || '';
+        let retryRaw = retryData.choices[0].message.content || '';
+        retryRaw = retryRaw.replace(/<\|.*?\|>/g,'').replace(/^\s*(assistant|user|system)\s*\n?/i,'').trim();
         const cleanReply = handleActions(retryRaw);
         const displayReply = cleanReply.replace(/</g,'&lt;').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
         addMsg('bot', displayReply || '✅ Đã lưu!');
