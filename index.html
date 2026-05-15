@@ -3220,17 +3220,28 @@ function handleActions(reply) {
       date: p[8]||todayStr(), status: p[9]||'dang_sua', note: p[10]||''
     };
     if (d.owner && d.device) {
+      // Chỉ coi là trùng khi: cùng chủ + cùng máy + phiếu cũ đang sửa (chưa giao)
+      // Khách cũ mang máy mới → device khác → tạo mới bình thường
+      // Khách cũ mang cùng máy nhưng đã giao → tạo mới bình thường
       const duplicate = REPAIRS.find(r =>
         r.owner.toLowerCase().trim() === d.owner.toLowerCase().trim() &&
-        r.device.toLowerCase().trim() === d.device.toLowerCase().trim()
+        r.device.toLowerCase().trim() === d.device.toLowerCase().trim() &&
+        r.status !== 'da_giao'
       );
       if (duplicate) {
         const overwrite = confirm(
-          `⚠️ Đã tồn tại phiếu:\n"${duplicate.owner} — ${duplicate.device}"\nTrạng thái: ${duplicate.status}\n\nBạn có muốn nhập CHỒNG lên phiếu cũ không?\n(Nhấn OK = ghi đè, Hủy = bỏ qua)`
+          `⚠️ Khách "${duplicate.owner}" đang có phiếu "${duplicate.device}" chưa giao!\nTrạng thái: ${duplicate.status}\n\nBấm OK để ghi đè lên phiếu cũ.\nBấm Hủy để tạo phiếu MỚI.`
         );
         if (overwrite) {
           Object.assign(duplicate, d);
           duplicate.updatedAt = new Date().toLocaleString('vi-VN');
+          saveRepairs();
+          anyAction = true;
+        } else {
+          // Người dùng chọn tạo mới → tạo phiếu mới luôn
+          d.id = Date.now() + Math.floor(Math.random() * 1000);
+          d.createdAt = new Date().toLocaleString('vi-VN');
+          REPAIRS.unshift(d);
           saveRepairs();
           anyAction = true;
         }
